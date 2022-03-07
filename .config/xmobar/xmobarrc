@@ -1,0 +1,74 @@
+-- colorBack = "#282c34"
+-- colorFore = "#bbc2cf"
+-- colorForeAlt = "#666666"
+-- 
+-- color01 = "#1c1f24"
+-- color02 = "#ff6c6b"
+-- color03 = "#98be65"
+-- color04 = "#da8548"
+-- color05 = "#51afef"
+-- color06 = "#c678dd"
+-- color07 = "#5699af"
+-- color08 = "#202328"
+-- color09 = "#5b6268"
+-- color10 = "#da8548"
+-- color11 = "#4db5bd"
+-- color12 = "#ecbe7b"
+-- color13 = "#3071db"
+-- color14 = "#a9a1e1"
+-- color15 = "#46d9ff"
+-- color16 = "#dfdfdf"
+
+Config { font            =   "xft:JetBrainsMono:weight=bold:pixelsize=24:antialias=true:hinting=true,Noto Sans Thai:weight=bold:pixelsize=24:antialias=true:hinting=true"
+       , additionalFonts = [ "xft:Mononoki:pixelsize=24"
+                           , "xft:Font Awesome 6 Free Solid:pixelsize=26"
+			   , "xft:Font Awesome 6 Brands:pixelsize=26"
+                           ]
+       , bgColor      = "#282c34"
+       , fgColor      = "#bbc2cf"
+       , position     = TopSize L 100 50
+       , lowerOnStart = True
+       , hideOnStart  = False
+       , allDesktops  = True
+       , persistent   = True
+       , iconRoot     = ".config/xmonad/xpm/"  -- default: "."
+       , commands = [ 
+                      Run Date "<fc=#bbc2cf><fn=2>\xf073</fn> %a %b %d %H:%M</fc>" "date"  600
+                    , Run BatteryP [ "BAT0" ]
+                    [ "--template" , "<fc=#98be65><acstatus></fc>"
+                    , "--Low"      , "15"        -- units: %
+                    , "--High"     , "80"        -- units: %
+                    , "--" -- battery specific options
+                              -- discharging status
+                              , "-o"   , "<fn=2>\xf241</fn> <left>%"
+                              -- AC "on" status
+                              , "-O"   , "<fn=2>\xf1e6</fn> <left>%"
+                              -- charged status
+                              , "-i"   , "<fn=2>\xf240</fn> Full"
+                    ] 50
+                    , Run Com ".config/xmobar/trayer-padding-icon.sh" [] "trayerpad" 20
+		    , Run ThermalZone 0 ["-t","<fc=#ff6c6b><fn=2>\xf2c9</fn> <temp>°C</fc>"] 50
+                    , Run Cpu [ "--template", "<fc=#5699af><fn=2>\xf2db</fn> <total>%</fc>"
+                              , "--Low","3"
+                              , "--High","50" 
+			      ] 50
+                    -- memory usage monitor
+                    , Run Memory  [ "--template" ,"<fc=#da8548><fn=2>\xf538</fn> <used>MB</fc>"
+                             , "--Low"      , "20"        -- units: %
+                             , "--High"     , "90"        -- units: %
+                             ] 50
+
+                    -- keyboard layout indicator
+                    , Run Kbd  [ ("us" , "<fc=#dfdfdf><fn=2>\xf11c</fn> EN</fc>")
+                               , ("th" , "<fc=#dfdfdf><fn=2>\xf11c</fn> TH</fc>")
+                               ]
+		    , Run Volume "pulse" "Master" [ "--template", "<fc=#51afef><fn=2>\xf028</fn> <volume>%</fc>"] 10
+		    , Run UnsafeStdinReader
+
+                    ]
+       , sepChar = "%"
+       , alignSep = "}{"
+
+       , template = " %UnsafeStdinReader%}{  %pulse:Master%  <action=`alacritty -e glances`>%cpu%</action>  %battery%  <action=`emacsclient -c -a 'emacs' --eval '(doom/window-maximize-buffer(cfw:open-org-calendar))'`>%date%</action> %trayerpad%"
+      }
+
