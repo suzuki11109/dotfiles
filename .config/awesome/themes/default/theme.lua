@@ -18,7 +18,7 @@ local lain  = require("lain")
 local theme = {}
 theme.dir           = os.getenv("HOME") .. "/.config/awesome/themes/default"
 
-theme.font          = "JetBrains Mono 9"
+theme.font          = "JetBrains Mono 10"
 
 theme.bg_normal     = "#222222"
 theme.bg_focus      = "#535d6c"
@@ -144,7 +144,7 @@ theme.awesome_icon = theme_assets.awesome_icon(
 -- from /usr/share/icons and /usr/share/icons/hicolor will be used.
 theme.icon_theme = nil
 
-function theme.at_screen_connect(s) 
+function theme.at_screen_connect(s)
     -- Each screen has its own tag table.
     awful.tag({ "1", "2", "3", "4", "5", "6", "7", "8", "9" }, s, awful.layout.layouts[1])
 

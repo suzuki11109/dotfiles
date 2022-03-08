@@ -164,59 +164,6 @@ local cpu = lain.widget.cpu({
     end
 })
 
--- ALSA volume
-local volicon = wibox.widget.imagebox(beautiful.widget_vol)
-beautiful.volume = lain.widget.alsa({
-	timeout = 1,
-    cmd = "amixer -D pulse",
-    settings = function()
-        if volume_now.status == "off" then
-            volicon:set_image(beautiful.widget_vol_mute)
-	    widget:set_markup(markup.font("Font Awesome 6 Free Solid", " ") .. volume_now.level .. "%")
-        elseif tonumber(volume_now.level) == 0 then
-            volicon:set_image(beautiful.widget_vol_no)
-	    widget:set_markup(markup.font("Font Awesome 6 Free Solid", " ") .. volume_now.level .. "%")
-        elseif tonumber(volume_now.level) <= 20 then
-            volicon:set_image(beautiful.widget_vol_low)
-	    widget:set_markup(markup.font("Font Awesome 6 Free Solid", " ") .. volume_now.level .. "%")
-        else
-            volicon:set_image(beautiful.widget_vol)
-	    widget:set_markup(markup.font("Font Awesome 6 Free Solid", " ") .. volume_now.level .. "%")
-        end
-        -- widget:set_markup(markup.font(beautiful.font, " " .. volume_now.level .. "% "))
-    end
-})
-
---theme.volume.widget:buttons(awful.util.table.join(
---                               awful.button({}, 4, function ()
---                                     awful.util.spawn("amixer set Master 1%+")
---                                     theme.volume.update()
---                               end),
---                               awful.button({}, 5, function ()
---                                     awful.util.spawn("amixer set Master 1%-")
---                                     theme.volume.update()
---                               end)
---))
-
-local baticon = wibox.widget.imagebox(beautiful.widget_battery)
-local bat = lain.widget.bat({
-	timeout = 15,
-    settings = function()
-        if bat_now.status and bat_now.status ~= "N/A" then
-            if bat_now.ac_status == 1 then
-		widget:set_markup(markup.font("Font Awesome 6 Free Solid", " " ) .. bat_now.perc .. "%")
-            else
-		widget:set_markup(markup.font("Font Awesome 6 Free Solid", " " ) .. bat_now.perc .. "%")
-            end
-        else
-		widget:set_markup(markup.font("Font Awesome 6 Free Solid", " " ) .. "AC")
-        end
-    end
-})
-
-
---local separators = lain.util.separators
-
 local function set_wallpaper(s)
     -- Wallpaper
     if beautiful.wallpaper then
@@ -281,12 +228,6 @@ awful.screen.connect_for_each_screen(function(s)
 	    spr,
 	    cpuicon,
 	    cpu,
-	    spr,
-            --volicon,
-            beautiful.volume.widget,
-	    spr,
-            --baticon,
-            bat.widget,
 	    spr,
             wibox.widget.systray(),
             mytextclock,
@@ -388,9 +329,13 @@ globalkeys = gears.table.join(
               {description = "restore minimized", group = "client"}),
 
     -- Prompt
-    awful.key({ modkey }, "p", function () 
+    awful.key({ modkey }, "p", function ()
 	    awful.util.spawn("rofi -dpi 192 -show combi -combi-modes 'window,run,ssh' -modes combi")
     end, {description = "run rofi", group = "launcher"}),
+
+
+	  awful.key({}, "XF86MonBrightnessUp", function () awful.util.spawn("brightnessctl s 15+", false) end),
+	  awful.key({}, "XF86MonBrightnessDown", function () awful.util.spawn("brightnessctl s 15-", false) end),
 
     awful.key({ modkey }, "x",
               function ()
@@ -401,13 +346,13 @@ globalkeys = gears.table.join(
                     history_path = awful.util.get_cache_dir() .. "/history_eval"
                   }
               end,
-              {description = "lua execute prompt", group = "awesome"}),
+              {description = "lua execute prompt", group = "awesome"})
     -- Menubar
     -- awful.key({ modkey }, "p", function() menubar.show() end,
     --          {description = "show the menubar", group = "launcher"})
-	awful.key({}, "XF86AudioRaiseVolume", function () awful.util.spawn("pamixer -i 2", false) end),
-	awful.key({}, "XF86AudioLowerVolume", function () awful.util.spawn("pamixer -d 2", false) end),
-	awful.key({}, "XF86AudioMute", function () awful.util.spawn("pamixer --toggle-mute", false) end)
+	-- awful.key({}, "XF86AudioRaiseVolume", function () awful.util.spawn("pamixer -i 2", false) end),
+	-- awful.key({}, "XF86AudioLowerVolume", function () awful.util.spawn("pamixer -d 2", false) end),
+	-- awful.key({}, "XF86AudioMute", function () awful.util.spawn("pamixer --toggle-mute", false) end)
 )
 
 clientkeys = gears.table.join(
@@ -646,8 +591,4 @@ client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_n
 -- }}}
 
 -- Autostart applications
-awful.spawn.once("nm-applet")
-awful.spawn.once("blueman-applet")
-awful.spawn.once("fcitx5 --replace -d")
-awful.spawn.once("nitrogen --restore")
-
+awful.spawn.with_shell("~/.config/awesome/autostart.sh")
