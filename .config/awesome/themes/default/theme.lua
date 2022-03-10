@@ -18,7 +18,7 @@ local lain  = require("lain")
 local theme = {}
 theme.dir           = os.getenv("HOME") .. "/.config/awesome/themes/default"
 
-theme.font          = "JetBrains Mono 10"
+theme.font          = "Noto Sans 10"
 
 theme.bg_normal     = "#222222"
 theme.bg_focus      = "#535d6c"
