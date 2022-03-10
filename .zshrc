@@ -26,9 +26,11 @@ alias vi="nvim"
 alias vim="nvim"
 alias k="kubectl"
 
-export N_PREFIX=$HOME/n
 export EDITOR=nvim
 
 export PATH=$PATH:$HOME/go/bin
 export PATH=$PATH:$HOME/.emacs.d/bin
-export PATH=$PATH:$N_PREFIX/bin
+
+export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"  # Added by n-install (see http://git.io/n-install-repo).
+
+
