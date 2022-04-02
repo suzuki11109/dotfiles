@@ -8,11 +8,14 @@
 (setq user-full-name "Aki Suzuki"
       user-mail-address "suzuki11109@gmail.com")
 
-(setq doom-font (font-spec :family "JetBrains Mono" :size 13 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "JetBrains Mono" :size 13 :weight 'regular)
-      doom-big-font (font-spec :family "JetBrains Mono" :size 15 :weight 'regular))
+(setq doom-font (font-spec :family "monospace" :size 13 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "monospace" :size 13 :weight 'regular)
+      doom-big-font (font-spec :family "monospace" :size 15 :weight 'regular))
 ;; Doom exposes five (optional) variables for controlling fonts in Doom:
 ;;
+(add-hook! 'doom-load-theme-hook :append
+  (set-fontset-font t 'thai (font-spec :family "SFThonburi")))
+
 ;; - `doom-font' -- the primary font to use
 ;; - `doom-variable-pitch-font' -- a non-monospace font (where applicable)
 ;; - `doom-big-font' -- used for `doom-big-font-mode'; use this for
@@ -184,3 +187,4 @@
 ;;
 ;; You can also try 'gd' (or 'C-c c d') to jump to their definition and see how
 ;; they are implemented.
+

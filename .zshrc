@@ -21,13 +21,14 @@ fi
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
+eval "$(zoxide init zsh)"
+
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias vi="nvim"
 alias vim="nvim"
 alias k="kubectl"
 
 export EDITOR=nvim
-
 export PATH=$PATH:$HOME/go/bin
 export PATH=$PATH:$HOME/.emacs.d/bin
 
