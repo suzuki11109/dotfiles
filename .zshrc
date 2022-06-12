@@ -19,19 +19,23 @@ if ! zgenom saved; then
   zgenom save
 fi
 
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-eval "$(zoxide init zsh)"
-
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias vi="nvim"
 alias vim="nvim"
 alias k="kubectl"
 
-export EDITOR=nvim
-export PATH=$PATH:$HOME/go/bin
 export PATH=$PATH:$HOME/.emacs.d/bin
+export PATH=$PATH:$HOME/.local/bin
+export PATH=$PATH:$HOME/go/bin
 
-export N_PREFIX="$HOME/n"; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH+=":$N_PREFIX/bin"  # Added by n-install (see http://git.io/n-install-repo).
+export EDITOR=nvim
+export GOPATH=$HOME/go
+export XDG_CONFIG_HOME=$HOME/.config
+export N_PREFIX=$HOME/n; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH="$N_PREFIX/bin:$PATH"  # Added by n-install (see http://git.io/n-install-repo).
 
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+eval "$(zoxide init zsh)"
+
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
