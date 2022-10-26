@@ -16,6 +16,7 @@ if ! zgenom saved; then
   zgenom load zsh-users/zsh-history-substring-search
   zgenom load hlissner/zsh-autopair
   zgenom load romkatv/powerlevel10k powerlevel10k
+  zgenom load unixorn/fzf-zsh-plugin
   zgenom save
 fi
 
@@ -27,6 +28,7 @@ alias k="kubectl"
 export PATH=$PATH:$HOME/.emacs.d/bin
 export PATH=$PATH:$HOME/.local/bin
 export PATH=$PATH:$HOME/go/bin
+export PATH=$PATH:$HOME/.local/share/coursier/bin
 
 export EDITOR=nvim
 export GOPATH=$HOME/go
@@ -35,7 +37,7 @@ export N_PREFIX=$HOME/n; [[ :$PATH: == *":$N_PREFIX/bin:"* ]] || PATH="$N_PREFIX
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-eval "$(zoxide init zsh)"
-
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+export PATH=$PATH:$HOME/.config/rofi/scripts
 
