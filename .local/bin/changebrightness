@@ -7,11 +7,11 @@ function send_notification() {
 
 case $1 in
 up)
-    brightnessctl s 17+
+    brightnessctl s 15+
 	send_notification
 	;;
 down)
-    brightnessctl s 17-
+    brightnessctl s 15-
 	send_notification
 	;;
 esac
