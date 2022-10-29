@@ -2,6 +2,7 @@
 ;;; $DOOMDIR/packages.el
 (package! solaire-mode :disable t)
 (package! evil-snipe :disable t)
+(package! autothemer)
 
 ;; To install a package with Doom you must declare them here and run 'doom sync'
 ;; on the command line, then restart Emacs for the changes to take effect -- or
