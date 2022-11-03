@@ -9,9 +9,9 @@
 (setq user-full-name "Aki Suzuki"
       user-mail-address "suzuki11109@gmail.com")
 
-(setq doom-font (font-spec :family "monospace" :size 26 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "monospace" :size 26 :weight 'regular)
-      doom-big-font (font-spec :family "monospace" :size 30 :weight 'regular))
+(setq doom-font (font-spec :family "monospace" :size 13 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "monospace" :size 13 :weight 'regular)
+      doom-big-font (font-spec :family "monospace" :size 15 :weight 'regular))
 ;; Doom exposes five (optional) variables for controlling fonts in Doom:
 ;;
 (add-hook! 'doom-load-theme-hook :append
@@ -40,16 +40,19 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-;; (setq doom-theme 'doom-vibrant)
-(load-theme 'catppuccin-macchiato t)
+(setq doom-theme 'doom-vibrant)
 
 ;; This determines the style of line numbers in effect. If set to `nil', line
 ;; numbers are disabled. For relative line numbers, set this to `relative'.
 (setq display-line-numbers-type 'relative)
+;; (set-frame-parameter (selected-frame) 'alpha '(95 . 95))
+;; (add-to-list 'default-frame-alist '(alpha . (95 . 95)))
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
 (setq org-directory "~/org/")
+
+(setq use-package-inject-hooks t)
 
 (setq-default line-spacing 2)
 (setq-default x-stretch-cursor t)
@@ -72,6 +75,7 @@
 (setq doom-modeline-percent-position nil)
 (setq doom-modeline-env-version nil)
 (setq all-the-icons-scale-factor 1)
+
 
 (setq-default custom-file (expand-file-name ".custom.el" doom-private-dir))
 (when (file-exists-p custom-file)
@@ -145,14 +149,17 @@
 (map! (:after flycheck
        :m "[e" #'flycheck-previous-error
        :m "]e" #'flycheck-next-error))
+(map! (:after vterm :map vterm-mode-map
+        :n (kbd "<return>") #'evil-insert-resume))
 
 (setq vterm-timer-delay 0.01)
 (setq vterm-always-compile-module t)
-(add-hook 'vterm-mode-hook
-         (lambda ()
-           (setq-local evil-insert-state-cursor '(box "#00FF00"))
-           (evil-insert-state)))
 (add-hook 'vterm-mode-hook #'doom-mark-buffer-as-real-h)
+
+(use-package! vterm
+    :config
+    (advice-add #'vterm--redraw :around (lambda (fun &rest args) (let ((cursor-type cursor-type)) (apply fun args))))
+  )
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
