@@ -95,7 +95,7 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 -- See `:help vim.o`
 
 -- Set highlight on search
-vim.o.hlsearch = false
+vim.o.hlsearch = true
 
 -- System clipboard
 vim.o.clipboard = 'unnamedplus'
@@ -152,6 +152,8 @@ vim.o.splitright = true -- Put new windows right of current
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
+vim.keymap.set("", ";", ":")
+
 -- Keymaps for better default experience
 -- See `:help vim.keymap.set()`
 vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
@@ -159,6 +161,29 @@ vim.keymap.set({ 'n', 'v' }, '<Space>', '<Nop>', { silent = true })
 -- Remap for dealing with word wrap
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+
+-- Better indents
+vim.keymap.set('v', '>', ">gv", { silent = true })
+vim.keymap.set('v', '<', "<gv", { silent = true })
+
+-- Move Lines
+vim.keymap.set("n", "<A-j>", "<cmd>m .+1<cr>==", { expr = true, silent = true })
+vim.keymap.set("n", "<A-k>", "<cmd>m .-2<cr>==", { expr = true, silent = true })
+vim.keymap.set("i", "<A-j>", "<esc><cmd>m .+1<cr>==gi", { expr = true, silent = true })
+vim.keymap.set("i", "<A-k>", "<esc><cmd>m .-2<cr>==gi", { expr = true, silent = true })
+vim.keymap.set("v", "<A-j>", ":m '>+1<cr>gv=gv", { expr = true, silent = true })
+vim.keymap.set("v", "<A-k>", ":m '<-2<cr>gv=gv", { expr = true, silent = true })
+
+-- Windows
+vim.keymap.set("n", "<leader>wd", "<C-W>c", { silent = true })
+vim.keymap.set("n", "<leader>wh", "<C-W>h", { silent = true })
+vim.keymap.set("n", "<leader>wj", "<C-W>j", { silent = true })
+vim.keymap.set("n", "<leader>wk", "<C-W>k", { silent = true })
+vim.keymap.set("n", "<leader>wl", "<C-W>l", { silent = true })
+vim.keymap.set("n", "<leader>wv", "<C-W>v", { silent = true })
+vim.keymap.set("n", "<leader>ws", "<C-W>s", { silent = true })
+
+
 
 -- [[ Highlight on yank ]]
 -- See `:help vim.highlight.on_yank()`
