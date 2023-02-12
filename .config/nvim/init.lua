@@ -97,8 +97,12 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 -- Set highlight on search
 vim.o.hlsearch = false
 
+-- System clipboard
+vim.o.clipboard = 'unnamedplus'
+
 -- Make line numbers default
-vim.wo.number = true
+vim.o.number = true
+vim.o.relativenumber = true
 
 -- Enable mouse mode
 vim.o.mouse = 'a'
@@ -108,6 +112,9 @@ vim.o.breakindent = true
 
 -- Save undo history
 vim.o.undofile = true
+
+-- No swapfile
+vim.o.swapfile = false
 
 -- Case insensitive searching UNLESS /C or capital in search
 vim.o.ignorecase = true
@@ -123,6 +130,20 @@ vim.cmd [[colorscheme onedark]]
 
 -- Set completeopt to have a better completion experience
 vim.o.completeopt = 'menuone,noselect'
+
+-- Use spaces instead of tabs
+vim.o.expandtab = true
+
+-- vim.o.smartindent = true
+
+-- Preview incremental substitute
+vim.o.inccommand = true
+
+-- Don't show mode 
+vim.o.showmode = false
+
+vim.o.splitbelow = true -- Put new windows below current
+vim.o.splitright = true -- Put new windows right of current
 
 -- [[ Basic Keymaps ]]
 -- Set <space> as the leader key
