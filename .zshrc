@@ -35,7 +35,7 @@ export PATH=$PATH:$HOME/.local/share/coursier/bin
 export EDITOR=nvim
 export GOPATH=$HOME/go
 export XDG_CONFIG_HOME=$HOME/.config
-export PATH="/home/aki/.local/share/fnm:$PATH"
+export PATH="$HOME/.local/share/fnm:$PATH"
 # fzf colors
 export FZF_DEFAULT_OPTS=" \
 --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
