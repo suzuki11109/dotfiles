@@ -1,14 +1,17 @@
+-- fzf git add select
+-- git diffview
+
 -- bookmark/grapple/harpoon/jump mark
--- refactor module
 
 -- kitty scroll vi mode
--- fzf git add select
+-- kitty move overlay to tab
+-- kitty move tabs
 -- markdown preview glow
-
--- git diffview
 
 -- my go playgournd
 -- lsp  statusline
+
+-- refactor module
 
 -- ruby rails
 -- angular
@@ -19,9 +22,10 @@
 -- ocaml
 -- rest
 
--- code runner
 -- resession
+-- code runner
 -- overseer
+
 -- fzf find app open new tmux window
 -- runner to tmux
 -- new session from shell
@@ -877,6 +881,10 @@ require('lazy').setup({
 
    {
       'ahmedkhalf/project.nvim',
+      dependencies = {
+         'nvim-telescope/telescope.nvim',
+      },
+      event = 'VeryLazy',
       config = function()
          require('project_nvim').setup {
             exclude_dirs = {
@@ -887,6 +895,10 @@ require('lazy').setup({
          require('telescope').load_extension 'projects'
          map('n', '<leader>pp', '<cmd>Telescope projects<cr>', { desc = 'switch projects' })
       end,
+   },
+   {
+      'jghauser/mkdir.nvim',
+      event = 'VeryLazy',
    },
 }, {
    ui = {

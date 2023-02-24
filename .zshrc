@@ -25,6 +25,7 @@ alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias vi="nvim"
 alias vim="nvim"
 alias k="kubectl"
+alias gad="git fza"
 
 export PATH=$PATH:$HOME/.emacs.d/bin
 export PATH=$PATH:$HOME/.local/bin
@@ -35,33 +36,29 @@ export EDITOR=nvim
 export GOPATH=$HOME/go
 export XDG_CONFIG_HOME=$HOME/.config
 export PATH="/home/aki/.local/share/fnm:$PATH"
-eval "`fnm env`"
-
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
-
-# export PATH=$PATH:$HOME/.config/rofi/scripts
-
-# catppuccin
+# fzf colors
 export FZF_DEFAULT_OPTS=" \
 --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
 --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
 
+command -v fnm >/dev/null && eval "`fnm env`"
+
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
 [[ -r "$HOME/emacs-vterm-zsh.sh" ]] && source "$HOME/emacs-vterm-zsh.sh"
 
+[[ -s  "$HOME/.cargo/env" ]] & source "$HOME/.cargo/env"
 
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-source "$HOME/.cargo/env"
-
+# comment if not install
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
-
-# Load pyenv-virtualenv automatically
 eval "$(pyenv virtualenv-init -)"
+
+
