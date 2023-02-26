@@ -1,41 +1,39 @@
--- fzf git add select
--- git diffview
+-- refactor module nvchad
+-- neodev neoconf
+
+-- markdown preview glow
+-- git diff side by side
+-- kitty tab length
+-- lazygit/ neovim remote
 
 -- bookmark/grapple/harpoon/jump mark
-
--- kitty scroll vi mode
--- kitty move overlay to tab
--- kitty move tabs
--- markdown preview glow
-
--- my go playgournd
--- lsp  statusline
-
--- refactor module
-
 -- ruby rails
--- angular
+
+-- Later
+-- octo
 -- clojure
 -- parinfer
+-- angular
 -- elixir
--- haskell
 -- ocaml
+-- haskell
+
+-- Maybe never
 -- rest
-
 -- resession
--- code runner
 -- overseer
-
 -- fzf find app open new tmux window
 -- runner to tmux
 -- new session from shell
 -- new tmux session neovim editor window
 --
 -- Set <space> as the leader key
--- See `:help mapleader`
---  NOTE: Must happen before plugins are required (otherwise wrong leader will be used)
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
+
+-- Disable netrw
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
 
 -- Decrease update time
 vim.o.updatetime = 250
@@ -67,7 +65,7 @@ if not vim.loop.fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
-local lsp_format = function(bufnr)
+local function lsp_format(bufnr)
    vim.lsp.buf.format {
       filter = function(client)
          -- always use null-ls only
@@ -77,7 +75,7 @@ local lsp_format = function(bufnr)
    }
 end
 
-local hover_doc = function()
+local function hover_doc()
    vim.lsp.buf_request(0, 'textDocument/hover', vim.lsp.util.make_position_params(), function(_, result, ctx, config)
       config = config or {}
       config.focus_id = ctx.method
@@ -155,29 +153,26 @@ local on_attach = function(client, bufnr)
    map('n', ']e', function()
       vim.diagnostic.goto_next { float = false }
    end, { desc = 'next diagnostic' })
+
    map({ 'n', 'v' }, '<leader>cr', vim.lsp.buf.rename, { desc = 'rename' })
    map('n', '<leader>ca', vim.lsp.buf.code_action, { desc = 'code action' })
    map({ 'n', 'v' }, 'gd', vim.lsp.buf.definition, { desc = 'goto definition' })
    map({ 'n', 'v' }, 'gI', vim.lsp.buf.implementation, { desc = 'goto implementation' })
+
    -- telescope helper
-   map({ 'n', 'v' }, 'gr', require('telescope.builtin').lsp_references, { desc = 'find references' })
-   map('n', '<leader>cs', require('telescope.builtin').lsp_document_symbols, { desc = 'document symbols' })
+   map('n', '<leader>cR', '<cmd>Telescope lsp_references<cr>', { desc = 'find references' })
+   map('n', '<leader>cs', '<cmd>Telescope lsp_document_symbols<cr>', { desc = 'document symbols' })
 
    -- map({ 'n', 'v' }, 'K', vim.lsp.buf.hover, { desc = 'Hover Documentation' })
    map({ 'n', 'v' }, 'K', hover_doc, { desc = 'Hover Documentation' })
-
-   vim.diagnostic.config {
-      virtual_text = false,
-   }
 
    -- vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
    --    border = 'rounded',
    -- })
 
-   -- Create a command `:Format` local to the LSP buffer
-   vim.api.nvim_buf_create_user_command(bufnr, 'Format', function(_)
-      lsp_format(bufnr)
-   end, { desc = 'format current buffer' })
+   vim.diagnostic.config {
+      virtual_text = false,
+   }
 
    local signs = { Error = ' ', Warn = ' ', Hint = ' ', Info = ' ' }
    for type, icon in pairs(signs) do
@@ -185,6 +180,12 @@ local on_attach = function(client, bufnr)
       vim.fn.sign_define(hl, { text = icon, texthl = hl, numhl = hl })
    end
 
+   -- Create a command `:Format` local to the LSP buffer
+   vim.api.nvim_buf_create_user_command(bufnr, 'Format', function(_)
+      lsp_format(bufnr)
+   end, { desc = 'format current buffer' })
+
+   -- autoformat
    if client.server_capabilities.documentFormattingProvider then
       vim.api.nvim_clear_autocmds { group = lsp_format_augroup, buffer = bufnr }
       vim.api.nvim_create_autocmd('BufWritePre', {
@@ -199,12 +200,6 @@ local on_attach = function(client, bufnr)
    vim.api.nvim_create_autocmd('CursorHold', {
       buffer = bufnr,
       callback = function()
-         -- don't show diagnostic if there is already hover doc, but it conflict with doc
-         -- for _, winid in pairs(vim.api.nvim_tabpage_list_wins(0)) do
-         --    if vim.api.nvim_win_get_config(winid).zindex then
-         --       return
-         --    end
-         -- end
          local opts = {
             focusable = false,
             close_events = { 'BufLeave', 'CursorMoved', 'InsertEnter', 'FocusLost' },
@@ -219,7 +214,7 @@ local on_attach = function(client, bufnr)
 end
 
 require('lazy').setup({
-   { -- LSP Configuration & Plugins
+   {
       'neovim/nvim-lspconfig',
       event = { 'BufReadPre', 'BufNewFile' },
       dependencies = {
@@ -298,8 +293,9 @@ require('lazy').setup({
       end,
    },
 
-   { -- Useful status updates for LSP
+   {
       'j-hui/fidget.nvim',
+      event = { 'BufReadPre', 'BufNewFile' },
       config = function()
          require('fidget').setup {
             window = {
@@ -345,7 +341,7 @@ require('lazy').setup({
       },
    },
 
-   { -- Autocompletion
+   {
       'hrsh7th/nvim-cmp',
       event = 'InsertEnter',
       dependencies = {
@@ -421,7 +417,7 @@ require('lazy').setup({
 
    {
       'windwp/nvim-autopairs',
-      event = 'VeryLazy',
+      event = 'InsertEnter',
       config = function()
          require('nvim-autopairs').setup {}
       end,
@@ -433,35 +429,15 @@ require('lazy').setup({
       config = true,
    },
 
-   { -- Highlight, edit, and navigate code
+   {
       'nvim-treesitter/nvim-treesitter',
-      event = { 'BufReadPost', 'BufNewFile' },
       dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
       build = function()
          pcall(require('nvim-treesitter.install').update { with_sync = true })
       end,
 
       opts = {
-         -- Add languages to be installed here that you want installed for treesitter
-         ensure_installed = {
-            'bash',
-            'c',
-            'go',
-            'help',
-            'html',
-            'javascript',
-            'json',
-            'jsonc',
-            'lua',
-            'markdown',
-            'markdown_inline',
-            'python',
-            'rust',
-            'tsx',
-            'typescript',
-            'vim',
-            'yaml',
-         },
+         ensure_installed = 'all',
          highlight = { enable = true },
          indent = { enable = true },
          textobjects = {
@@ -469,7 +445,6 @@ require('lazy').setup({
                enable = true,
                lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
                keymaps = {
-                  -- You can use the capture groups defined in textobjects.scm
                   ['aa'] = '@parameter.outer',
                   ['ia'] = '@parameter.inner',
                   ['af'] = '@function.outer',
@@ -480,7 +455,7 @@ require('lazy').setup({
             },
             move = {
                enable = true,
-               set_jumps = true, -- whether to set jumps in the jumplist
+               set_jumps = true,
                goto_next_start = {
                   [']m'] = '@function.outer',
                   [']]'] = '@class.outer',
@@ -539,13 +514,6 @@ require('lazy').setup({
                enabled = true,
             },
          },
-         -- highlight_overrides = {
-         --    mocha = function(mocha)
-         --       return {
-         --          StatusLine = { fg = mocha.text },
-         --       }
-         --    end,
-         -- },
       },
    },
 
@@ -560,10 +528,10 @@ require('lazy').setup({
       end,
    },
 
-   { -- Fuzzy Finder (files, lsp, etc)
+   {
       'nvim-telescope/telescope.nvim',
       branch = '0.1.x',
-      dependencies = { 'nvim-lua/plenary.nvim', 'nvim-telescope/telescope-file-browser.nvim' },
+      dependencies = { 'nvim-lua/plenary.nvim' },
       cmd = 'Telescope',
       config = function()
          local actions = require 'telescope.actions'
@@ -599,37 +567,32 @@ require('lazy').setup({
                },
             },
          }
-         require('telescope').load_extension 'file_browser'
       end,
-      keys = function()
-         local builtin = require 'telescope.builtin'
-         return {
-            { '<leader><space>', builtin.commands, desc = 'commands' },
-            { '<leader>:', builtin.command_history, desc = 'command history' },
-            -- {
-            --    '<leader>ff',
-            --    function()
-            --       builtin.find_files { cwd = vim.fn.expand '%:p:h' }
-            --    end,
-            --    desc = 'find files',
-            -- },
-            { '<leader>ff', ':Telescope file_browser path=%:p:h<cr>', desc = 'browse files' },
-            { '<leader>pf', builtin.find_files, desc = 'find project files' },
-            { '<leader>fr', builtin.oldfiles, desc = 'recent files' },
-            { '<leader>sg', builtin.live_grep, desc = 'live grep' },
-            {
-               '<leader>bb',
-               function()
-                  builtin.buffers { sort_lastused = true, ignore_current_buffer = true }
-               end,
-               desc = 'switch buffer',
-            },
-            { '<leader>hh', builtin.help_tags, desc = 'search help' },
-            { '<leader>hk', builtin.keymaps, desc = 'keymaps' },
-            { '<leader>hl', builtin.highlights, desc = 'highlights' },
-            { '<leader>cR', builtin.lsp_references, desc = 'lsp references' },
-         }
-      end,
+      keys = {
+         { '<leader><space>', '<cmd>Telescope commands<cr>', desc = 'commands' },
+         { '<leader>:', '<cmd>Telescope command_history<cr>', desc = 'command history' },
+         {
+            '<leader>ff',
+            function()
+               require('telescope.builtin').find_files { cwd = vim.fn.expand '%:p:h' }
+            end,
+            desc = 'find files',
+         },
+         -- { '<leader>ff', '<cmd>Telescope file_browser path=%:p:h<cr>', desc = 'browse files' },
+         { '<leader>pf', '<cmd>Telescope find_files<cr>', desc = 'find project files' },
+         { '<leader>fr', '<cmd>Telescope oldfiles<cr>', desc = 'recent files' },
+         { '<leader>sg', '<cmd>Telescope live_grep<cr>', desc = 'live grep' },
+         {
+            '<leader>bb',
+            function()
+               require('telescope.builtin').buffers { sort_lastused = true, ignore_current_buffer = true }
+            end,
+            desc = 'switch buffer',
+         },
+         { '<leader>hh', '<cmd>Telescope help_tags<cr>', desc = 'search help' },
+         { '<leader>hk', '<cmd>Telescope keymaps<cr>', desc = 'keymaps' },
+         { '<leader>hl', '<cmd>Telescope highlights<cr>', desc = 'highlights' },
+      },
    },
 
    { -- Fuzzy Finder Algorithm which requires local dependencies to be built. Only load if `make` is available
@@ -677,22 +640,24 @@ require('lazy').setup({
       },
    },
 
-   {
-      'aserowy/tmux.nvim',
-      config = function()
-         return require('tmux').setup {
-            copy_sync = {
-               sync_registers = false,
-            },
-         }
-      end,
-   },
+   -- {
+   --    'aserowy/tmux.nvim',
+   --    config = function()
+   --       return require('tmux').setup {
+   --          copy_sync = {
+   --             sync_registers = false,
+   --          },
+   --       }
+   --    end,
+   -- },
 
-   'google/vim-searchindex',
+   {
+      'google/vim-searchindex',
+      event = 'VeryLazy',
+   },
 
    {
       'phaazon/hop.nvim',
-      event = 'VeryLazy',
       branch = 'v2',
       config = function()
          return require('hop').setup {}
@@ -724,7 +689,6 @@ require('lazy').setup({
    },
    {
       'klen/nvim-test',
-      event = 'VeryLazy',
       opts = {
          termOpts = {
             width = 80,
@@ -739,46 +703,15 @@ require('lazy').setup({
          { '<leader>tb', ':TestVisit<cr>' },
       },
    },
-   {
-      'stevearc/oil.nvim',
-      event = 'VeryLazy',
-      config = function()
-         require('oil').setup {
-            columns = { 'icon', 'size', 'mtime' },
-            keymaps = {
-               ['g?'] = 'actions.show_help',
-               ['<CR>'] = 'actions.select',
-               ['O'] = 'actions.select_vsplit',
-               ['B'] = 'actions.select_split',
-               ['p'] = 'actions.preview',
-               ['q'] = 'actions.close',
-               ['-'] = 'actions.parent',
-               ['_'] = 'actions.open_cwd',
-               ['g.'] = 'actions.toggle_hidden',
-            },
-            use_default_keymaps = false,
-            view_options = {
-               show_hidden = true,
-            },
-         }
-      end,
-      keys = {
-         { '<leader>fd', ':Oil<cr>' },
-      },
-   },
-   {
-      'sindrets/diffview.nvim',
-      dependencies = 'nvim-lua/plenary.nvim',
-      config = function()
-         require('diffview').setup {}
-      end,
-   },
+   -- {
+   --    'sindrets/diffview.nvim',
+   --    dependencies = 'nvim-lua/plenary.nvim',
+   --    config = function()
+   --       require('diffview').setup {}
+   --    end,
+   -- },
    {
       'nvim-lualine/lualine.nvim',
-      event = 'VeryLazy',
-      -- dependencies = {
-      --    'linrongbin16/lsp-progress.nvim',
-      -- },
       config = function()
          require('lualine').setup {
             options = {
@@ -787,10 +720,10 @@ require('lazy').setup({
                theme = 'catppuccin',
                globalstatus = true,
             },
+
             sections = {
-               lualine_a = {},
                lualine_b = {},
-               lualine_c = { 'diagnostics', 'filename', 'branch' },
+               lualine_c = { 'filename', 'location' },
                lualine_x = {
                   {
                      'fileformat',
@@ -800,10 +733,9 @@ require('lazy').setup({
                         mac = '[mac]',
                      },
                   },
-                  'location',
                   'filetype',
                },
-               lualine_y = {},
+               lualine_y = { 'branch', 'diagnostics' },
                lualine_z = {},
             },
          }
@@ -811,6 +743,7 @@ require('lazy').setup({
    },
    {
       'scalameta/nvim-metals',
+      ft = { 'scala', 'sbt' },
       dependencies = { 'nvim-lua/plenary.nvim' },
       config = function()
          local metals_config = require('metals').bare_config()
@@ -842,6 +775,7 @@ require('lazy').setup({
    },
    {
       'simrat39/rust-tools.nvim',
+      ft = 'rust',
       config = function()
          require('rust-tools').setup {
             server = {
@@ -850,6 +784,16 @@ require('lazy').setup({
          }
       end,
    },
+   {
+      'ethanholz/nvim-lastplace',
+      event = { 'BufReadPre', 'BufNewFile' },
+      opts = {
+         lastplace_ignore_buftype = { 'quickfix', 'nofile', 'help' },
+         lastplace_ignore_filetype = { 'gitcommit', 'gitrebase', 'svn', 'hgcommit' },
+         lastplace_open_folds = true,
+      },
+   },
+
    -- {
    --    'akinsho/toggleterm.nvim',
    --    version = '*',
@@ -881,10 +825,10 @@ require('lazy').setup({
 
    {
       'ahmedkhalf/project.nvim',
+      event = 'VeryLazy',
       dependencies = {
          'nvim-telescope/telescope.nvim',
       },
-      event = 'VeryLazy',
       config = function()
          require('project_nvim').setup {
             exclude_dirs = {
@@ -900,6 +844,53 @@ require('lazy').setup({
       'jghauser/mkdir.nvim',
       event = 'VeryLazy',
    },
+   {
+      'nvim-tree/nvim-tree.lua',
+      dependencies = {
+         'nvim-tree/nvim-web-devicons', -- optional, for file icons
+      },
+      config = function()
+         require('nvim-tree').setup {
+            sync_root_with_cwd = true,
+            respect_buf_cwd = true,
+            update_focused_file = {
+               enable = true,
+               update_root = true,
+            },
+         }
+      end,
+      keys = {
+         { '<leader>on', '<cmd>NvimTreeToggle<cr>', { desc = 'nvim tree' } },
+      },
+   },
+   {
+      'NvChad/nvim-colorizer.lua',
+      event = 'VeryLazy',
+      name = 'colorizer',
+      opts = {
+         user_default_options = {
+            names = false,
+         },
+      },
+   },
+   {
+      'is0n/jaq-nvim',
+      config = function()
+         require('jaq-nvim').setup {
+            cmds = {
+               external = {
+                  go = 'go run %',
+               },
+            },
+            behavior = {
+               default = 'bang',
+            },
+         }
+      end,
+      keys = {
+         { '<leader>rf', '<cmd>Jaq<cr>' },
+      },
+   },
 }, {
    ui = {
       border = 'rounded',
@@ -907,15 +898,19 @@ require('lazy').setup({
 })
 
 -- [[ Setting options ]]
--- See `:help vim.o`
 
 -- Set highlight on search
 vim.o.hlsearch = true
 
--- vim.o.showmode = false
+-- Customize terminal's title
+vim.o.title = true
+vim.o.titlestring = [[%f - nvim]]
 
--- max autocomplete height
-vim.o.pumheight = 17
+-- Mode line is already showing mode
+vim.o.showmode = false
+
+-- Max autocomplete height
+vim.o.pumheight = 15
 
 -- System clipboard
 vim.o.clipboard = 'unnamedplus'
@@ -989,10 +984,9 @@ vim.api.nvim_create_autocmd('FileType', {
 
 -- [[ Basic Keymaps ]]
 map('', ';', ':')
-map('c', 'kj', '<esc>')
+-- map('c', 'kj', '<esc>')
 
 -- Keymaps for better default experience
--- See `:help vim.keymap.set()`
 map({ 'n', 'v' }, '<Space>', '<Nop>')
 
 -- Remap for dealing with word wrap
@@ -1004,8 +998,8 @@ map('v', '>', '>gv')
 map('v', '<', '<gv')
 
 -- Buffers
-map('n', '[b', ':bn<cr>')
-map('n', ']b', ':bp<cr>')
+-- map('n', '[b', ':bn<cr>')
+-- map('n', ']b', ':bp<cr>')
 map('n', '<leader>bd', ':bd<cr>')
 map('n', '<leader>bn', ':bn<cr>')
 map('n', '<leader>bp', ':bp<cr>')
@@ -1015,6 +1009,7 @@ map('n', '<leader>bl', ':e #<cr>')
 map('n', '<leader>fi', ':e ~/.config/nvim/init.lua<cr>')
 map('n', '<leader>ft', ':e ~/.config/kitty/kitty.conf<cr>')
 map('n', '<leader>fz', ':e ~/.zshrc<cr>')
+map('n', '<leader>fp', ':e ~/code/exp/play/main.go<cr>')
 
 -- Windows
 map('n', '<leader>wo', '<C-W>o')
@@ -1038,18 +1033,6 @@ vim.api.nvim_create_autocmd('TextYankPost', {
    end,
 })
 
--- Go to last loc when opening a buffer
-vim.api.nvim_create_autocmd('BufReadPost', {
-   group = augroup 'LastLoc',
-   callback = function()
-      local mark = vim.api.nvim_buf_get_mark(0, '"')
-      local lcount = vim.api.nvim_buf_line_count(0)
-      if mark[1] > 0 and mark[1] <= lcount then
-         pcall(vim.api.nvim_win_set_cursor, 0, mark)
-      end
-   end,
-})
-
 -- close some filetypes with <q>
 vim.api.nvim_create_autocmd('FileType', {
    group = augroup 'CloseWithQ',
@@ -1059,10 +1042,8 @@ vim.api.nvim_create_autocmd('FileType', {
       'man',
       'notify',
       'lspinfo',
-      'spectre_panel',
       'startuptime',
       'tsplayground',
-      'PlenaryTestPopup',
    },
    callback = function(event)
       vim.bo[event.buf].buflisted = false
@@ -1077,6 +1058,4 @@ vim.api.nvim_create_autocmd('BufWritePre', {
    end,
 })
 
--- vim.cmd [[set statusline=%!v:lua.require'statusline'.statusline()]]
--- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=3 sts=3 sw=3 et

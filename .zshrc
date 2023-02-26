@@ -27,6 +27,7 @@ alias vim="nvim"
 alias k="kubectl"
 alias gad="git fza"
 
+export DISABLE_AUTO_TITLE="true"
 export PATH=$PATH:$HOME/.emacs.d/bin
 export PATH=$PATH:$HOME/.local/bin
 export PATH=$PATH:$HOME/go/bin
@@ -50,7 +51,7 @@ command -v fnm >/dev/null && eval "`fnm env`"
 
 [[ -r "$HOME/emacs-vterm-zsh.sh" ]] && source "$HOME/emacs-vterm-zsh.sh"
 
-[[ -s  "$HOME/.cargo/env" ]] & source "$HOME/.cargo/env"
+[[ -r  "$HOME/.cargo/env" ]] & source "$HOME/.cargo/env"
 
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
@@ -62,3 +63,4 @@ eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
 
+eval "$(~/.rbenv/bin/rbenv init - zsh)"
