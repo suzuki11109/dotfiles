@@ -18,13 +18,14 @@ return {
 
    {
       'ahmedkhalf/project.nvim',
-      event = { 'BufReadPre', 'BufNewFile' },
+      event = 'VeryLazy',
       dependencies = {
          'nvim-telescope/telescope.nvim',
       },
       config = function()
          require('project_nvim').setup {
             exclude_dirs = {
+               '~',
                '/home/aki',
             },
          }
@@ -55,8 +56,20 @@ return {
             },
          }
       end,
+      cmd = 'Jaq',
       keys = {
          { '<leader>rf', '<cmd>Jaq<cr>' },
       },
+   },
+
+   {
+      'akinsho/toggleterm.nvim',
+      version = '*',
+      event = 'VeryLazy',
+      config = function()
+         require('toggleterm').setup {
+            open_mapping = [[<C-\>]],
+         }
+      end,
    },
 }

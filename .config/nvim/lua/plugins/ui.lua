@@ -64,11 +64,14 @@ return {
          { '<leader>hh', '<cmd>Telescope help_tags<cr>', desc = 'search help' },
          { '<leader>hk', '<cmd>Telescope keymaps<cr>', desc = 'keymaps' },
          { '<leader>hl', '<cmd>Telescope highlights<cr>', desc = 'highlights' },
+
+         { '<leader>gb', '<cmd>Telescope git_branches<cr>', desc = 'git branches' },
       },
    },
 
    { -- Fuzzy Finder Algorithm which requires local dependencies to be built. Only load if `make` is available
       'nvim-telescope/telescope-fzf-native.nvim',
+      event = 'VeryLazy',
       build = 'make',
       dependencies = { 'nvim-telescope/telescope.nvim' },
       cond = vim.fn.executable 'make' == 1,
@@ -104,37 +107,38 @@ return {
       },
    },
 
-   {
-      'nvim-lualine/lualine.nvim',
-      config = function()
-         require('lualine').setup {
-            options = {
-               section_separators = '',
-               component_separators = '',
-               theme = 'catppuccin',
-               globalstatus = true,
-            },
-
-            sections = {
-               lualine_b = {},
-               lualine_c = { 'filename', 'location' },
-               lualine_x = {
-                  {
-                     'fileformat',
-                     symbols = {
-                        unix = '',
-                        dos = '[dos]',
-                        mac = '[mac]',
-                     },
-                  },
-                  'filetype',
-               },
-               lualine_y = { 'branch', 'diagnostics' },
-               lualine_z = {},
-            },
-         }
-      end,
-   },
+   -- {
+   --    'nvim-lualine/lualine.nvim',
+   --    event = 'VeryLazy',
+   --    config = function()
+   --       require('lualine').setup {
+   --          options = {
+   --             section_separators = '',
+   --             component_separators = '',
+   --             theme = 'catppuccin',
+   --             globalstatus = true,
+   --          },
+   --
+   --          sections = {
+   --             lualine_b = {},
+   --             lualine_c = { 'filename', 'location' },
+   --             lualine_x = {
+   --                {
+   --                   'fileformat',
+   --                   symbols = {
+   --                      unix = '',
+   --                      dos = '[dos]',
+   --                      mac = '[mac]',
+   --                   },
+   --                },
+   --                'filetype',
+   --             },
+   --             lualine_y = { 'branch', 'diagnostics' },
+   --             lualine_z = {},
+   --          },
+   --       }
+   --    end,
+   -- },
 
    {
       'nvim-tree/nvim-tree.lua',
@@ -169,6 +173,7 @@ return {
 
    {
       'nvim-treesitter/nvim-treesitter',
+      event = { 'BufReadPre', 'BufNewFile' },
       dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
       build = function()
          pcall(require('nvim-treesitter.install').update { with_sync = true })
@@ -220,7 +225,7 @@ return {
 
    {
       'lewis6991/gitsigns.nvim',
-      event = 'VeryLazy',
+      event = { 'BufReadPre', 'BufNewFile' },
       opts = {
          signs = {
             add = { text = '▎' },
@@ -230,6 +235,24 @@ return {
             changedelete = { text = '▎' },
             untracked = { text = '▎' },
          },
+      },
+      keys = {
+         { '<leader>g]', '<cmd>Gitsigns next_hunk<cr>' },
+         { '<leader>g[', '<cmd>Gitsigns prev_hunk<cr>' },
+         { '<leader>gh', '<cmd>Gitsigns preview_hunk<cr>' },
+         { '<leader>gs', '<cmd>Gitsigns stage_hunk<cr>' },
+         { '<leader>gu', '<cmd>Gitsigns undo_stage_hunk<cr>' },
+         { '<leader>gr', '<cmd>Gitsigns reset_stage_hunk<cr>' },
+      },
+   },
+   {
+      'tpope/vim-fugitive',
+      cmd = 'Git',
+      keys = {
+         { '<leader>gt', '<cmd>Git status<cr>' },
+         { '<leader>gg', '<cmd>Git<cr>' },
+         { '<leader>gP', '<cmd>Git push<cr>' },
+         { '<leader>gF', '<cmd>Git pull --rebase<cr>' },
       },
    },
 }

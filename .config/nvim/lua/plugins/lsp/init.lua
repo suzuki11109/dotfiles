@@ -14,6 +14,7 @@ return {
       opts = {
          servers = {
             jsonls = {},
+            solargraph = {},
             gopls = {},
             tsserver = {},
             pyright = {},

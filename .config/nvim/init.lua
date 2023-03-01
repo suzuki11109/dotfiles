@@ -1,28 +1,35 @@
--- git diff side by side
--- kitty tab length
--- lazygit/ neovim remote
+-- change font
+-- tmux new tab with name prompt
+-- new tmux session neovim editor window
+-- tmux manager runner
+-- tmux remove sensible
+-- bigger toggleterm
+-- next toggleterm
+-- null-ls
 
--- bookmark/grapple/harpoon/jump mark
--- ruby rails
+-- project root nvim
+-- tmux xdgconfig
 
--- Later
--- octo
+-- dashboard
+
+-- telescope search under directory
+
 -- clojure
 -- parinfer
 -- angular
+
+-- bookmark/grapple/harpoon/jump mark
+
 -- elixir
 -- ocaml
 -- haskell
 
 -- Maybe never
--- rest
+-- fzf find app open new tmux window
 -- resession
 -- overseer
--- fzf find app open new tmux window
--- runner to tmux
--- new session from shell
--- new tmux session neovim editor window
---
+-- octo
+-- rest
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
@@ -50,6 +57,8 @@ require('lazy').setup('plugins', {
    },
 })
 
+vim.env.GIT_EDITOR = 'nvr --servername ' .. vim.v.servername .. " -cc vsplit --remote-wait +'set bufhidden=delete'"
+vim.cmd [[set statusline=%!v:lua.require'statusline'.output()]]
 vim.cmd [[colorscheme catppuccin]]
 
 -- vim: ts=3 sts=3 sw=3 et

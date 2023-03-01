@@ -23,9 +23,11 @@ map('n', '<leader>bl', ':e #<cr>')
 
 -- Files
 map('n', '<leader>fi', ':e ~/.config/nvim/init.lua<cr>')
-map('n', '<leader>ft', ':e ~/.config/kitty/kitty.conf<cr>')
 map('n', '<leader>fz', ':e ~/.zshrc<cr>')
-map('n', '<leader>fp', ':e ~/code/exp/play/main.go<cr>')
+map('n', '<leader>fx', ':e ~/.tmux.conf<cr>')
+map('n', '<leader>ft', ':e ~/.config/alacritty/alacritty.yaml<cr>')
+-- map('n', '<leader>ft', ':e ~/.config/kitty/kitty.conf<cr>')
+map('n', '<leader>fG', ':e ~/code/exp/play/main.go<cr>')
 
 -- Windows
 map('n', '<leader>wo', '<C-W>o')

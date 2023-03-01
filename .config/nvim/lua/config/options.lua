@@ -23,11 +23,11 @@ vim.o.hlsearch = true
 vim.o.title = true
 vim.o.titlestring = [[%f - nvim]]
 
--- Mode line is already showing mode
-vim.o.showmode = false
+-- Show mode in command line
+vim.o.showmode = true
 
 -- Max autocomplete height
-vim.o.pumheight = 15
+vim.o.pumheight = 17
 
 -- System clipboard
 vim.o.clipboard = 'unnamedplus'
@@ -123,6 +123,8 @@ vim.api.nvim_create_autocmd('FileType', {
       'lspinfo',
       'startuptime',
       'tsplayground',
+      'git',
+      'fugitive',
    },
    callback = function(event)
       vim.bo[event.buf].buflisted = false

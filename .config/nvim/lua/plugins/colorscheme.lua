@@ -5,12 +5,20 @@ return {
       opts = {
          flavour = 'mocha',
          transparent_background = true,
+         highlight_overrides = {
+            mocha = function(mocha)
+               return {
+                  Pmenu = { bg = mocha.base },
+               }
+            end,
+         },
          integrations = {
+            cmp = true,
             fidget = true,
-            mason = true,
             gitsigns = true,
             hop = true,
-            cmp = true,
+            mason = true,
+            nvimtree = true,
             treesitter = true,
             telescope = true,
             lsp_trouble = true,

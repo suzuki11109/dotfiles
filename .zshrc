@@ -18,22 +18,42 @@ if ! zgenom saved; then
   zgenom load romkatv/powerlevel10k powerlevel10k
   zgenom load unixorn/fzf-zsh-plugin
   zgenom load agkozak/zsh-z
+  zgenom load djui/alias-tips
   zgenom save
 fi
 
-alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
+zstyle ':fzf-tab:complete:git-(add|diff|restore):*' fzf-preview \
+	'git diff $word | delta'
+zstyle ':fzf-tab:complete:git-log:*' fzf-preview \
+	'git log --color=always $word'
+zstyle ':fzf-tab:complete:git-help:*' fzf-preview \
+	'git help $word | bat -plman --color=always'
+zstyle ':fzf-tab:complete:git-show:*' fzf-preview \
+	'case "$group" in
+	"commit tag") git show --color=always $word ;;
+	*) git show --color=always $word | delta ;;
+	esac'
+zstyle ':fzf-tab:complete:git-checkout:*' fzf-preview \
+	'case "$group" in
+	"modified file") git diff $word | delta ;;
+	"recent commit object name") git show --color=always $word | delta ;;
+	*) git log --color=always $word ;;
+	esac'
+
 alias vi="nvim"
 alias vim="nvim"
+export EDITOR="nvim"
+
+alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias k="kubectl"
 alias gad="git fza"
 
-export DISABLE_AUTO_TITLE="true"
+# export DISABLE_AUTO_TITLE="true"
 export PATH=$PATH:$HOME/.emacs.d/bin
 export PATH=$PATH:$HOME/.local/bin
 export PATH=$PATH:$HOME/go/bin
 export PATH=$PATH:$HOME/.local/share/coursier/bin
 
-export EDITOR=nvim
 export GOPATH=$HOME/go
 export XDG_CONFIG_HOME=$HOME/.config
 export PATH="$HOME/.local/share/fnm:$PATH"
@@ -51,7 +71,7 @@ command -v fnm >/dev/null && eval "`fnm env`"
 
 [[ -r "$HOME/emacs-vterm-zsh.sh" ]] && source "$HOME/emacs-vterm-zsh.sh"
 
-[[ -r  "$HOME/.cargo/env" ]] & source "$HOME/.cargo/env"
+[[ -r "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
@@ -62,5 +82,5 @@ command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
-
 eval "$(~/.rbenv/bin/rbenv init - zsh)"
+
