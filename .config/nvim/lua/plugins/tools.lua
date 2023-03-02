@@ -24,8 +24,8 @@ return {
       },
       config = function()
          require('project_nvim').setup {
+            ignore_lsp = { 'null-ls' },
             exclude_dirs = {
-               '~',
                '/home/aki',
             },
          }
@@ -69,6 +69,13 @@ return {
       config = function()
          require('toggleterm').setup {
             open_mapping = [[<C-\>]],
+            size = function(term)
+               if term.direction == 'horizontal' then
+                  return 17
+               elseif term.direction == 'vertical' then
+                  return vim.o.columns * 0.3
+               end
+            end,
          }
       end,
    },

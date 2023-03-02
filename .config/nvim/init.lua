@@ -1,24 +1,19 @@
--- change font
--- tmux new tab with name prompt
+-- snippet cmp setting
+-- dashboard/ project management
+
 -- new tmux session neovim editor window
 -- tmux manager runner
--- tmux remove sensible
--- bigger toggleterm
 -- next toggleterm
--- null-ls
-
--- project root nvim
--- tmux xdgconfig
-
--- dashboard
-
--- telescope search under directory
 
 -- clojure
 -- parinfer
 -- angular
 
 -- bookmark/grapple/harpoon/jump mark
+
+-- dbeaver client vi
+-- hoppscoth api tester
+-- improve docker/k8s zsh
 
 -- elixir
 -- ocaml

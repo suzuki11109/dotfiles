@@ -5,7 +5,7 @@ return {
       'neovim/nvim-lspconfig',
       event = { 'BufReadPre', 'BufNewFile' },
       dependencies = {
-         { 'folke/neodev.nvim', config = true },
+         { 'folke/neodev.nvim', opts = { experimental = { pathStrict = true } } },
          'hrsh7th/cmp-nvim-lsp',
          'williamboman/mason.nvim',
          'williamboman/mason-lspconfig.nvim',
@@ -21,8 +21,12 @@ return {
             lua_ls = {
                settings = {
                   Lua = {
+                     workspace = {
+                        checkThirdParty = false,
+                     },
                      completion = {
                         callSnippet = 'Replace',
+                        keywordSnippet = 'Disable',
                      },
                   },
                },

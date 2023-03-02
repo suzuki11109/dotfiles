@@ -42,29 +42,17 @@ return {
       end,
       keys = {
          { '<leader><space>', '<cmd>Telescope commands<cr>', desc = 'commands' },
+         { '<leader>.', '<cmd>Telescope resume<cr>', desc = 'resume' },
          { '<leader>:', '<cmd>Telescope command_history<cr>', desc = 'command history' },
-         {
-            '<leader>ff',
-            function()
-               require('telescope.builtin').find_files { cwd = vim.fn.expand '%:p:h' }
-            end,
-            desc = 'find files',
-         },
-         -- { '<leader>ff', '<cmd>Telescope file_browser path=%:p:h<cr>', desc = 'browse files' },
-         { '<leader>pf', '<cmd>Telescope find_files<cr>', desc = 'find project files' },
+         { '<leader>ff', '<cmd>Telescope find_files cwd=%:p:h<cr>', desc = 'find current dir files' },
+         { '<leader>pf', '<cmd>Telescope find_files<cr>', desc = 'find files' },
          { '<leader>fr', '<cmd>Telescope oldfiles<cr>', desc = 'recent files' },
-         { '<leader>sp', '<cmd>Telescope live_grep<cr>', desc = 'live grep' },
-         {
-            '<leader>bb',
-            function()
-               require('telescope.builtin').buffers { sort_lastused = true, ignore_current_buffer = true }
-            end,
-            desc = 'switch buffer',
-         },
+         { '<leader>ss', '<cmd>Telescope live_grep<cr>', desc = 'live grep' },
+         { '<leader>sl', '<cmd>Telescope current_buffer_fuzzy_find<cr>', desc = 'search this buffer' },
+         { '<leader>bb', '<cmd>Telescope buffers sort_lastused=true ignore_current_buffer=true<cr>', desc = 'switch buffers' },
          { '<leader>hh', '<cmd>Telescope help_tags<cr>', desc = 'search help' },
          { '<leader>hk', '<cmd>Telescope keymaps<cr>', desc = 'keymaps' },
          { '<leader>hl', '<cmd>Telescope highlights<cr>', desc = 'highlights' },
-
          { '<leader>gb', '<cmd>Telescope git_branches<cr>', desc = 'git branches' },
       },
    },
@@ -78,6 +66,18 @@ return {
       config = function()
          require('telescope').load_extension 'fzf'
       end,
+   },
+
+   {
+      'smilovanovic/telescope-search-dir-picker.nvim',
+      event = 'VeryLazy',
+      dependencies = { 'nvim-telescope/telescope.nvim' },
+      config = function()
+         require('telescope').load_extension 'search_dir_picker'
+      end,
+      keys = {
+         { '<leader>sd', '<cmd>Telescope search_dir_picker<cr>', desc = 'search in directory' },
+      },
    },
 
    {
