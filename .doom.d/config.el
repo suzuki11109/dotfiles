@@ -9,9 +9,9 @@
 (setq user-full-name "Aki Suzuki"
       user-mail-address "suzuki11109@gmail.com")
 
-(setq doom-font (font-spec :family "monospace" :size 13 :weight 'regular)
-      doom-variable-pitch-font (font-spec :family "monospace" :size 13 :weight 'regular)
-      doom-big-font (font-spec :family "monospace" :size 15 :weight 'regular))
+(setq doom-font (font-spec :family "monospace" :size 14 :weight 'regular)
+      doom-variable-pitch-font (font-spec :family "monospace" :size 14 :weight 'regular)
+      doom-big-font (font-spec :family "monospace" :size 16 :weight 'regular))
 ;; Doom exposes five (optional) variables for controlling fonts in Doom:
 ;;
 (add-hook! 'doom-load-theme-hook :append
@@ -132,6 +132,8 @@
   (add-hook 'before-save-hook #'lsp-organize-imports nil 'local))
 
 (setq orderless-matching-styles '(orderless-literal orderless-flex))
+
+(setq +tree-sitter-hl-enabled-modes t)
 
 (defun remove-dos-eol ()
  "Do not show ^M in files containing mixed UNIX and DOS line endings."
