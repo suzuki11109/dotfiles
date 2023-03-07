@@ -1,5 +1,4 @@
 return {
-
    {
       'nvim-telescope/telescope.nvim',
       branch = '0.1.x',
@@ -107,39 +106,6 @@ return {
       },
    },
 
-   -- {
-   --    'nvim-lualine/lualine.nvim',
-   --    event = 'VeryLazy',
-   --    config = function()
-   --       require('lualine').setup {
-   --          options = {
-   --             section_separators = '',
-   --             component_separators = '',
-   --             theme = 'catppuccin',
-   --             globalstatus = true,
-   --          },
-   --
-   --          sections = {
-   --             lualine_b = {},
-   --             lualine_c = { 'filename', 'location' },
-   --             lualine_x = {
-   --                {
-   --                   'fileformat',
-   --                   symbols = {
-   --                      unix = '',
-   --                      dos = '[dos]',
-   --                      mac = '[mac]',
-   --                   },
-   --                },
-   --                'filetype',
-   --             },
-   --             lualine_y = { 'branch', 'diagnostics' },
-   --             lualine_z = {},
-   --          },
-   --       }
-   --    end,
-   -- },
-
    {
       'nvim-tree/nvim-tree.lua',
       dependencies = {
@@ -221,38 +187,5 @@ return {
       config = function(_, opts)
          require('nvim-treesitter.configs').setup(opts)
       end,
-   },
-
-   {
-      'lewis6991/gitsigns.nvim',
-      event = { 'BufReadPre', 'BufNewFile' },
-      opts = {
-         signs = {
-            add = { text = '▎' },
-            change = { text = '▎' },
-            delete = { text = '契' },
-            topdelete = { text = '契' },
-            changedelete = { text = '▎' },
-            untracked = { text = '▎' },
-         },
-      },
-      keys = {
-         { '<leader>g]', '<cmd>Gitsigns next_hunk<cr>' },
-         { '<leader>g[', '<cmd>Gitsigns prev_hunk<cr>' },
-         { '<leader>gh', '<cmd>Gitsigns preview_hunk<cr>' },
-         { '<leader>gs', '<cmd>Gitsigns stage_hunk<cr>' },
-         { '<leader>gu', '<cmd>Gitsigns undo_stage_hunk<cr>' },
-         { '<leader>gr', '<cmd>Gitsigns reset_stage_hunk<cr>' },
-      },
-   },
-   {
-      'tpope/vim-fugitive',
-      cmd = 'Git',
-      keys = {
-         { '<leader>gt', '<cmd>Git status<cr>' },
-         { '<leader>gg', '<cmd>Git<cr>' },
-         { '<leader>gP', '<cmd>Git push<cr>' },
-         { '<leader>gF', '<cmd>Git pull --rebase<cr>' },
-      },
    },
 }

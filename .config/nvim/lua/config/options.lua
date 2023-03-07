@@ -131,3 +131,9 @@ vim.api.nvim_create_autocmd('FileType', {
       vim.keymap.set('n', 'q', '<cmd>close<cr>', { buffer = event.buf, silent = true })
    end,
 })
+
+-- reload after change tmux config
+vim.api.nvim_create_autocmd('BufWritePost', {
+   pattern = { '*tmux.conf' },
+   command = "execute 'silent !tmux source <afile> --silent'",
+})

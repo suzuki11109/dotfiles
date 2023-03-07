@@ -22,6 +22,9 @@ if ! zgenom saved; then
   zgenom save
 fi
 
+# disable sort when completing options of any command
+zstyle ':completion:complete:*:options' sort false
+
 zstyle ':fzf-tab:complete:git-(add|diff|restore):*' fzf-preview \
 	'git diff $word | delta'
 zstyle ':fzf-tab:complete:git-log:*' fzf-preview \
@@ -84,3 +87,11 @@ eval "$(pyenv virtualenv-init -)"
 
 eval "$(~/.rbenv/bin/rbenv init - zsh)"
 
+
+
+# Load Angular CLI autocompletion.
+source <(ng completion script)
+
+executables(){
+    echo -n "$PATH" | xargs -d: -I{} -r -- find -L {} -maxdepth 1 -mindepth 1 -type f -executable -printf '%P\n' 2>/dev/null | sort -u
+}

@@ -1,26 +1,21 @@
--- snippet cmp setting
--- dashboard/ project management
-
--- new tmux session neovim editor window
--- tmux manager runner
--- next toggleterm
-
--- clojure
--- parinfer
--- angular
-
--- bookmark/grapple/harpoon/jump mark
-
--- dbeaver client vi
 -- hoppscoth api tester
--- improve docker/k8s zsh
+-- dbeaver client vi
 
+-- Later
+-- harpoon
 -- elixir
 -- ocaml
--- haskell
+-- tmuxp
 
 -- Maybe never
--- fzf find app open new tmux window
+-- tmux fzf launch app in new tab (top,k9s)
+-- tmux popup
+-- dashboard/ project management
+-- dap
+-- haskell
+-- clojure
+-- parinfer
+-- fzf find executable open new tmux window
 -- resession
 -- overseer
 -- octo
@@ -52,7 +47,7 @@ require('lazy').setup('plugins', {
    },
 })
 
-vim.env.GIT_EDITOR = 'nvr --servername ' .. vim.v.servername .. " -cc vsplit --remote-wait +'set bufhidden=delete'"
+-- vim.env.GIT_EDITOR = 'nvr --servername ' .. vim.v.servername .. " -cc vsplit --remote-wait +'set bufhidden=delete'"
 vim.cmd [[set statusline=%!v:lua.require'statusline'.output()]]
 vim.cmd [[colorscheme catppuccin]]
 

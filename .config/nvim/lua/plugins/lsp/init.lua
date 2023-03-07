@@ -5,7 +5,12 @@ return {
       'neovim/nvim-lspconfig',
       event = { 'BufReadPre', 'BufNewFile' },
       dependencies = {
-         { 'folke/neodev.nvim', opts = { experimental = { pathStrict = true } } },
+         {
+            'folke/neodev.nvim',
+            config = function()
+               require('neodev').setup {}
+            end,
+         },
          'hrsh7th/cmp-nvim-lsp',
          'williamboman/mason.nvim',
          'williamboman/mason-lspconfig.nvim',
@@ -17,6 +22,7 @@ return {
             solargraph = {},
             gopls = {},
             tsserver = {},
+            angularls = {},
             pyright = {},
             lua_ls = {
                settings = {
@@ -26,7 +32,6 @@ return {
                      },
                      completion = {
                         callSnippet = 'Replace',
-                        keywordSnippet = 'Disable',
                      },
                   },
                },
