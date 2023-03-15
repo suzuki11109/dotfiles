@@ -52,21 +52,21 @@ alias k="kubectl"
 alias gad="git fza"
 
 # export DISABLE_AUTO_TITLE="true"
-export PATH=$PATH:$HOME/.emacs.d/bin
-export PATH=$PATH:$HOME/.local/bin
-export PATH=$PATH:$HOME/go/bin
-export PATH=$PATH:$HOME/.local/share/coursier/bin
+# export PATH=$PATH:$HOME/.emacs.d/bin
+# export PATH=$PATH:$HOME/.local/bin
+# export PATH=$PATH:$HOME/go/bin
+# export PATH=$PATH:$HOME/.local/share/coursier/bin
 
-export GOPATH=$HOME/go
-export XDG_CONFIG_HOME=$HOME/.config
-export PATH="$HOME/.local/share/fnm:$PATH"
+# export GOPATH=$HOME/go
+# export XDG_CONFIG_HOME=$HOME/.config
+# export PATH="$HOME/.local/share/fnm:$PATH"
 # fzf colors
 export FZF_DEFAULT_OPTS=" \
 --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
 --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
 
-command -v fnm >/dev/null && eval "`fnm env`"
+# command -v fnm >/dev/null && eval "`fnm env`"
 
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
@@ -76,12 +76,12 @@ command -v fnm >/dev/null && eval "`fnm env`"
 
 [[ -r "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
-export SDKMAN_DIR="$HOME/.sdkman"
+# export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # comment if not install
-export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+# export PYENV_ROOT="$HOME/.pyenv"
+# command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
