@@ -3,16 +3,17 @@ return {
       'nvim-telescope/telescope.nvim',
       branch = '0.1.x',
       dependencies = { 'nvim-lua/plenary.nvim' },
-      cmd = 'Telescope',
       config = function()
          local actions = require 'telescope.actions'
          require('telescope').setup {
             defaults = {
+               file_ignore_patterns = { '.git/', 'node_modules/' },
                layout_config = {
-                  horizontal = {
-                     preview_width = 0.50,
-                  },
+                  preview_width = 0.50,
+                  prompt_position = 'top',
                },
+               path_display = { 'smart' },
+               sorting_strategy = 'ascending',
                mappings = {
                   i = {
                      ['<C-u>'] = false,
@@ -27,14 +28,7 @@ return {
             },
             pickers = {
                find_files = {
-                  find_command = { 'rg', '--files', '--hidden', '--glob', '!**/.git/*' },
-               },
-            },
-            extensions = {
-               file_browser = {
-                  hidden = true,
-                  select_buffer = true,
-                  respect_gitignore = true,
+                  find_command = { 'rg', '--files', '--hidden' },
                },
             },
          }
@@ -58,7 +52,6 @@ return {
 
    { -- Fuzzy Finder Algorithm which requires local dependencies to be built. Only load if `make` is available
       'nvim-telescope/telescope-fzf-native.nvim',
-      event = 'VeryLazy',
       build = 'make',
       dependencies = { 'nvim-telescope/telescope.nvim' },
       cond = vim.fn.executable 'make' == 1,
@@ -69,13 +62,37 @@ return {
 
    {
       'smilovanovic/telescope-search-dir-picker.nvim',
-      event = 'VeryLazy',
+      event = 'VimEnter',
       dependencies = { 'nvim-telescope/telescope.nvim' },
       config = function()
          require('telescope').load_extension 'search_dir_picker'
       end,
       keys = {
          { '<leader>sd', '<cmd>Telescope search_dir_picker<cr>', desc = 'search in directory' },
+      },
+   },
+
+   {
+      'ahmedkhalf/project.nvim',
+      event = 'VimEnter',
+      dependencies = {
+         'nvim-telescope/telescope.nvim',
+      },
+      config = function()
+         require('project_nvim').setup {
+            detection_methods = { 'pattern', 'lsp' },
+            patterns = { '.git', '_darcs', '.hg', '.bzr', '.svn', 'go.mod', 'build.sbt', 'pyproject.toml', 'Makefile', 'package.json' },
+            ignore_lsp = { 'null-ls' },
+            exclude_dirs = {
+               '/home/aki',
+            },
+            silent_chdir = false,
+         }
+
+         require('telescope').load_extension 'projects'
+      end,
+      keys = {
+         { '<leader>pp', '<cmd>Telescope projects<cr>' },
       },
    },
 

@@ -1,23 +1,53 @@
--- hoppscoth api tester
--- dbeaver client vi
+-- harpoon
+-- gitmux config + new icons
+-- cmp sort comparator
+
+-- reuse only one hover split
+
+-- fugitive highlight
+-- fugitive remap
+-- fugitive fullscreen
+
+-- diffview stage/unstage?
+
+-- git alias completion?
+-- docker completions?
+
+-- toggle line numbers
+
+-- fzf open new tmux tab with selected directory/project roots
+-- tmux close pane without confirm
+
+-- dwm + patches
+-- xorg keyboard shortcut/mouse
+-- xorg hidpi
+-- bar wifi,battery,volume,bluetooth
+-- tray fcitx,zoom
+-- feh
+-- bluetooth blueberry
+-- volume pavucontrol
+-- wifi networkmanager
+-- shutdown menu
+-- lockscreen
+-- login screen
+-- eww menu?
+-- default applications?
+
+-- partition
+-- endeavouros lts kernel?
 
 -- Later
--- harpoon
 -- elixir
 -- ocaml
 -- tmuxp
 
 -- Maybe never
 -- tmux fzf launch app in new tab (top,k9s)
--- tmux popup
 -- dashboard/ project management
 -- dap
 -- haskell
 -- clojure
 -- parinfer
--- fzf find executable open new tmux window
--- resession
--- overseer
 -- octo
 -- rest
 

@@ -22,27 +22,6 @@ return {
    },
 
    {
-      'ahmedkhalf/project.nvim',
-      event = 'VeryLazy',
-      dependencies = {
-         'nvim-telescope/telescope.nvim',
-      },
-      config = function()
-         require('project_nvim').setup {
-            ignore_lsp = { 'null-ls' },
-            exclude_dirs = {
-               '/home/aki',
-            },
-         }
-
-         require('telescope').load_extension 'projects'
-      end,
-      keys = {
-         { '<leader>pp', '<cmd>Telescope projects<cr>' },
-      },
-   },
-
-   {
       'is0n/jaq-nvim',
       config = function()
          require('jaq-nvim').setup {
@@ -63,7 +42,16 @@ return {
    },
 
    {
+      'iamcco/markdown-preview.nvim',
+      event = 'VeryLazy',
+      build = function()
+         vim.fn['mkdp#util#install']()
+      end,
+   },
+
+   {
       'aserowy/tmux.nvim',
+      event = 'VeryLazy',
       config = function()
          return require('tmux').setup {
             copy_sync = {
@@ -122,45 +110,21 @@ return {
          { '<leader>gh', '<cmd>Gitsigns preview_hunk<cr>' },
          { '<leader>gs', '<cmd>Gitsigns stage_hunk<cr>' },
          { '<leader>gu', '<cmd>Gitsigns undo_stage_hunk<cr>' },
-         { '<leader>gr', '<cmd>Gitsigns reset_stage_hunk<cr>' },
-      },
-   },
-
-   {
-      'TimUntersberger/neogit',
-      cmd = 'Neogit',
-      dependencies = 'nvim-lua/plenary.nvim',
-      config = function()
-         require('neogit').setup {
-            use_magit_keybindings = false,
-            signs = {
-               section = { '>', 'v' },
-               item = { '>', 'v' },
-               hunk = { '', '' },
-            },
-         }
-      end,
-      keys = {
-         { '<leader>gg', '<cmd>Neogit<cr>' },
+         { '<leader>gx', '<cmd>Gitsigns reset_stage_hunk<cr>' },
       },
    },
 
    {
       'tpope/vim-fugitive',
-      enabled = false,
       cmd = 'Git',
       keys = {
-         { '<leader>gt', '<cmd>Git status<cr>' },
          { '<leader>gg', '<cmd>Git<cr>' },
+         { '<leader>gt', '<cmd>Git status<cr>' },
          { '<leader>gP', '<cmd>Git push<cr>' },
          { '<leader>gF', '<cmd>Git pull --rebase<cr>' },
+         { '<leader>gz', '<cmd>Git stash<cr>' },
+         { '<leader>gZ', '<cmd>Git stash pop<cr>' },
+         { '<leader>gb', '<cmd>Git branch<cr>' },
       },
-   },
-   {
-      'iamcco/markdown-preview.nvim',
-      event = 'VeryLazy',
-      build = function()
-         vim.fn['mkdp#util#install']()
-      end,
    },
 }

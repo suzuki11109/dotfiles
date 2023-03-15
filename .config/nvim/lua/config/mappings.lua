@@ -16,7 +16,7 @@ map('v', '>', '>gv')
 map('v', '<', '<gv')
 
 -- Buffers
-map('n', '<leader>bd', ':bd<cr>')
+map('n', '<leader>bd', ':bp|bd#<cr>')
 map('n', '<leader>bn', ':bn<cr>')
 map('n', '<leader>bp', ':bp<cr>')
 map('n', '<leader>bl', ':e #<cr>')

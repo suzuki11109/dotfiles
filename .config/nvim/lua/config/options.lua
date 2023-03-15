@@ -20,8 +20,8 @@ vim.o.relativenumber = true
 vim.o.hlsearch = true
 
 -- Customize terminal's title
-vim.o.title = true
-vim.o.titlestring = [[%f - nvim]]
+-- vim.o.title = true
+-- vim.o.titlestring = [[%f - nvim]]
 
 -- Show mode in command line
 vim.o.showmode = true
@@ -137,3 +137,9 @@ vim.api.nvim_create_autocmd('BufWritePost', {
    pattern = { '*tmux.conf' },
    command = "execute 'silent !tmux source <afile> --silent'",
 })
+
+vim.api.nvim_create_user_command('YankFilePath', function()
+   local path = vim.fn.expand '%:p'
+   vim.fn.setreg('+', path)
+   vim.notify('Copied "' .. path .. '" to the clipboard!')
+end, {})

@@ -2,7 +2,7 @@ local M = {}
 
 function M.output()
    local parts = {
-      '%<%t ',
+      '%<%f ',
       '%h%m%r ',
       '%#LspDiagnosticsError#',
       [[%{luaeval("require'statusline'.diagnostic_errors()")}]],
@@ -25,7 +25,7 @@ function M.output()
 end
 
 function M.diagnostic_errors()
-   local num_errors = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.ERROR })
+   local num_errors = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.ERROR })
    if num_errors > 0 then
       return ' ' .. num_errors .. ' '
    end
@@ -33,7 +33,7 @@ function M.diagnostic_errors()
 end
 
 function M.diagnostic_warnings()
-   local num = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.WARN })
+   local num = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.WARN })
    if num > 0 then
       return ' ' .. num .. ' '
    end
@@ -41,7 +41,7 @@ function M.diagnostic_warnings()
 end
 
 function M.diagnostic_hints()
-   local num = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.HINT })
+   local num = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.HINT })
    if num > 0 then
       return ' ' .. num .. ' '
    end
@@ -49,7 +49,7 @@ function M.diagnostic_hints()
 end
 
 function M.diagnostic_infos()
-   local num = #vim.diagnostic.get(0, { severity = vim.diagnostic.severity.INFO })
+   local num = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.INFO })
    if num > 0 then
       return ' ' .. num .. ' '
    end
