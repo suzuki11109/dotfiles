@@ -51,47 +51,20 @@ alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias k="kubectl"
 alias gad="git fza"
 
-# export DISABLE_AUTO_TITLE="true"
-# export PATH=$PATH:$HOME/.emacs.d/bin
-# export PATH=$PATH:$HOME/.local/bin
-# export PATH=$PATH:$HOME/go/bin
-# export PATH=$PATH:$HOME/.local/share/coursier/bin
-
-# export GOPATH=$HOME/go
-# export XDG_CONFIG_HOME=$HOME/.config
-# export PATH="$HOME/.local/share/fnm:$PATH"
-# fzf colors
 export FZF_DEFAULT_OPTS=" \
 --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
 --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
 
-# command -v fnm >/dev/null && eval "`fnm env`"
-
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
 [[ -r "$HOME/emacs-vterm-zsh.sh" ]] && source "$HOME/emacs-vterm-zsh.sh"
 
-[[ -r "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
-
-# export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
-# comment if not install
-# export PYENV_ROOT="$HOME/.pyenv"
-# command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-
-eval "$(~/.rbenv/bin/rbenv init - zsh)"
-
-
-
 # Load Angular CLI autocompletion.
-source <(ng completion script)
+command -v ng >/dev/null && source <(ng completion script)
 
 executables(){
     echo -n "$PATH" | xargs -d: -I{} -r -- find -L {} -maxdepth 1 -mindepth 1 -type f -executable -printf '%P\n' 2>/dev/null | sort -u
 }
+
+[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
