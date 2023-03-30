@@ -27,7 +27,7 @@ vim.o.hlsearch = true
 vim.o.showmode = true
 
 -- Max autocomplete height
-vim.o.pumheight = 17
+vim.o.pumheight = 15
 
 -- System clipboard
 vim.o.clipboard = 'unnamedplus'
@@ -81,6 +81,10 @@ vim.o.laststatus = 3
 vim.o.list = true
 vim.o.listchars = 'tab:│ '
 
+vim.o.scrolloff = 4
+
+vim.o.previewheight = 17
+
 -- Discontinue comments on new line
 vim.api.nvim_create_autocmd('BufEnter', {
    callback = function()
@@ -108,7 +112,7 @@ end
 vim.api.nvim_create_autocmd('TextYankPost', {
    group = augroup 'HighlightYank',
    callback = function()
-      vim.highlight.on_yank()
+      vim.highlight.on_yank { timeout = 100 }
    end,
 })
 

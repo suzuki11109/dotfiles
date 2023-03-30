@@ -4,6 +4,9 @@ function M.output()
    local parts = {
       '%<%f ',
       '%h%m%r ',
+      '%#Function#',
+      [[%{luaeval("require'statusline'.tags()")} ]],
+      '%*',
       '%#LspDiagnosticsError#',
       [[%{luaeval("require'statusline'.diagnostic_errors()")}]],
       '%*',
@@ -52,6 +55,14 @@ function M.diagnostic_infos()
    local num = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.INFO })
    if num > 0 then
       return ' ' .. num .. ' '
+   end
+   return ''
+end
+
+function M.tags()
+   if require('grapple').exists() then
+      local key = require('grapple').key()
+      return ' [' .. key .. ']'
    end
    return ''
 end

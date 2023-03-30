@@ -1,4 +1,6 @@
-local map = require('utils').map
+-- local map = require('utils').map
+
+-- local wk = require 'which-key'
 
 local M = {}
 
@@ -30,55 +32,32 @@ local function lsp_format(bufnr)
    }
 end
 
-local function hover_doc()
-   vim.lsp.buf_request(0, 'textDocument/hover', vim.lsp.util.make_position_params(), function(_, result, ctx, config)
-      config = config or {}
-      config.focus_id = ctx.method
-      if not (result and result.contents) then
-         vim.notify 'No information available'
-         return
-      end
-      local markdown_lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
-      markdown_lines = vim.lsp.util.trim_empty_lines(markdown_lines)
-      if vim.tbl_isempty(markdown_lines) then
-         vim.notify 'No information available'
-         return
-      end
-
-      vim.api.nvim_command [[ new ]]
-      vim.api.nvim_command [[ resize 15 ]]
-      vim.api.nvim_buf_set_lines(0, 0, 1, false, markdown_lines)
-      vim.api.nvim_command [[ setlocal ft=markdown ]]
-      vim.api.nvim_command [[ setlocal norelativenumber ]]
-      vim.api.nvim_command [[ setlocal nonumber ]]
-      vim.api.nvim_command [[ nnoremap <buffer>q <C-W>c ]]
-      vim.api.nvim_command [[ setlocal buftype+=nofile ]]
-      vim.api.nvim_command [[ setlocal nobl ]]
-      vim.api.nvim_command [[ setlocal conceallevel=2 ]]
-      vim.api.nvim_command [[ setlocal concealcursor+=n ]]
-   end)
-end
-
 function M.on_attach(client, bufnr)
    -- Diagnostic keymaps
-   map('n', '[e', function()
-      vim.diagnostic.goto_prev { float = false }
-   end, { desc = 'previous diagnostic' })
-   map('n', ']e', function()
-      vim.diagnostic.goto_next { float = false }
-   end, { desc = 'next diagnostic' })
 
-   map({ 'n', 'v' }, '<leader>cr', vim.lsp.buf.rename, { desc = 'rename' })
-   map({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, { desc = 'code action' })
-   map({ 'n', 'v' }, 'gd', vim.lsp.buf.definition, { desc = 'goto definition' })
-   map({ 'n', 'v' }, 'gI', vim.lsp.buf.implementation, { desc = 'goto implementation' })
+   -- wk.register({
+   --    r = { vim.lsp.buf.rename, 'rename' },
+   --    a = { vim.lsp.buf.code_action, 'code action' },
+   -- }, { prefix = '<leader>c' })
+
+   -- map('n', '[e', function()
+   --    vim.diagnostic.goto_prev { float = false }
+   -- end, { desc = 'previous diagnostic' })
+   -- map('n', ']e', function()
+   --    vim.diagnostic.goto_next { float = false }
+   -- end, { desc = 'next diagnostic' })
+
+   -- map({ 'n', 'v' }, '<leader>cr', vim.lsp.buf.rename, { desc = 'rename' })
+   -- map({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, { desc = 'code action' })
+   -- map({ 'n', 'v' }, 'gd', vim.lsp.buf.definition, { desc = 'goto definition' })
+   -- map({ 'n', 'v' }, 'gI', vim.lsp.buf.implementation, { desc = 'goto implementation' })
 
    -- telescope helper
-   map('n', '<leader>cR', '<cmd>Telescope lsp_references<cr>', { desc = 'find references' })
-   map('n', '<leader>cs', '<cmd>Telescope lsp_document_symbols<cr>', { desc = 'document symbols' })
-
+   -- map('n', '<leader>cR', '<cmd>Telescope lsp_references<cr>', { desc = 'find references' })
+   -- map('n', '<leader>cs', '<cmd>Telescope lsp_document_symbols<cr>', { desc = 'document symbols' })
+   --
    -- map({ 'n', 'v' }, 'K', vim.lsp.buf.hover, { desc = 'Hover Documentation' })
-   map({ 'n', 'v' }, 'K', hover_doc, { desc = 'Hover Documentation' })
+   -- map({ 'n', 'v' }, 'K', hover_doc, { desc = 'Hover Documentation' })
 
    -- vim.lsp.handlers['textDocument/hover'] = vim.lsp.with(vim.lsp.handlers.hover, {
    --    border = 'rounded',
@@ -98,6 +77,9 @@ function M.on_attach(client, bufnr)
    vim.api.nvim_buf_create_user_command(bufnr, 'Format', function(_)
       lsp_format(bufnr)
    end, { desc = 'format current buffer' })
+
+   -- disable highlighting from lsp
+   client.server_capabilities.semanticTokensProvider = nil
 
    -- autoformat
    if client.server_capabilities.documentFormattingProvider then
@@ -148,6 +130,59 @@ function M.metals_status_handler(_, status, ctx)
    local info = { client_id = ctx.client_id }
    local msg = { token = 'metals', value = val }
    vim.lsp.handlers['$/progress'](nil, msg, info)
+end
+
+local function get_preview_window()
+   for _, win in ipairs(vim.api.nvim_tabpage_list_wins(vim.api.nvim_get_current_tabpage())) do
+      if vim.wo[win].previewwindow then
+         return win
+      end
+   end
+end
+
+local function create_preview_window()
+   vim.cmd.new()
+   vim.cmd.stopinsert()
+   local pwin = vim.api.nvim_get_current_win()
+   vim.wo[pwin].previewwindow = true
+   vim.wo[pwin].relativenumber = false
+   vim.wo[pwin].number = false
+   vim.api.nvim_win_set_height(pwin, vim.api.nvim_get_option 'previewheight')
+   local pbuf = vim.api.nvim_win_get_buf(pwin)
+   -- vim.bo[pbuf].bufhidden = 'delete'
+   vim.bo[pbuf].buflisted = false
+   vim.bo[pbuf].buftype = 'nofile'
+   vim.api.nvim_command [[ nnoremap <silent> <buffer>q :set nopreviewwindow<CR>:bd<CR> ]]
+   return pwin
+end
+
+function M.hover_doc()
+   vim.lsp.buf_request(0, 'textDocument/hover', vim.lsp.util.make_position_params(), function(_, result, ctx, config)
+      config = config or {}
+      config.focus_id = ctx.method
+      if not (result and result.contents) then
+         vim.notify 'No information available'
+         return
+      end
+      local doc_lines = vim.lsp.util.convert_input_to_markdown_lines(result.contents)
+      doc_lines = vim.lsp.util.trim_empty_lines(doc_lines)
+      if vim.tbl_isempty(doc_lines) then
+         vim.notify 'No information available'
+         return
+      end
+
+      local pwin = get_preview_window() or create_preview_window()
+      local pbuf = vim.api.nvim_win_get_buf(pwin)
+      -- set markdown types
+      vim.bo[pbuf].filetype = 'markdown'
+      vim.wo[pwin].conceallevel = 2
+      vim.wo[pwin].concealcursor = vim.wo[pwin].concealcursor .. 'n'
+      -- replace contents
+      vim.bo[pbuf].modifiable = true
+      vim.api.nvim_buf_set_lines(pbuf, 0, 1, false, doc_lines)
+      -- disable insert mode for this preview buffer
+      vim.bo[pbuf].modifiable = false
+   end)
 end
 
 return M

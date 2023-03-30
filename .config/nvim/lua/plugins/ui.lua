@@ -2,7 +2,10 @@ return {
    {
       'nvim-telescope/telescope.nvim',
       branch = '0.1.x',
-      dependencies = { 'nvim-lua/plenary.nvim' },
+      cmd = 'Telescope',
+      dependencies = {
+         'nvim-telescope/telescope-fzf-native.nvim',
+      },
       config = function()
          local actions = require 'telescope.actions'
          require('telescope').setup {
@@ -33,27 +36,11 @@ return {
             },
          }
       end,
-      keys = {
-         { '<leader><space>', '<cmd>Telescope commands<cr>', desc = 'commands' },
-         { '<leader>.', '<cmd>Telescope resume<cr>', desc = 'resume' },
-         { '<leader>:', '<cmd>Telescope command_history<cr>', desc = 'command history' },
-         { '<leader>ff', '<cmd>Telescope find_files cwd=%:p:h<cr>', desc = 'find current dir files' },
-         { '<leader>pf', '<cmd>Telescope find_files<cr>', desc = 'find files' },
-         { '<leader>fr', '<cmd>Telescope oldfiles<cr>', desc = 'recent files' },
-         { '<leader>ss', '<cmd>Telescope live_grep<cr>', desc = 'live grep' },
-         { '<leader>sl', '<cmd>Telescope current_buffer_fuzzy_find<cr>', desc = 'search this buffer' },
-         { '<leader>bb', '<cmd>Telescope buffers sort_lastused=true ignore_current_buffer=true<cr>', desc = 'switch buffers' },
-         { '<leader>hh', '<cmd>Telescope help_tags<cr>', desc = 'search help' },
-         { '<leader>hk', '<cmd>Telescope keymaps<cr>', desc = 'keymaps' },
-         { '<leader>hl', '<cmd>Telescope highlights<cr>', desc = 'highlights' },
-         { '<leader>gb', '<cmd>Telescope git_branches<cr>', desc = 'git branches' },
-      },
    },
 
    { -- Fuzzy Finder Algorithm which requires local dependencies to be built. Only load if `make` is available
       'nvim-telescope/telescope-fzf-native.nvim',
       build = 'make',
-      dependencies = { 'nvim-telescope/telescope.nvim' },
       cond = vim.fn.executable 'make' == 1,
       config = function()
          require('telescope').load_extension 'fzf'
@@ -61,44 +48,51 @@ return {
    },
 
    {
-      'smilovanovic/telescope-search-dir-picker.nvim',
-      event = 'VimEnter',
+      'princejoogie/dir-telescope.nvim',
       dependencies = { 'nvim-telescope/telescope.nvim' },
       config = function()
-         require('telescope').load_extension 'search_dir_picker'
-      end,
-      keys = {
-         { '<leader>sd', '<cmd>Telescope search_dir_picker<cr>', desc = 'search in directory' },
-      },
-   },
-
-   {
-      'ahmedkhalf/project.nvim',
-      event = 'VimEnter',
-      dependencies = {
-         'nvim-telescope/telescope.nvim',
-      },
-      config = function()
-         require('project_nvim').setup {
-            detection_methods = { 'pattern', 'lsp' },
-            patterns = { '.git', '_darcs', '.hg', '.bzr', '.svn', 'go.mod', 'build.sbt', 'pyproject.toml', 'Makefile', 'package.json' },
-            ignore_lsp = { 'null-ls' },
-            exclude_dirs = {
-               '/home/aki',
-            },
-            silent_chdir = false,
+         require('dir-telescope').setup {
+            hidden = true,
+            respect_gitignore = true,
          }
 
-         require('telescope').load_extension 'projects'
+         require('telescope').load_extension 'dir'
       end,
-      keys = {
-         { '<leader>pp', '<cmd>Telescope projects<cr>' },
-      },
+      -- keys = {
+      --    {
+      --       '<leader>sd',
+      --       '<cmd>Telescope dir live_grep<CR>',
+      --    },
+      -- },
    },
+
+   -- {
+   --    'ahmedkhalf/project.nvim',
+   --    event = 'VeryLazy',
+   --    dependencies = {
+   --       'nvim-telescope/telescope.nvim',
+   --    },
+   --    config = function()
+   --       require('project_nvim').setup {
+   --          detection_methods = { 'pattern', 'lsp' },
+   --          patterns = { '.git', '_darcs', '.hg', '.bzr', '.svn', 'go.mod', 'build.sbt', 'pyproject.toml', 'Makefile', 'package.json' },
+   --          ignore_lsp = { 'null-ls' },
+   --          exclude_dirs = {
+   --             '/home/aki',
+   --          },
+   --          silent_chdir = false,
+   --       }
+   --
+   --       require('telescope').load_extension 'projects'
+   --    end,
+   --    -- keys = {
+   --    --    { '<leader>pp', '<cmd>Telescope projects<cr>' },
+   --    -- },
+   -- },
 
    {
       'google/vim-searchindex',
-      event = 'VeryLazy',
+      event = 'CmdlineEnter',
    },
 
    {
@@ -111,6 +105,7 @@ return {
 
    {
       'folke/trouble.nvim',
+      cmd = 'TroubleToggle',
       dependencies = 'nvim-tree/nvim-web-devicons',
       config = function()
          require('trouble').setup {
@@ -118,34 +113,34 @@ return {
             padding = false,
          }
       end,
-      keys = {
-         { '<leader>cx', '<cmd>TroubleToggle<cr>' },
-      },
+      -- keys = {
+      --    { '<leader>cx', '<cmd>TroubleToggle<cr>' },
+      -- },
    },
 
-   {
-      'nvim-tree/nvim-tree.lua',
-      dependencies = {
-         'nvim-tree/nvim-web-devicons', -- optional, for file icons
-      },
-      config = function()
-         require('nvim-tree').setup {
-            sync_root_with_cwd = true,
-            respect_buf_cwd = true,
-            update_focused_file = {
-               enable = true,
-               update_root = true,
-            },
-         }
-      end,
-      keys = {
-         { '<leader>on', '<cmd>NvimTreeToggle<cr>', { desc = 'nvim tree' } },
-      },
-   },
+   -- {
+   --    'nvim-tree/nvim-tree.lua',
+   --    dependencies = {
+   --       'nvim-tree/nvim-web-devicons', -- optional, for file icons
+   --    },
+   --    config = function()
+   --       require('nvim-tree').setup {
+   --          sync_root_with_cwd = true,
+   --          respect_buf_cwd = true,
+   --          update_focused_file = {
+   --             enable = true,
+   --             update_root = true,
+   --          },
+   --       }
+   --    end,
+   --    keys = {
+   --       { '<leader>on', '<cmd>NvimTreeToggle<cr>', { desc = 'nvim tree' } },
+   --    },
+   -- },
 
    {
       'NvChad/nvim-colorizer.lua',
-      event = 'VeryLazy',
+      event = { 'BufReadPre', 'BufNewFile' },
       name = 'colorizer',
       opts = {
          user_default_options = {
@@ -161,7 +156,6 @@ return {
       build = function()
          pcall(require('nvim-treesitter.install').update { with_sync = true })
       end,
-
       opts = {
          ensure_installed = 'all',
          highlight = { enable = true },
@@ -203,6 +197,138 @@ return {
       },
       config = function(_, opts)
          require('nvim-treesitter.configs').setup(opts)
+      end,
+   },
+
+   -- {
+   --    'ThePrimeagen/harpoon',
+   --    event = 'VeryLazy',
+   --    dependencies = { 'nvim-lua/plenary.nvim' },
+   --    config = function()
+   --       require('harpoon').setup {}
+   --    end,
+   --    keys = {
+   --       {
+   --          '<leader>kk',
+   --          function()
+   --             require('harpoon.ui').toggle_quick_menu()
+   --          end,
+   --       },
+   --       {
+   --          '<leader>ki',
+   --          function()
+   --             require('harpoon.mark').add_file()
+   --          end,
+   --       },
+   --       {
+   --          '<leader>kn',
+   --          function()
+   --             require('harpoon.ui').nav_next()
+   --          end,
+   --       },
+   --       {
+   --          '<leader>kp',
+   --          function()
+   --             require('harpoon.ui').nav_prev()
+   --          end,
+   --       },
+   --       -- { '<leader>:', '<cmd>Telescope command_history<cr>' },
+   --    },
+   -- },
+   {
+      'cbochs/grapple.nvim',
+      cmd = { 'GrappleSelect', 'GrapplePopup', 'GrappleTag', 'GrappleUntag', 'GrappleCycle' },
+      opts = {
+         popup_options = {
+            -- width = vim.api.nvim_win_get_width(0) - 10,
+            border = 'rounded',
+            height = 17,
+         },
+      },
+      -- keys = {
+      --    { '<leader>kk', '<cmd>GrapplePopup tags<CR>' },
+      --    { '<leader>ki', '<cmd>GrappleTag<CR>' },
+      --    { '<leader>ku', '<cmd>GrappleUntag<CR>' },
+      --    { '<leader>kn', '<cmd>GrappleCycle forward<CR>' },
+      --    { '<leader>kp', '<cmd>GrappleCycle backward<CR>' },
+      --    { '<leader>k1', '<cmd>GrappleSelect key=1<CR>' },
+      --    { '<leader>k2', '<cmd>GrappleSelect key=2<CR>' },
+      --    { '<leader>k3', '<cmd>GrappleSelect key=3<CR>' },
+      --    { '<leader>k4', '<cmd>GrappleSelect key=4<CR>' },
+      --    { '<leader>k5', '<cmd>GrappleSelect key=5<CR>' },
+      --    { '<leader>k6', '<cmd>GrappleSelect key=6<CR>' },
+      --    { '<leader>k7', '<cmd>GrappleSelect key=7<CR>' },
+      --    { '<leader>k8', '<cmd>GrappleSelect key=8<CR>' },
+      --    { '<leader>k9', '<cmd>GrappleSelect key=9<CR>' },
+      --    { '<leader>k0', '<cmd>GrappleSelect key=10<CR>' },
+      -- },
+   },
+   -- {
+   --    'cbochs/portal.nvim',
+   --    dependencies = {
+   --       'cbochs/grapple.nvim',
+   --    },
+   --    opts = {
+   --       window_options = {
+   --          height = 5,
+   --          border = 'rounded',
+   --       },
+   --       escape = {
+   --          ['<esc>'] = true,
+   --          ['q'] = true,
+   --       },
+   --    },
+   --    keys = {
+   --       {
+   --          '<leader>kl',
+   --          function()
+   --             require('portal.builtin').grapple.tunnel()
+   --          end,
+   --       },
+   --       {
+   --          '<leader>kj',
+   --          function()
+   --             require('portal.builtin').jumplist.tunnel()
+   --          end,
+   --       },
+   --    },
+   -- },
+   {
+      'stevearc/oil.nvim',
+      cmd = 'Oil',
+      opts = {
+         columns = {
+            'icon',
+            'permission',
+            'size',
+            'mtime',
+         },
+         win_options = {
+            conceallevel = 3,
+            concealcursor = 'nv',
+         },
+         keymaps = {
+            ['g?'] = 'actions.show_help',
+            ['q'] = 'actions.close',
+         },
+         view_options = {
+            show_hidden = true,
+         },
+      },
+   },
+   {
+      'folke/which-key.nvim',
+      config = function()
+         -- vim.o.timeout = true
+         -- vim.o.timeoutlen = 300
+         require('which-key').setup {
+            window = {
+               border = 'rounded',
+            },
+            plugins = {
+               marks = false,
+            },
+         }
       end,
    },
 }

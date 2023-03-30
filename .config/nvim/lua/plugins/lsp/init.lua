@@ -60,7 +60,6 @@ return {
    {
       'williamboman/mason.nvim',
       cmd = 'Mason',
-      keys = { { '<leader>cm', '<cmd>Mason<cr>', desc = 'mason' } },
       config = function()
          require('mason').setup {
             ui = {
@@ -80,6 +79,7 @@ return {
                nls.builtins.formatting.prettierd,
                nls.builtins.formatting.stylua,
                nls.builtins.formatting.gofmt,
+               nls.builtins.diagnostics.golangci_lint,
             },
          }
       end,
@@ -89,16 +89,21 @@ return {
       event = { 'BufReadPre', 'BufNewFile' },
       config = function()
          require('fidget').setup {
+            text = {
+               done = '',
+               commenced = '',
+               completed = '',
+            },
             window = {
                blend = 0,
             },
          }
       end,
    },
+
    {
       'scalameta/nvim-metals',
       ft = { 'scala', 'sbt' },
-      dependencies = { 'nvim-lua/plenary.nvim' },
       config = function()
          local metals_config = require('metals').bare_config()
          metals_config.settings = {
@@ -133,4 +138,31 @@ return {
          }
       end,
    },
+
+   -- {
+   --    'lewis6991/hover.nvim',
+   --    config = function()
+   --       require('hover').setup {
+   --          init = function()
+   --             require 'hover.providers.lsp'
+   --             -- require('hover.providers.gh')
+   --             -- require('hover.providers.gh_user')
+   --             -- require('hover.providers.jira')
+   --             -- require 'hover.providers.man'
+   --             -- require('hover.providers.dictionary')
+   --          end,
+   --          -- preview_opts = {
+   --          --    border = nil,
+   --          -- },
+   --          -- Whether the contents of a currently open hover window should be moved
+   --          -- to a :h preview-window when pressing the hover keymap.
+   --          preview_window = true,
+   --          -- title = true,
+   --       }
+   --
+   --       -- Setup keymaps
+   --       vim.keymap.set('n', 'K', require('hover').hover, { desc = 'hover.nvim' })
+   --       vim.keymap.set('n', 'gK', require('hover').hover_select, { desc = 'hover.nvim (select)' })
+   --    end,
+   -- },
 }

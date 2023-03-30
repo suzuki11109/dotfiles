@@ -51,7 +51,6 @@ return {
          'L3MON4D3/LuaSnip',
          'saadparwaiz1/cmp_luasnip',
          'onsails/lspkind.nvim',
-         'hrsh7th/cmp-cmdline',
       },
       config = function()
          local cmp = require 'cmp'
@@ -121,6 +120,12 @@ return {
             },
          })
 
+         cmp.setup.filetype('rust', {
+            sources = cmp.config.sources {
+               { name = 'nvim_lsp' },
+            },
+         })
+
          -- cmp.setup.cmdline(':', {
          --    mapping = cmp.mapping.preset.cmdline(),
          --    sources = cmp.config.sources({
@@ -147,18 +152,19 @@ return {
 
    {
       'kylechui/nvim-surround',
-      event = 'CursorMoved',
-      opts = {
-         aliases = {
-            ["'"] = { '"', "'", '`' },
-         },
-      },
-      config = true,
+      event = 'VeryLazy',
+      config = function()
+         require('nvim-surround').setup {
+            aliases = {
+               ["'"] = { '"', "'", '`' },
+            },
+         }
+      end,
    },
 
    {
       'numToStr/Comment.nvim',
-      event = 'CursorMoved',
+      event = { 'BufReadPre', 'BufNewFile' },
       dependencies = { 'JoosepAlviste/nvim-ts-context-commentstring' },
       config = function()
          require('Comment').setup {
@@ -187,12 +193,13 @@ return {
 
    {
       'phaazon/hop.nvim',
+      cmd = 'HopChar2',
       branch = 'v2',
       config = function()
          return require('hop').setup {}
       end,
-      keys = {
-         { 's', ':HopChar2<cr>' },
-      },
+      -- keys = {
+      --    { 's', ':HopChar2<cr>' },
+      -- },
    },
 }

@@ -1,22 +1,29 @@
--- harpoon
--- gitmux config + new icons
+-- check lsp setting with kickstart
+
+-- zoxide/z.lua & fzf
+-- tmux popup-fzf select directory new tab
+
+-- tmux popup lazygit?
+--- save serverfile in cwd
+--- read current directory nvim server file
+--- open popup start NVIM_SERVER=blahblah lazygit
+--- edit send file to nvimserver & quit tmux popup
+
+-- tmux popup-fzf run executables in tmux window
+
+-- diffview
+
+-- Maybe later later...
+-- rest
+-- elixir
+-- clojure
+-- parinfer
+-- ocaml
+-- haskell
+-- tmuxp
+-- github pr
+-- dap
 -- cmp sort comparator
-
--- reuse only one hover split
-
--- fugitive highlight
--- fugitive remap
--- fugitive fullscreen
-
--- diffview stage/unstage?
-
--- git alias completion?
--- docker completions?
-
--- toggle line numbers
-
--- fzf open new tmux tab with selected directory/project roots
--- tmux close pane without confirm
 
 -- dwm + patches
 -- xorg keyboard shortcut/mouse
@@ -33,24 +40,6 @@
 -- eww menu?
 -- default applications?
 
--- partition
--- endeavouros lts kernel?
-
--- Later
--- elixir
--- ocaml
--- tmuxp
-
--- Maybe never
--- tmux fzf launch app in new tab (top,k9s)
--- dashboard/ project management
--- dap
--- haskell
--- clojure
--- parinfer
--- octo
--- rest
-
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
    vim.fn.system {
@@ -66,9 +55,11 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require 'config.options'
-require 'config.mappings'
 
 require('lazy').setup('plugins', {
+   defaults = {
+      lazy = true,
+   },
    ui = {
       border = 'rounded',
    },
@@ -77,8 +68,10 @@ require('lazy').setup('plugins', {
    },
 })
 
+require 'config.mappings'
+
 -- vim.env.GIT_EDITOR = 'nvr --servername ' .. vim.v.servername .. " -cc vsplit --remote-wait +'set bufhidden=delete'"
 vim.cmd [[set statusline=%!v:lua.require'statusline'.output()]]
-vim.cmd [[colorscheme catppuccin]]
+vim.cmd 'colorscheme catppuccin'
 
 -- vim: ts=3 sts=3 sw=3 et
