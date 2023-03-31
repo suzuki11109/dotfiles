@@ -49,7 +49,6 @@ return {
 
    {
       'princejoogie/dir-telescope.nvim',
-      dependencies = { 'nvim-telescope/telescope.nvim' },
       config = function()
          require('dir-telescope').setup {
             hidden = true,
@@ -58,37 +57,7 @@ return {
 
          require('telescope').load_extension 'dir'
       end,
-      -- keys = {
-      --    {
-      --       '<leader>sd',
-      --       '<cmd>Telescope dir live_grep<CR>',
-      --    },
-      -- },
    },
-
-   -- {
-   --    'ahmedkhalf/project.nvim',
-   --    event = 'VeryLazy',
-   --    dependencies = {
-   --       'nvim-telescope/telescope.nvim',
-   --    },
-   --    config = function()
-   --       require('project_nvim').setup {
-   --          detection_methods = { 'pattern', 'lsp' },
-   --          patterns = { '.git', '_darcs', '.hg', '.bzr', '.svn', 'go.mod', 'build.sbt', 'pyproject.toml', 'Makefile', 'package.json' },
-   --          ignore_lsp = { 'null-ls' },
-   --          exclude_dirs = {
-   --             '/home/aki',
-   --          },
-   --          silent_chdir = false,
-   --       }
-   --
-   --       require('telescope').load_extension 'projects'
-   --    end,
-   --    -- keys = {
-   --    --    { '<leader>pp', '<cmd>Telescope projects<cr>' },
-   --    -- },
-   -- },
 
    {
       'google/vim-searchindex',
@@ -109,34 +78,11 @@ return {
       dependencies = 'nvim-tree/nvim-web-devicons',
       config = function()
          require('trouble').setup {
-            height = 10,
+            height = 15,
             padding = false,
          }
       end,
-      -- keys = {
-      --    { '<leader>cx', '<cmd>TroubleToggle<cr>' },
-      -- },
    },
-
-   -- {
-   --    'nvim-tree/nvim-tree.lua',
-   --    dependencies = {
-   --       'nvim-tree/nvim-web-devicons', -- optional, for file icons
-   --    },
-   --    config = function()
-   --       require('nvim-tree').setup {
-   --          sync_root_with_cwd = true,
-   --          respect_buf_cwd = true,
-   --          update_focused_file = {
-   --             enable = true,
-   --             update_root = true,
-   --          },
-   --       }
-   --    end,
-   --    keys = {
-   --       { '<leader>on', '<cmd>NvimTreeToggle<cr>', { desc = 'nvim tree' } },
-   --    },
-   -- },
 
    {
       'NvChad/nvim-colorizer.lua',
@@ -200,41 +146,6 @@ return {
       end,
    },
 
-   -- {
-   --    'ThePrimeagen/harpoon',
-   --    event = 'VeryLazy',
-   --    dependencies = { 'nvim-lua/plenary.nvim' },
-   --    config = function()
-   --       require('harpoon').setup {}
-   --    end,
-   --    keys = {
-   --       {
-   --          '<leader>kk',
-   --          function()
-   --             require('harpoon.ui').toggle_quick_menu()
-   --          end,
-   --       },
-   --       {
-   --          '<leader>ki',
-   --          function()
-   --             require('harpoon.mark').add_file()
-   --          end,
-   --       },
-   --       {
-   --          '<leader>kn',
-   --          function()
-   --             require('harpoon.ui').nav_next()
-   --          end,
-   --       },
-   --       {
-   --          '<leader>kp',
-   --          function()
-   --             require('harpoon.ui').nav_prev()
-   --          end,
-   --       },
-   --       -- { '<leader>:', '<cmd>Telescope command_history<cr>' },
-   --    },
-   -- },
    {
       'cbochs/grapple.nvim',
       cmd = { 'GrappleSelect', 'GrapplePopup', 'GrappleTag', 'GrappleUntag', 'GrappleCycle' },
@@ -245,54 +156,8 @@ return {
             height = 17,
          },
       },
-      -- keys = {
-      --    { '<leader>kk', '<cmd>GrapplePopup tags<CR>' },
-      --    { '<leader>ki', '<cmd>GrappleTag<CR>' },
-      --    { '<leader>ku', '<cmd>GrappleUntag<CR>' },
-      --    { '<leader>kn', '<cmd>GrappleCycle forward<CR>' },
-      --    { '<leader>kp', '<cmd>GrappleCycle backward<CR>' },
-      --    { '<leader>k1', '<cmd>GrappleSelect key=1<CR>' },
-      --    { '<leader>k2', '<cmd>GrappleSelect key=2<CR>' },
-      --    { '<leader>k3', '<cmd>GrappleSelect key=3<CR>' },
-      --    { '<leader>k4', '<cmd>GrappleSelect key=4<CR>' },
-      --    { '<leader>k5', '<cmd>GrappleSelect key=5<CR>' },
-      --    { '<leader>k6', '<cmd>GrappleSelect key=6<CR>' },
-      --    { '<leader>k7', '<cmd>GrappleSelect key=7<CR>' },
-      --    { '<leader>k8', '<cmd>GrappleSelect key=8<CR>' },
-      --    { '<leader>k9', '<cmd>GrappleSelect key=9<CR>' },
-      --    { '<leader>k0', '<cmd>GrappleSelect key=10<CR>' },
-      -- },
    },
-   -- {
-   --    'cbochs/portal.nvim',
-   --    dependencies = {
-   --       'cbochs/grapple.nvim',
-   --    },
-   --    opts = {
-   --       window_options = {
-   --          height = 5,
-   --          border = 'rounded',
-   --       },
-   --       escape = {
-   --          ['<esc>'] = true,
-   --          ['q'] = true,
-   --       },
-   --    },
-   --    keys = {
-   --       {
-   --          '<leader>kl',
-   --          function()
-   --             require('portal.builtin').grapple.tunnel()
-   --          end,
-   --       },
-   --       {
-   --          '<leader>kj',
-   --          function()
-   --             require('portal.builtin').jumplist.tunnel()
-   --          end,
-   --       },
-   --    },
-   -- },
+
    {
       'stevearc/oil.nvim',
       cmd = 'Oil',

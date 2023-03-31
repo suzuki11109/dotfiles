@@ -14,6 +14,7 @@ return {
          'hrsh7th/cmp-nvim-lsp',
          'williamboman/mason.nvim',
          'williamboman/mason-lspconfig.nvim',
+         'jose-elias-alvarez/null-ls.nvim',
          'j-hui/fidget.nvim',
       },
       opts = {
@@ -27,12 +28,9 @@ return {
             lua_ls = {
                settings = {
                   Lua = {
-                     workspace = {
-                        checkThirdParty = false,
-                     },
-                     completion = {
-                        callSnippet = 'Replace',
-                     },
+                     workspace = { checkThirdParty = false },
+                     telemetry = { enable = false },
+                     completion = { callSnippet = 'Replace' },
                   },
                },
             },
@@ -70,8 +68,6 @@ return {
    },
    {
       'jose-elias-alvarez/null-ls.nvim',
-      event = { 'BufReadPre', 'BufNewFile' },
-      dependencies = { 'mason.nvim' },
       opts = function()
          local nls = require 'null-ls'
          return {
@@ -86,7 +82,6 @@ return {
    },
    {
       'j-hui/fidget.nvim',
-      event = { 'BufReadPre', 'BufNewFile' },
       config = function()
          require('fidget').setup {
             text = {
@@ -138,31 +133,4 @@ return {
          }
       end,
    },
-
-   -- {
-   --    'lewis6991/hover.nvim',
-   --    config = function()
-   --       require('hover').setup {
-   --          init = function()
-   --             require 'hover.providers.lsp'
-   --             -- require('hover.providers.gh')
-   --             -- require('hover.providers.gh_user')
-   --             -- require('hover.providers.jira')
-   --             -- require 'hover.providers.man'
-   --             -- require('hover.providers.dictionary')
-   --          end,
-   --          -- preview_opts = {
-   --          --    border = nil,
-   --          -- },
-   --          -- Whether the contents of a currently open hover window should be moved
-   --          -- to a :h preview-window when pressing the hover keymap.
-   --          preview_window = true,
-   --          -- title = true,
-   --       }
-   --
-   --       -- Setup keymaps
-   --       vim.keymap.set('n', 'K', require('hover').hover, { desc = 'hover.nvim' })
-   --       vim.keymap.set('n', 'gK', require('hover').hover_select, { desc = 'hover.nvim (select)' })
-   --    end,
-   -- },
 }

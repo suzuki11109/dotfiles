@@ -19,10 +19,6 @@ vim.o.relativenumber = true
 -- Set highlight on search
 vim.o.hlsearch = true
 
--- Customize terminal's title
--- vim.o.title = true
--- vim.o.titlestring = [[%f - nvim]]
-
 -- Show mode in command line
 vim.o.showmode = true
 
@@ -81,9 +77,11 @@ vim.o.laststatus = 3
 vim.o.list = true
 vim.o.listchars = 'tab:│ '
 
+-- Don't go to edge of screen
 vim.o.scrolloff = 4
 
-vim.o.previewheight = 17
+-- Height of preview buffer
+vim.o.previewheight = 15
 
 -- Discontinue comments on new line
 vim.api.nvim_create_autocmd('BufEnter', {
@@ -102,6 +100,12 @@ vim.api.nvim_create_autocmd('FileType', {
 vim.api.nvim_create_autocmd('FileType', {
    pattern = 'go',
    command = 'setlocal shiftwidth=4 tabstop=4',
+})
+
+-- gitcommit
+vim.api.nvim_create_autocmd('FileType', {
+   pattern = 'gitcommit',
+   command = 'startinsert',
 })
 
 local function augroup(name)

@@ -191,15 +191,25 @@ return {
       },
    },
 
+   -- {
+   --    'phaazon/hop.nvim',
+   --    cmd = 'HopChar2',
+   --    branch = 'v2',
+   --    config = function()
+   --       return require('hop').setup {}
+   --    end,
+   --    -- keys = {
+   --    --    { 's', ':HopChar2<cr>' },
+   --    -- },
+   -- },
+
    {
-      'phaazon/hop.nvim',
-      cmd = 'HopChar2',
-      branch = 'v2',
+      'ggandor/leap.nvim',
+      event = 'VeryLazy',
       config = function()
-         return require('hop').setup {}
+         require('leap').add_default_mappings()
       end,
-      -- keys = {
-      --    { 's', ':HopChar2<cr>' },
-      -- },
    },
+   { 'tpope/vim-repeat', event = 'InsertEnter' },
+   { 'tpope/vim-eunuch', event = 'CmdlineEnter' },
 }
