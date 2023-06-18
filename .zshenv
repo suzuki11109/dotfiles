@@ -4,7 +4,8 @@ export XMODIFIERS=@im=fcitx
 export SDL_IM_MODULE=fcitx
 export GLFW_IM_MODULE=ibus
 
-# export DISABLE_AUTO_TITLE="true"
+# hide user@host in title
+export DISABLE_AUTO_TITLE="true"
 
 export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$PATH:$HOME/.emacs.d/bin

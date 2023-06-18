@@ -1,10 +1,31 @@
 return {
    {
+      'nvim-lualine/lualine.nvim',
+      event = 'VeryLazy',
+      opts = {
+         options = {
+            theme = 'catppuccin',
+            component_separators = { left = '', right = '' },
+            section_separators = { left = '', right = '' },
+         },
+         sections = {
+            lualine_a = { 'mode' },
+            lualine_b = { 'branch' },
+            lualine_c = { 'filename', 'location' },
+            lualine_x = { 'filetype' },
+            lualine_y = { 'diagnostics' },
+            lualine_z = { 'overseer' },
+         },
+      },
+   },
+   {
       'nvim-telescope/telescope.nvim',
-      branch = '0.1.x',
+      tag = '0.1.1',
       cmd = 'Telescope',
       dependencies = {
          'nvim-telescope/telescope-fzf-native.nvim',
+         'prochri/telescope-all-recent.nvim',
+         'window-picker',
       },
       config = function()
          local actions = require 'telescope.actions'
@@ -12,8 +33,11 @@ return {
             defaults = {
                file_ignore_patterns = { '.git/', 'node_modules/' },
                layout_config = {
-                  preview_width = 0.50,
+                  width = 0.9,
                   prompt_position = 'top',
+                  horizontal = {
+                     preview_width = 0.5,
+                  },
                },
                path_display = { 'smart' },
                sorting_strategy = 'ascending',
@@ -26,6 +50,21 @@ return {
                      ['<C-g>'] = actions.close,
                      ['<C-f>'] = actions.preview_scrolling_down,
                      ['<C-b>'] = actions.preview_scrolling_up,
+                     ['<C-o>'] = function(prompt_bufnr)
+                        -- Use nvim-window-picker to choose the window by dynamically attaching a function
+                        local action_set = require 'telescope.actions.set'
+                        local action_state = require 'telescope.actions.state'
+
+                        local picker = action_state.get_current_picker(prompt_bufnr)
+                        picker.get_selection_window = function(picker, entry)
+                           local picked_window_id = require('window-picker').pick_window() or vim.api.nvim_get_current_win()
+                           -- Unbind after using so next instance of the picker acts normally
+                           picker.get_selection_window = nil
+                           return picked_window_id
+                        end
+
+                        return action_set.edit(prompt_bufnr, 'edit')
+                     end,
                   },
                },
             },
@@ -48,14 +87,43 @@ return {
    },
 
    {
+      'prochri/telescope-all-recent.nvim',
+      dependencies = {
+         'kkharji/sqlite.lua',
+      },
+      config = function()
+         require('telescope-all-recent').setup {
+            pickers = {
+               find_files = {
+                  sorting = 'recent',
+               },
+            },
+         }
+      end,
+   },
+
+   {
       'princejoogie/dir-telescope.nvim',
       config = function()
          require('dir-telescope').setup {
             hidden = true,
-            respect_gitignore = true,
          }
 
          require('telescope').load_extension 'dir'
+      end,
+   },
+
+   {
+      's1n7ax/nvim-window-picker',
+      name = 'window-picker',
+      version = '2.*',
+      config = function()
+         require('window-picker').setup {
+            hint = 'floating-big-letter',
+            filter_rules = {
+               include_current_win = true,
+            },
+         }
       end,
    },
 
@@ -147,18 +215,6 @@ return {
    },
 
    {
-      'cbochs/grapple.nvim',
-      cmd = { 'GrappleSelect', 'GrapplePopup', 'GrappleTag', 'GrappleUntag', 'GrappleCycle' },
-      opts = {
-         popup_options = {
-            -- width = vim.api.nvim_win_get_width(0) - 10,
-            border = 'rounded',
-            height = 17,
-         },
-      },
-   },
-
-   {
       'stevearc/oil.nvim',
       cmd = 'Oil',
       opts = {
@@ -178,6 +234,17 @@ return {
          },
          view_options = {
             show_hidden = true,
+         },
+      },
+   },
+   {
+      'cbochs/grapple.nvim',
+      cmd = { 'GrappleSelect', 'GrapplePopup', 'GrappleTag', 'GrappleUntag', 'GrappleCycle' },
+      opts = {
+         popup_options = {
+            -- width = vim.api.nvim_win_get_width(0) - 10,
+            border = 'rounded',
+            height = 17,
          },
       },
    },

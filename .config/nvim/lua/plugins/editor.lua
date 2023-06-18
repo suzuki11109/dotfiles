@@ -12,35 +12,6 @@ return {
       dependencies = {
          'rafamadriz/friendly-snippets',
       },
-      -- opts = {
-      -- history = true,
-      -- delete_check_events = 'TextChanged',
-      -- },
-      -- keys = {
-      --    {
-      --       '<tab>',
-      --       function()
-      --          return require('luasnip').jumpable(1) and '<Plug>luasnip-jump-next' or '<tab>'
-      --       end,
-      --       expr = true,
-      --       silent = true,
-      --       mode = 'i',
-      --    },
-      --    {
-      --       '<tab>',
-      --       function()
-      --          require('luasnip').jump(1)
-      --       end,
-      --       mode = 's',
-      --    },
-      --    {
-      --       '<s-tab>',
-      --       function()
-      --          require('luasnip').jump(-1)
-      --       end,
-      --       mode = { 'i', 's' },
-      --    },
-      -- },
    },
 
    {
@@ -57,6 +28,9 @@ return {
          local luasnip = require 'luasnip'
          require('luasnip.loaders.from_vscode').lazy_load()
 
+         local cmp_autopairs = require 'nvim-autopairs.completion.cmp'
+         cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
+
          cmp.setup {
             preselect = cmp.PreselectMode.None,
             window = {
@@ -68,29 +42,17 @@ return {
                   luasnip.lsp_expand(args.body)
                end,
             },
-            -- completion = {
-            --    keyword_length = 2,
-            -- },
             mapping = cmp.mapping.preset.insert {
                ['<C-d>'] = cmp.mapping.scroll_docs(-4),
                ['<C-f>'] = cmp.mapping.scroll_docs(4),
+               ['<C-e>'] = cmp.mapping.abort(),
                ['<C-Space>'] = cmp.mapping.complete(),
-               -- ['<Tab>'] = cmp.mapping.confirm {
-               --    behavior = cmp.ConfirmBehavior.Replace,
-               --    select = true,
-               -- },
-               ['<CR>'] = cmp.mapping.confirm {
-                  behavior = cmp.ConfirmBehavior.Replace,
-                  select = true,
-               },
                ['<Tab>'] = cmp.mapping(function(fallback)
                   if cmp.visible() then
                      cmp.confirm {
                         behavior = cmp.ConfirmBehavior.Replace,
                         select = true,
                      }
-                  -- You could replace the expand_or_jumpable() calls with expand_or_locally_jumpable()
-                  -- they way you will only jump inside the snippet region
                   elseif luasnip.expand_or_jumpable() then
                      luasnip.expand_or_jump()
                   elseif has_words_before() then
@@ -125,20 +87,6 @@ return {
                { name = 'nvim_lsp' },
             },
          })
-
-         -- cmp.setup.cmdline(':', {
-         --    mapping = cmp.mapping.preset.cmdline(),
-         --    sources = cmp.config.sources({
-         --       { name = 'path' },
-         --    }, {
-         --       {
-         --          name = 'cmdline',
-         --          option = {
-         --             ignore_cmds = { 'Man', '!' },
-         --          },
-         --       },
-         --    }),
-         -- })
       end,
    },
 
@@ -152,7 +100,7 @@ return {
 
    {
       'kylechui/nvim-surround',
-      event = 'VeryLazy',
+      event = 'InsertEnter',
       config = function()
          require('nvim-surround').setup {
             aliases = {
@@ -191,21 +139,9 @@ return {
       },
    },
 
-   -- {
-   --    'phaazon/hop.nvim',
-   --    cmd = 'HopChar2',
-   --    branch = 'v2',
-   --    config = function()
-   --       return require('hop').setup {}
-   --    end,
-   --    -- keys = {
-   --    --    { 's', ':HopChar2<cr>' },
-   --    -- },
-   -- },
-
    {
       'ggandor/leap.nvim',
-      event = 'VeryLazy',
+      event = { 'BufReadPre', 'BufNewFile' },
       config = function()
          require('leap').add_default_mappings()
       end,

@@ -83,6 +83,9 @@ vim.o.scrolloff = 4
 -- Height of preview buffer
 vim.o.previewheight = 15
 
+vim.o.title = true
+vim.opt.titlestring = [[%F %h%m%r%w]]
+
 -- Discontinue comments on new line
 vim.api.nvim_create_autocmd('BufEnter', {
    callback = function()

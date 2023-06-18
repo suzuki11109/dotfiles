@@ -58,6 +58,7 @@ return {
    {
       'williamboman/mason.nvim',
       cmd = 'Mason',
+      build = ':MasonUpdate',
       config = function()
          require('mason').setup {
             ui = {
@@ -74,21 +75,31 @@ return {
             sources = {
                nls.builtins.formatting.prettierd,
                nls.builtins.formatting.stylua,
-               nls.builtins.formatting.gofmt,
+               nls.builtins.formatting.goimports,
                nls.builtins.diagnostics.golangci_lint,
             },
          }
       end,
    },
+
+   {
+      'amrbashir/nvim-docs-view',
+      commit = '601d7f6a2e399226a669fd2a73f7da77726cb32f',
+      cmd = { 'DocsViewToggle', 'DocsViewUpdate' },
+      config = function()
+         require('docs-view').setup {
+            update_mode = 'manual',
+            position = 'bottom',
+            height = 15,
+         }
+      end,
+   },
+
    {
       'j-hui/fidget.nvim',
+      tag = 'legacy',
       config = function()
          require('fidget').setup {
-            text = {
-               done = '',
-               commenced = '',
-               completed = '',
-            },
             window = {
                blend = 0,
             },

@@ -1,6 +1,7 @@
 return {
    {
       'catppuccin/nvim',
+      priority = 1000,
       name = 'catppuccin',
       opts = {
          flavour = 'mocha',
@@ -8,23 +9,24 @@ return {
          highlight_overrides = {
             mocha = function(mocha)
                return {
-                  Pmenu = { bg = mocha.base },
+                  Pmenu = { bg = mocha.mantle },
                }
             end,
          },
          integrations = {
-            cmp = true,
             fidget = true,
             gitsigns = true,
-            hop = true,
+            leap = true,
             mason = true,
-            nvimtree = true,
-            treesitter = true,
-            telescope = true,
-            lsp_trouble = true,
+            cmp = true,
             native_lsp = {
                enabled = true,
             },
+            treesitter = true,
+            overseer = true,
+            telescope = true,
+            lsp_trouble = true,
+            which_key = true,
          },
       },
    },

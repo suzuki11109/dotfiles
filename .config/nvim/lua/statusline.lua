@@ -21,8 +21,9 @@ function M.output()
       '%*',
       '%=',
       '%l,%c%V ',
-      "%{&ff!='unix'?&ff:''} ",
-      '%y',
+      " %{get(b:,'gitsigns_head','')}",
+      "%{&ff!='unix'?&ff:''}",
+      ' %y',
    }
    return table.concat(parts, '')
 end
