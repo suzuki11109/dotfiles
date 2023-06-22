@@ -16,25 +16,25 @@ return {
 
    {
       'hrsh7th/nvim-cmp',
-      event = 'InsertEnter',
+      event = 'VeryLazy',
       dependencies = {
          'hrsh7th/cmp-nvim-lsp',
          'L3MON4D3/LuaSnip',
          'saadparwaiz1/cmp_luasnip',
          'onsails/lspkind.nvim',
+         'windwp/nvim-autopairs',
       },
       config = function()
          local cmp = require 'cmp'
          local luasnip = require 'luasnip'
          require('luasnip.loaders.from_vscode').lazy_load()
 
-         local cmp_autopairs = require 'nvim-autopairs.completion.cmp'
-         cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
-
          cmp.setup {
+            completion = {
+               keyword_length = 2,
+            },
             preselect = cmp.PreselectMode.None,
             window = {
-               -- completion = cmp.config.window.bordered(),
                documentation = cmp.config.window.bordered(),
             },
             snippet = {
@@ -47,6 +47,7 @@ return {
                ['<C-f>'] = cmp.mapping.scroll_docs(4),
                ['<C-e>'] = cmp.mapping.abort(),
                ['<C-Space>'] = cmp.mapping.complete(),
+               ['<CR>'] = cmp.mapping.confirm { select = true },
                ['<Tab>'] = cmp.mapping(function(fallback)
                   if cmp.visible() then
                      cmp.confirm {
@@ -60,7 +61,7 @@ return {
                   else
                      fallback()
                   end
-               end, { 'i', 's' }),
+               end),
             },
             sources = {
                { name = 'luasnip' },
@@ -87,14 +88,9 @@ return {
                { name = 'nvim_lsp' },
             },
          })
-      end,
-   },
 
-   {
-      'windwp/nvim-autopairs',
-      event = 'InsertEnter',
-      config = function()
-         require('nvim-autopairs').setup {}
+         local cmp_autopairs = require 'nvim-autopairs.completion.cmp'
+         cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
       end,
    },
 
@@ -107,6 +103,13 @@ return {
                ["'"] = { '"', "'", '`' },
             },
          }
+      end,
+   },
+   
+   {
+      'windwp/nvim-autopairs',
+      config = function()
+         require('nvim-autopairs').setup {}
       end,
    },
 
@@ -146,6 +149,4 @@ return {
          require('leap').add_default_mappings()
       end,
    },
-   { 'tpope/vim-repeat', event = 'InsertEnter' },
-   { 'tpope/vim-eunuch', event = 'CmdlineEnter' },
 }

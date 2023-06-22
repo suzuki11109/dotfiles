@@ -3,6 +3,7 @@ local lsputil = require 'plugins.lsp.util'
 return {
    {
       'neovim/nvim-lspconfig',
+      enabled = true,
       event = { 'BufReadPre', 'BufNewFile' },
       dependencies = {
          {
@@ -90,7 +91,7 @@ return {
          require('docs-view').setup {
             update_mode = 'manual',
             position = 'bottom',
-            height = 15,
+            height = vim.o.lines * 0.5,
          }
       end,
    },

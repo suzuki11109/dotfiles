@@ -16,9 +16,20 @@ require 'config.options'
 
 require('lazy').setup {
    {
-      'windwp/nvim-autopairs',
+      'nvim-lua/plenary.nvim',
+      lazy = false,
+   },
+   {
+      'folke/which-key.nvim',
       config = function()
-         require('nvim-autopairs').setup {}
+         require('which-key').setup {
+            window = {
+               border = 'rounded',
+            },
+            plugins = {
+               marks = false,
+            },
+         }
       end,
    },
 }

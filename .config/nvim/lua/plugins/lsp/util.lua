@@ -29,29 +29,6 @@ local function lsp_format(bufnr)
 end
 
 function M.on_attach(client, bufnr)
-   -- Diagnostic keymaps
-
-   -- wk.register({
-   --    r = { vim.lsp.buf.rename, 'rename' },
-   --    a = { vim.lsp.buf.code_action, 'code action' },
-   -- }, { prefix = '<leader>c' })
-
-   -- map('n', '[e', function()
-   --    vim.diagnostic.goto_prev { float = false }
-   -- end, { desc = 'previous diagnostic' })
-   -- map('n', ']e', function()
-   --    vim.diagnostic.goto_next { float = false }
-   -- end, { desc = 'next diagnostic' })
-
-   -- map({ 'n', 'v' }, '<leader>cr', vim.lsp.buf.rename, { desc = 'rename' })
-   -- map({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, { desc = 'code action' })
-   -- map({ 'n', 'v' }, 'gd', vim.lsp.buf.definition, { desc = 'goto definition' })
-   -- map({ 'n', 'v' }, 'gI', vim.lsp.buf.implementation, { desc = 'goto implementation' })
-
-   -- telescope helper
-   -- map('n', '<leader>cR', '<cmd>Telescope lsp_references<cr>', { desc = 'find references' })
-   -- map('n', '<leader>cs', '<cmd>Telescope lsp_document_symbols<cr>', { desc = 'document symbols' })
-   --
    -- map({ 'n', 'v' }, 'K', vim.lsp.buf.hover, { desc = 'Hover Documentation' })
    -- map({ 'n', 'v' }, 'K', hover_doc, { desc = 'Hover Documentation' })
 

@@ -1,5 +1,3 @@
--- obsidian
-
 -- rails
 -- scala
 
