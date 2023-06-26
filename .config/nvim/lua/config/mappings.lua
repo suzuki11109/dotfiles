@@ -179,3 +179,12 @@ wk.register {
       'Previous diagnostic',
    },
 }
+
+vim.api.nvim_create_autocmd('FileType', {
+   pattern = { 'typescript', 'typescriptreact' },
+   callback = function()
+      wk.register {
+         ['gd'] = { '<cmd>TypescriptGoToSourceDefinition<CR>', 'Goto source definition' },
+      }
+   end,
+})

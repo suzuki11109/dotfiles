@@ -23,7 +23,6 @@ return {
             jsonls = {},
             solargraph = {},
             gopls = {},
-            tsserver = {},
             angularls = {},
             pyright = {},
             kotlin_language_server = {},
@@ -140,6 +139,17 @@ return {
       ft = 'rust',
       config = function()
          require('rust-tools').setup {
+            server = {
+               on_attach = lsputil.on_attach,
+            },
+         }
+      end,
+   },
+   {
+      'jose-elias-alvarez/typescript.nvim',
+      ft = { 'typescript', 'typescriptreact', 'javscript' },
+      config = function()
+         require('typescript').setup {
             server = {
                on_attach = lsputil.on_attach,
             },
