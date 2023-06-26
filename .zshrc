@@ -11,7 +11,6 @@ if ! zgenom saved; then
   zgenom ohmyzsh
   zgenom ohmyzsh plugins/git
   zgenom load unixorn/fzf-zsh-plugin
-  zgenom load Aloxaf/fzf-tab
   zgenom load zdharma-continuum/fast-syntax-highlighting
   zgenom load zsh-users/zsh-completions
   zgenom load zsh-users/zsh-history-substring-search
@@ -21,12 +20,6 @@ if ! zgenom saved; then
   zgenom save
 fi
 
-# disable sort when completing options of any command
-# zstyle ':completion:complete:*:options' sort false
-
-zstyle ':fzf-tab:complete:git-log:*' fzf-preview \
-	'git log --color=always $word'
-
 alias vi="nvim"
 alias vim="nvim"
 export EDITOR="nvim"
@@ -35,6 +28,7 @@ alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias k="kubectl"
 
 export FZF_DEFAULT_OPTS=" \
+--info=inline --no-sort --keep-right --height=40% \
 --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
 --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
 --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
@@ -48,5 +42,19 @@ command -v ng >/dev/null && source <(ng completion script)
 
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 
-# _ZL_EXCLUDE_DIRS
-eval "$(lua $HOME/z.lua/z.lua --init zsh once)"
+export _ZO_FZF_OPTS="--no-sort --keep-right --height=40% --layout=reverse \
+--color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
+--color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
+--color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
+
+eval "$(zoxide init zsh)"
+bindkey -s '^j' 'zi^M'
+
+source $HOME/fzf-tab-completion/zsh/fzf-zsh-completion.sh
+bindkey '^I' fzf_completion
+
+v ()
+{
+  __zoxide_zi
+  nvim
+}

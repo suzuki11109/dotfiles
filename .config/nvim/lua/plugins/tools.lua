@@ -11,14 +11,16 @@ return {
    {
       'klen/nvim-test',
       cmd = { 'TestSuite', 'TestFile', 'TestNearest', 'TestLast', 'TestVisit' },
-      opts = {
-         term = 'toggleterm',
-         termOpts = {
-            direction = 'horizontal',
-            height = vim.o.lines * 0.5,
-            go_back = true,
-         },
-      },
+      config = function()
+         require('nvim-test').setup {
+            term = 'toggleterm',
+            termOpts = {
+               direction = 'horizontal',
+               height = vim.o.lines * 0.5,
+               go_back = true,
+            },
+         }
+      end,
    },
 
    {

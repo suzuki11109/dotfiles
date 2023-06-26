@@ -26,6 +26,7 @@ return {
             tsserver = {},
             angularls = {},
             pyright = {},
+            kotlin_language_server = {},
             lua_ls = {
                settings = {
                   Lua = {

@@ -22,17 +22,12 @@ export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null && eval "$(pyenv init -)"
 # eval "$(pyenv virtualenv-init -)"
 
-export PATH=$PATH:$HOME/.local/share/coursier/bin
+# export PATH=$PATH:$HOME/.local/share/coursier/bin
 
 [[ -r "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
-export SDKMAN_DIR="$HOME/.sdkman"
-[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
 command -v pyenv >/dev/null && eval "$(direnv hook zsh)"
 
-# >>> JVM installed by coursier >>>
-export JAVA_HOME="$HOME/.cache/coursier/arc/https/github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u292-b10/OpenJDK8U-jdk_x64_linux_hotspot_8u292b10.tar.gz/jdk8u292-b10"
-export PATH="$PATH:$HOME/.cache/coursier/arc/https/github.com/AdoptOpenJDK/openjdk8-binaries/releases/download/jdk8u292-b10/OpenJDK8U-jdk_x64_linux_hotspot_8u292b10.tar.gz/jdk8u292-b10/bin"
-# <<< JVM installed by coursier <<<
+export SDKMAN_DIR="$HOME/.sdkman"
+[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
 

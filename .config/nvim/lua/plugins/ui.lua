@@ -146,7 +146,7 @@ return {
       dependencies = 'nvim-tree/nvim-web-devicons',
       config = function()
          require('trouble').setup {
-            height = 15,
+            -- height = 15,
             padding = false,
          }
       end,
@@ -171,7 +171,34 @@ return {
          pcall(require('nvim-treesitter.install').update { with_sync = true })
       end,
       opts = {
-         ensure_installed = 'all',
+         ensure_installed = {
+            'go',
+            'gomod',
+            'gosum',
+            'gowork',
+            'git_config',
+            'gitcommit',
+            'css',
+            'html',
+            'markdown',
+            'lua',
+            'python',
+            'ruby',
+            'rust',
+            'scala',
+            'make',
+            'dockerfile',
+            'http',
+            'terraform',
+            'javascript',
+            'typescript',
+            'tsx',
+            'vue',
+            'json',
+            'yaml',
+            'toml',
+            'sql',
+         },
          highlight = { enable = true },
          indent = { enable = true },
          textobjects = {
@@ -185,26 +212,6 @@ return {
                   ['if'] = '@function.inner',
                   ['ac'] = '@class.outer',
                   ['ic'] = '@class.inner',
-               },
-            },
-            move = {
-               enable = true,
-               set_jumps = true,
-               goto_next_start = {
-                  [']m'] = '@function.outer',
-                  [']]'] = '@class.outer',
-               },
-               goto_next_end = {
-                  [']M'] = '@function.outer',
-                  [']['] = '@class.outer',
-               },
-               goto_previous_start = {
-                  ['[m'] = '@function.outer',
-                  ['[['] = '@class.outer',
-               },
-               goto_previous_end = {
-                  ['[M'] = '@function.outer',
-                  ['[]'] = '@class.outer',
                },
             },
          },
@@ -251,8 +258,6 @@ return {
    {
       'folke/which-key.nvim',
       config = function()
-         -- vim.o.timeout = true
-         -- vim.o.timeoutlen = 300
          require('which-key').setup {
             window = {
                border = 'rounded',

@@ -139,6 +139,7 @@ wk.register({
       o = { '<C-W>o', 'Close other window' },
       s = { '<C-W>s', 'Split horizontal' },
       v = { '<C-W>v', 'Split vertical' },
+      z = { '<cmd>$quit<CR>', 'Close last window' },
    },
 
    g = {
