@@ -1,5 +1,4 @@
 local map = require('utils').map
--- local lsputil = require 'plugins.lsp.util'
 
 -- [[ Basic Keymaps ]]
 map('', ';', ':')

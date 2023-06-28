@@ -11,6 +11,7 @@ if ! zgenom saved; then
   zgenom ohmyzsh
   zgenom ohmyzsh plugins/git
   zgenom load unixorn/fzf-zsh-plugin
+  zgenom load Aloxaf/fzf-tab
   zgenom load zdharma-continuum/fast-syntax-highlighting
   zgenom load zsh-users/zsh-completions
   zgenom load zsh-users/zsh-history-substring-search
@@ -26,6 +27,9 @@ export EDITOR="nvim"
 
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias k="kubectl"
+
+#fzf-tab
+zstyle ':completion:*:git-checkout:*' sort false
 
 export FZF_DEFAULT_OPTS=" \
 --info=inline --no-sort --keep-right --height=40% \
@@ -49,9 +53,10 @@ export _ZO_FZF_OPTS="--no-sort --keep-right --height=40% --layout=reverse \
 
 eval "$(zoxide init zsh)"
 bindkey -s '^j' 'zi^M'
+# bindkey -s '^j' 'cd $(zoxide query -l | fzf --reverse --inline-info)^M'
 
-source $HOME/fzf-tab-completion/zsh/fzf-zsh-completion.sh
-bindkey '^I' fzf_completion
+# source $HOME/fzf-tab-completion/zsh/fzf-zsh-completion.sh
+# bindkey '^I' fzf_completion
 
 v ()
 {

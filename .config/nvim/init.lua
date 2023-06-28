@@ -1,3 +1,4 @@
+-- buffers show hidden file
 -- neotest
 -- yaml k8s support
 

@@ -224,25 +224,31 @@ return {
    {
       'stevearc/oil.nvim',
       cmd = 'Oil',
-      opts = {
-         columns = {
-            'icon',
-            'permission',
-            'size',
-            'mtime',
-         },
-         win_options = {
-            conceallevel = 3,
-            concealcursor = 'nv',
-         },
-         keymaps = {
-            ['g?'] = 'actions.show_help',
-            ['q'] = 'actions.close',
-         },
-         view_options = {
-            show_hidden = true,
-         },
-      },
+      config = function()
+         require('oil').setup {
+            columns = {
+               'icon',
+               'permission',
+               'size',
+               'mtime',
+            },
+            win_options = {
+               conceallevel = 3,
+               concealcursor = 'nv',
+            },
+            keymaps = {
+               ['g?'] = 'actions.show_help',
+               ['q'] = 'actions.close',
+            },
+            view_options = {
+               show_hidden = true,
+            },
+         }
+         vim.api.nvim_create_autocmd('FileType', {
+            pattern = 'oil',
+            command = 'setlocal winbar=%f',
+         })
+      end,
    },
    {
       'cbochs/grapple.nvim',
