@@ -149,4 +149,9 @@ return {
    },
 
    { 'gpanders/editorconfig.nvim', event = 'VeryLazy' },
+   {
+      'm4xshen/hardtime.nvim',
+      event = 'VeryLazy',
+      opts = {},
+   },
 }

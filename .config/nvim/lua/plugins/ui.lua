@@ -32,14 +32,15 @@ return {
          require('telescope').setup {
             defaults = {
                file_ignore_patterns = { '.git/', 'node_modules/' },
+               results_title = '',
+               layout_strategy = 'horizontal',
                layout_config = {
-                  width = 0.9,
-                  prompt_position = 'top',
                   horizontal = {
-                     preview_width = 0.5,
+                     width = 0.9,
+                     prompt_position = 'top',
                   },
                },
-               path_display = { 'smart' },
+               -- path_display = { 'smart' },
                sorting_strategy = 'ascending',
                mappings = {
                   i = {
@@ -146,7 +147,6 @@ return {
       dependencies = 'nvim-tree/nvim-web-devicons',
       config = function()
          require('trouble').setup {
-            -- height = 15,
             padding = false,
          }
       end,
@@ -249,7 +249,6 @@ return {
       cmd = { 'GrappleSelect', 'GrapplePopup', 'GrappleTag', 'GrappleUntag', 'GrappleCycle' },
       opts = {
          popup_options = {
-            -- width = vim.api.nvim_win_get_width(0) - 10,
             border = 'rounded',
             height = 17,
          },

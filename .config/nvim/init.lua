@@ -1,5 +1,4 @@
 -- neotest
--- hardtime
 -- yaml k8s support
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'

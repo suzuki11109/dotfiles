@@ -20,7 +20,7 @@ vim.o.relativenumber = true
 vim.o.hlsearch = true
 
 -- Show mode in command line
-vim.o.showmode = true
+vim.o.showmode = false
 
 -- Max autocomplete height
 vim.o.pumheight = 15
