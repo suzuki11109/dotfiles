@@ -31,11 +31,14 @@ return {
 
          cmp.setup {
             completion = {
-               keyword_length = 2,
+               -- keyword_length = 2,
+               -- completeopt = 'menu,menuone,noinsert',
+               autocomplete = false,
             },
             preselect = cmp.PreselectMode.None,
             window = {
-               documentation = cmp.config.window.bordered(),
+               -- documentation = cmp.config.window.bordered(),
+               documentation = cmp.config.disable,
             },
             snippet = {
                expand = function(args)
@@ -51,24 +54,37 @@ return {
                ['<Tab>'] = cmp.mapping(function(fallback)
                   if cmp.visible() then
                      cmp.select_next_item()
-                  elseif luasnip.expand_or_jumpable() then
-                     luasnip.expand_or_jump()
                   elseif has_words_before() then
                      cmp.complete()
+                     cmp.select_next_item()
+                     -- cmp.complete {
+                     --    reason = cmp.ContextReason.Auto,
+                     -- }
                   else
                      fallback()
                   end
                end, { 'i', 's' }),
-
-               ['<S-Tab>'] = cmp.mapping(function(fallback)
-                  if cmp.visible() then
-                     cmp.select_prev_item()
-                  elseif luasnip.jumpable(-1) then
-                     luasnip.jump(-1)
-                  else
-                     fallback()
-                  end
-               end, { 'i', 's' }),
+               -- ['<Tab>'] = cmp.mapping(function(fallback)
+               --    if cmp.visible() then
+               --       cmp.select_next_item()
+               --    elseif luasnip.expand_or_jumpable() then
+               --       luasnip.expand_or_jump()
+               --    elseif has_words_before() then
+               --       cmp.complete()
+               --    else
+               --       fallback()
+               --    end
+               -- end, { 'i', 's' }),
+               --
+               -- ['<S-Tab>'] = cmp.mapping(function(fallback)
+               --    if cmp.visible() then
+               --       cmp.select_prev_item()
+               --    elseif luasnip.jumpable(-1) then
+               --       luasnip.jump(-1)
+               --    else
+               --       fallback()
+               --    end
+               -- end, { 'i', 's' }),
                -- ['<Tab>'] = cmp.mapping(function(fallback)
                --    if cmp.visible() then
                --       cmp.confirm {
@@ -163,14 +179,14 @@ return {
       },
    },
 
-   {
-      'ggandor/leap.nvim',
-      event = { 'BufReadPre', 'BufNewFile' },
-      config = function()
-         vim.keymap.set('n', 's', function()
-            local current_window = vim.fn.win_getid()
-            require('leap').leap { target_windows = { current_window } }
-         end)
-      end,
-   },
+   -- {
+   --    'ggandor/leap.nvim',
+   --    event = { 'BufReadPre', 'BufNewFile' },
+   --    config = function()
+   --       vim.keymap.set('n', 's', function()
+   --          local current_window = vim.fn.win_getid()
+   --          require('leap').leap { target_windows = { current_window } }
+   --       end)
+   --    end,
+   -- },
 }

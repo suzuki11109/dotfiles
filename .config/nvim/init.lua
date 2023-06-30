@@ -1,7 +1,7 @@
--- buffers show hidden file
--- neotest
--- yaml k8s support
-
+-- fzf sort
+-- nvim-docs jump to docs window and q to quit
+-- resize window with alt
+-- vim-test
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
    vim.fn.system {
@@ -39,6 +39,7 @@ require('lazy').setup('plugins', {
 
 require 'config.mappings'
 
+vim.cmd [[set statusline=%!v:lua.require'statusline'.output()]]
 vim.cmd 'colorscheme catppuccin'
 
 -- vim: ts=3 sts=3 sw=3 et

@@ -1,6 +1,7 @@
 return {
    {
       'catppuccin/nvim',
+      enabled = true,
       priority = 1000,
       name = 'catppuccin',
       opts = {
@@ -16,16 +17,15 @@ return {
          integrations = {
             fidget = true,
             gitsigns = true,
-            leap = true,
             mason = true,
             cmp = true,
             native_lsp = {
                enabled = true,
             },
             treesitter = true,
-            overseer = true,
-            telescope = true,
-            lsp_trouble = true,
+            -- overseer = true,
+            -- telescope = true,
+            -- lsp_trouble = true,
             which_key = true,
          },
       },

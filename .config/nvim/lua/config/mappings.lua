@@ -1,5 +1,14 @@
 local map = require('utils').map
 
+local function new_scratch()
+   vim.api.nvim_command 'e scratch'
+   vim.api.nvim_create_buf(false, true)
+   vim.opt_local.buflisted = false
+   vim.opt_local.buftype = 'nofile'
+   vim.opt_local.bufhidden = 'hide'
+   vim.opt_local.swapfile = false
+end
+
 -- [[ Basic Keymaps ]]
 map('', ';', ':')
 
@@ -21,14 +30,21 @@ map('v', '<', '<gv')
 
 local wk = require 'which-key'
 
+map('n', '<C-1>', '<cmd>1ToggleTerm<CR>')
+map('n', '<C-2>', '<cmd>2ToggleTerm<CR>')
+map('n', '<C-3>', '<cmd>3ToggleTerm<CR>')
+map('n', '<C-4>', '<cmd>4ToggleTerm<CR>')
+map('n', '<C-5>', '<cmd>5ToggleTerm<CR>')
+
 wk.register({
-   ['<space>'] = { '<cmd>Telescope commands<CR>', 'Commands' },
-   ['.'] = { '<cmd>Telescope resume<CR>', 'Resume' },
-   [':'] = { '<cmd>Telescope command_history<CR>', 'Command history' },
+   ['<space>'] = { '<cmd>FzfLua commands<CR>', 'Commands' },
+   ['x'] = { new_scratch, 'Scratch buffer' },
+   ['.'] = { '<cmd>FzfLua resume<CR>', 'Resume' },
+   [':'] = { '<cmd>FzfLua command_history<CR>', 'Command history' },
 
    b = {
       name = 'Buffer',
-      b = { '<cmd>Telescope buffers sort_lastused=true ignore_current_buffer=true<CR>', 'Switch to buffer' },
+      b = { '<cmd>FzfLua buffers<CR>', 'Switch to buffer' },
       d = { ':bp|bd#<CR>', 'Close buffer' },
       l = { ':e #<CR>', 'Last buffer' },
       n = { ':bn<CR>', 'Next buffer' },
@@ -41,19 +57,19 @@ wk.register({
       d = { vim.lsp.buf.definition, 'Goto definition' },
       m = { '<cmd>Mason<CR>', 'Mason' },
       r = { vim.lsp.buf.rename, 'Rename' },
-      R = { '<cmd>Telescope lsp_references<CR>', 'References' },
-      s = { '<cmd>Telescope lsp_document_symbols<CR>', 'Symbols' },
+      R = { '<cmd>FzfLua lsp_references<CR>', 'References' },
+      s = { '<cmd>FzfLua lsp_document_symbols<CR>', 'Symbols' },
       x = { '<cmd>TroubleToggle<CR>', 'List errors' },
    },
 
    f = {
       name = 'File',
-      d = { '<cmd>Oil<CR>', 'File Explorer' },
-      f = { '<cmd>Telescope find_files<CR>', 'Find files' },
-      F = { '<cmd>Telescope find_files cwd=%:p:h<CR>', 'Find current dir files' },
+      d = { '<cmd>FzfLua files cwd=%:p:h<CR>', 'Find files' },
+      e = { '<cmd>Oil<CR>', 'File Explorer' },
+      f = { '<cmd>FzfLua files<CR>', 'Find files' },
       G = { ':e ~/code/exp/play/main.go<CR>', 'Goplay' },
       i = { ':e ~/.config/nvim/init.lua<CR>', 'Config nvim' },
-      r = { '<cmd>Telescope oldfiles<CR>', 'Recent files' },
+      r = { '<cmd>FzfLua oldfiles<CR>', 'Recent files' },
       T = { ':e ~/.config/alacritty/alacritty.yml<CR>', 'Config terminal' },
       t = { ':e ~/.config/kitty/kitty.conf<CR>', 'Config kitty' },
       x = { ':e ~/.config/tmux/tmux.conf<CR>', 'Config tmux' },
@@ -63,10 +79,10 @@ wk.register({
 
    h = {
       name = 'Help',
-      h = { '<cmd>Telescope help_tags<CR>', 'Help tags' },
-      k = { '<cmd>Telescope keymaps<CR>', 'Keymaps' },
-      l = { '<cmd>Telescope highlights<CR>', 'Highlights' },
-      t = { '<cmd>Telescope colorscheme<CR>', 'Colorscheme' },
+      h = { '<cmd>FzfLua help_tags<CR>', 'Help tags' },
+      k = { '<cmd>FzfLua keymaps<CR>', 'Keymaps' },
+      l = { '<cmd>FzfLua highlights<CR>', 'Highlights' },
+      t = { '<cmd>FzfLua colorschemes<CR>', 'Colorscheme' },
    },
 
    k = {
@@ -91,32 +107,27 @@ wk.register({
    m = {
       name = 'Terminal',
       m = { '<cmd>TermSelect<CR>', 'Toggle terminal' },
-      ['1'] = { '<cmd>1ToggleTerm<CR>', 'Switch to term 1' },
-      ['2'] = { '<cmd>2ToggleTerm<CR>', 'Switch to term 2' },
-      ['3'] = { '<cmd>3ToggleTerm<CR>', 'Switch to term 3' },
-      ['4'] = { '<cmd>4ToggleTerm<CR>', 'Switch to term 4' },
-      ['5'] = { '<cmd>5ToggleTerm<CR>', 'Switch to term 5' },
    },
 
-   n = {
-      name = 'Run',
-      o = { '<cmd>OverseerToggle<CR>', 'Toggle task window' },
-      n = { '<cmd>OverseerRun<CR>', 'Run tasks from template' },
-      c = { '<cmd>OverseerRunCmd<CR>', 'Run cmd in shell' },
-   },
+   -- n = {
+   --    name = 'Run',
+   --    o = { '<cmd>OverseerToggle<CR>', 'Toggle task window' },
+   --    n = { '<cmd>OverseerRun<CR>', 'Run tasks from template' },
+   --    c = { '<cmd>OverseerRunCmd<CR>', 'Run cmd in shell' },
+   -- },
 
-   r = {
-      name = 'Rest',
-      r = { '<Plug>RestNvim', 'Run request at point' },
-      p = { '<Plug>RestNvimPreview', 'Preview request command' },
-      l = { '<Plug>RestNvimLast', 'Rerun last request' },
-   },
+   -- r = {
+   --    name = 'Rest',
+   --    r = { '<Plug>RestNvim', 'Run request at point' },
+   --    p = { '<Plug>RestNvimPreview', 'Preview request command' },
+   --    l = { '<Plug>RestNvimLast', 'Rerun last request' },
+   -- },
 
    s = {
       name = 'Search',
-      d = { '<cmd>Telescope dir live_grep<CR>', 'Grep in directory' },
-      l = { '<cmd>Telescope current_buffer_fuzzy_find<CR>', 'Search this buffer' },
-      p = { '<cmd>Telescope live_grep<CR>', 'Grep in project' },
+      l = { '<cmd>FzfLua blines<CR>', 'Search this buffer' },
+      p = { '<cmd>FzfLua grep_project<CR>', 'Grep in project' },
+      r = { '<cmd>FzfLua grep_last<CR>', 'Last grep' },
    },
 
    t = {
@@ -126,6 +137,11 @@ wk.register({
       f = { '<cmd>TestFile<CR>', 'Test file' },
       s = { '<cmd>TestNearest<CR>', 'Test single' },
       t = { '<cmd>TestLast<CR>', 'Test last' },
+      -- s = { '<cmd>Neotest run<CR>', 'Test single' },
+      -- t = { '<cmd>Neotest run last<CR>', 'Test last' },
+      -- f = { '<cmd>Neotest run file<CR>', 'Test file' },
+      -- o = { '<cmd>Neotest output-panel<CR>', 'Test output panel' },
+      -- u = { '<cmd>Neotest summary<CR>', 'Test summary' },
    },
 
    w = {

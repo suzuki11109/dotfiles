@@ -1,5 +1,3 @@
--- [[ Setting options ]]
-
 -- Set <space> as the leader key
 vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
@@ -20,7 +18,7 @@ vim.o.relativenumber = true
 vim.o.hlsearch = true
 
 -- Show mode in command line
-vim.o.showmode = false
+vim.o.showmode = true
 
 -- Max autocomplete height
 vim.o.pumheight = 15
@@ -136,6 +134,7 @@ vim.api.nvim_create_autocmd('FileType', {
       'tsplayground',
       'git',
       'fugitive',
+      'nvim-docs-view',
    },
    callback = function(event)
       vim.bo[event.buf].buflisted = false
@@ -150,6 +149,12 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 })
 
 vim.api.nvim_create_user_command('YankFilePath', function()
+   local path = vim.fn.expand '%:p'
+   vim.fn.setreg('+', path)
+   vim.notify('Copied "' .. path .. '" to the clipboard!')
+end, {})
+
+vim.api.nvim_create_user_command('Scratch', function()
    local path = vim.fn.expand '%:p'
    vim.fn.setreg('+', path)
    vim.notify('Copied "' .. path .. '" to the clipboard!')

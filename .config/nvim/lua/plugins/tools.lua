@@ -3,25 +3,29 @@ return {
       'nvim-lua/plenary.nvim',
       lazy = false,
    },
+
    {
       'jghauser/mkdir.nvim',
       event = 'CmdlineEnter',
    },
 
-   {
-      'klen/nvim-test',
-      cmd = { 'TestSuite', 'TestFile', 'TestNearest', 'TestLast', 'TestVisit' },
-      config = function()
-         require('nvim-test').setup {
-            term = 'toggleterm',
-            termOpts = {
-               direction = 'horizontal',
-               height = vim.o.lines * 0.5,
-               go_back = true,
-            },
-         }
-      end,
-   },
+   -- {
+   --    'klen/nvim-test',
+   --    cmd = { 'TestSuite', 'TestFile', 'TestNearest', 'TestLast', 'TestVisit' },
+   --    config = function()
+   --       require('nvim-test.runners.jest'):setup {
+   --          command = 'npm test --',
+   --       }
+   --       require('nvim-test').setup {
+   --          term = 'toggleterm',
+   --          termOpts = {
+   --             direction = 'horizontal',
+   --             height = vim.o.lines * 0.5,
+   --             go_back = true,
+   --          },
+   --       }
+   --    end,
+   -- },
 
    {
       'akinsho/toggleterm.nvim',
@@ -36,6 +40,9 @@ return {
                   return vim.o.columns * 0.3
                end
             end,
+            float_opts = {
+               border = 'curved',
+            },
             winbar = {
                enabled = true,
                name_formatter = function(term) --  term: Terminal
@@ -44,18 +51,21 @@ return {
             },
          }
 
-         function _G.set_terminal_keymaps()
-            local opts = { buffer = 0 }
-            vim.keymap.set('t', '<esc>', [[<C-\><C-n>]], opts)
-            -- vim.keymap.set('t', 'kj', [[<C-\><C-n>]], opts)
-            vim.keymap.set('t', '<C-h>', [[<Cmd>wincmd h<CR>]], opts)
-            vim.keymap.set('t', '<C-j>', [[<Cmd>wincmd j<CR>]], opts)
-            vim.keymap.set('t', '<C-k>', [[<Cmd>wincmd k<CR>]], opts)
-            vim.keymap.set('t', '<C-l>', [[<Cmd>wincmd l<CR>]], opts)
-            vim.keymap.set('t', '<C-w>', [[<C-\><C-n><C-w>]], opts)
-         end
-
-         vim.cmd 'autocmd! TermOpen term://* lua set_terminal_keymaps()'
+         vim.api.nvim_create_autocmd('FileType', {
+            pattern = { 'toggleterm' },
+            callback = function()
+               local opts = { buffer = 0 }
+               vim.keymap.set('t', '<esc>', [[<C-\><C-n>]], opts)
+               vim.keymap.set('t', '<C-g>', [[<C-\><C-n>]], opts)
+               vim.keymap.set('n', '<CR>', [[i]], opts)
+               -- vim.keymap.set('t', 'kj', [[<C-\><C-n>]], opts)
+               -- vim.keymap.set('t', '<C-h>', [[<Cmd>wincmd h<CR>]], opts)
+               -- vim.keymap.set('t', '<C-j>', [[<Cmd>wincmd j<CR>]], opts)
+               -- vim.keymap.set('t', '<C-k>', [[<Cmd>wincmd k<CR>]], opts)
+               -- vim.keymap.set('t', '<C-l>', [[<Cmd>wincmd l<CR>]], opts)
+               -- vim.keymap.set('t', '<C-w>', [[<C-\><C-n><C-w>]], opts)
+            end,
+         })
       end,
    },
 
@@ -122,25 +132,27 @@ return {
       cmd = { 'Git', 'G' },
    },
 
-   {
-      'rest-nvim/rest.nvim',
-      ft = 'http',
-      config = function()
-         require('rest-nvim').setup {
-            result = {
-               show_curl_command = false,
-            },
-            jump_to_request = false,
-         }
-      end,
-   },
-   {
-      'stevearc/overseer.nvim',
-      cmd = { 'OverseerToggle', 'OverseerRun', 'OverseerRunCmd' },
-      opts = {
-         strategy = 'toggleterm',
-      },
-   },
+   -- {
+   --    'rest-nvim/rest.nvim',
+   --    ft = 'http',
+   --    config = function()
+   --       require('rest-nvim').setup {
+   --          result = {
+   --             show_curl_command = false,
+   --          },
+   --          jump_to_request = false,
+   --       }
+   --    end,
+   -- },
+
+   -- {
+   --    'stevearc/overseer.nvim',
+   --    cmd = { 'OverseerToggle', 'OverseerRun', 'OverseerRunCmd' },
+   --    opts = {
+   --       strategy = 'toggleterm',
+   --    },
+   -- },
+
    {
       'akinsho/git-conflict.nvim',
       event = 'VeryLazy',
@@ -149,9 +161,11 @@ return {
    },
 
    { 'gpanders/editorconfig.nvim', event = 'VeryLazy' },
+
    {
       'm4xshen/hardtime.nvim',
       event = 'VeryLazy',
       opts = {},
+      enabled = false,
    },
 }

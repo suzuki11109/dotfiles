@@ -91,7 +91,7 @@ return {
          require('docs-view').setup {
             update_mode = 'manual',
             position = 'bottom',
-            height = vim.o.lines * 0.5,
+            height = vim.o.lines * 0.5 - 1,
          }
       end,
    },

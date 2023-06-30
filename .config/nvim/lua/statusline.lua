@@ -4,24 +4,22 @@ function M.output()
    local parts = {
       '%<%f ',
       '%h%m%r ',
-      '%#Function#',
-      [[%{luaeval("require'statusline'.tags()")} ]],
-      '%*',
-      '%#LspDiagnosticsError#',
-      [[%{luaeval("require'statusline'.diagnostic_errors()")}]],
-      '%*',
-      '%#LspDiagnosticsWarning#',
-      [[%{luaeval("require'statusline'.diagnostic_warnings()")}]],
-      '%*',
-      '%#LspDiagnosticsHint#',
-      [[%{luaeval("require'statusline'.diagnostic_hints()")}]],
-      '%*',
-      '%#LspDiagnosticsInformation#',
-      [[%{luaeval("require'statusline'.diagnostic_infos()")}]],
-      '%*',
+      -- '%#LspDiagnosticsError#',
+      -- [[%{luaeval("require'statusline'.diagnostic_errors()")}]],
+      -- '%*',
+      -- '%#LspDiagnosticsWarning#',
+      -- [[%{luaeval("require'statusline'.diagnostic_warnings()")}]],
+      -- '%*',
+      -- '%#LspDiagnosticsHint#',
+      -- [[%{luaeval("require'statusline'.diagnostic_hints()")}]],
+      -- '%*',
+      -- '%#LspDiagnosticsInformation#',
+      -- [[%{luaeval("require'statusline'.diagnostic_infos()")}]],
+      -- '%*',
       '%=',
-      '%l,%c%V ',
-      " %{get(b:,'gitsigns_head','')}",
+      -- " %{get(b:,'gitsigns_head','')}",
+      ' %l,%c%V',
+      ' %P',
       "%{&ff!='unix'?&ff:''}",
       ' %y',
    }
@@ -56,14 +54,6 @@ function M.diagnostic_infos()
    local num = #vim.diagnostic.get(nil, { severity = vim.diagnostic.severity.INFO })
    if num > 0 then
       return ' ' .. num .. ' '
-   end
-   return ''
-end
-
-function M.tags()
-   if require('grapple').exists() then
-      local key = require('grapple').key()
-      return ' [' .. key .. ']'
    end
    return ''
 end
