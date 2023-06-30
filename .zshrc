@@ -52,7 +52,7 @@ export _ZO_FZF_OPTS="--no-sort --keep-right --height=40% --layout=reverse \
 --color=marker:#f5e0dc,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
 
 eval "$(zoxide init zsh)"
-bindkey -s '^j' 'zi^M'
+# bindkey -s '^j' 'zi^M'
 # bindkey -s '^j' 'cd $(zoxide query -l | fzf --reverse --inline-info)^M'
 
 # source $HOME/fzf-tab-completion/zsh/fzf-zsh-completion.sh
