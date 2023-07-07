@@ -19,32 +19,27 @@ map({ 'n' }, '<Space>', '<Nop>')
 map('n', 'k', "v:count == 0 ? 'gk' : 'k'", { expr = true })
 map('n', 'j', "v:count == 0 ? 'gj' : 'j'", { expr = true })
 
-map('n', '<C-h>', '<C-w>h')
-map('n', '<C-j>', '<C-w>j')
-map('n', '<C-k>', '<C-w>k')
-map('n', '<C-l>', '<C-w>l')
-
 -- Better indents
 map('v', '>', '>gv')
 map('v', '<', '<gv')
 
 local wk = require 'which-key'
 
-map('n', '<C-1>', '<cmd>1ToggleTerm<CR>')
-map('n', '<C-2>', '<cmd>2ToggleTerm<CR>')
-map('n', '<C-3>', '<cmd>3ToggleTerm<CR>')
-map('n', '<C-4>', '<cmd>4ToggleTerm<CR>')
-map('n', '<C-5>', '<cmd>5ToggleTerm<CR>')
+-- map('n', '<C-1>', '<cmd>1ToggleTerm<CR>')
+-- map('n', '<C-2>', '<cmd>2ToggleTerm<CR>')
+-- map('n', '<C-3>', '<cmd>3ToggleTerm<CR>')
+-- map('n', '<C-4>', '<cmd>4ToggleTerm<CR>')
+-- map('n', '<C-5>', '<cmd>5ToggleTerm<CR>')
 
 wk.register({
-   ['<space>'] = { '<cmd>FzfLua commands<CR>', 'Commands' },
+   ['<space>'] = { '<cmd>Telescope commands<CR>', 'Commands' },
    ['x'] = { new_scratch, 'Scratch buffer' },
-   ['.'] = { '<cmd>FzfLua resume<CR>', 'Resume' },
-   [':'] = { '<cmd>FzfLua command_history<CR>', 'Command history' },
+   ['.'] = { '<cmd>Telescope resume<CR>', 'Resume' },
+   [':'] = { '<cmd>Telescope command_history<CR>', 'Command history' },
 
    b = {
       name = 'Buffer',
-      b = { '<cmd>FzfLua buffers<CR>', 'Switch to buffer' },
+      b = { '<cmd>Telescope buffers<CR>', 'Switch to buffer' },
       d = { ':bp|bd#<CR>', 'Close buffer' },
       l = { ':e #<CR>', 'Last buffer' },
       n = { ':bn<CR>', 'Next buffer' },
@@ -57,19 +52,19 @@ wk.register({
       d = { vim.lsp.buf.definition, 'Goto definition' },
       m = { '<cmd>Mason<CR>', 'Mason' },
       r = { vim.lsp.buf.rename, 'Rename' },
-      R = { '<cmd>FzfLua lsp_references<CR>', 'References' },
-      s = { '<cmd>FzfLua lsp_document_symbols<CR>', 'Symbols' },
+      R = { '<cmd>Telescope lsp_references<CR>', 'References' },
+      s = { '<cmd>Telescope lsp_document_symbols<CR>', 'Symbols' },
       x = { '<cmd>TroubleToggle<CR>', 'List errors' },
    },
 
    f = {
       name = 'File',
-      d = { '<cmd>FzfLua files cwd=%:p:h<CR>', 'Find files' },
+      d = { '<cmd>Telescope find_files cwd=%:p:h<CR>', 'Find files' },
       e = { '<cmd>Oil<CR>', 'File Explorer' },
-      f = { '<cmd>FzfLua files<CR>', 'Find files' },
+      f = { '<cmd>Telescope find_files<CR>', 'Find files' },
       G = { ':e ~/code/exp/play/main.go<CR>', 'Goplay' },
       i = { ':e ~/.config/nvim/init.lua<CR>', 'Config nvim' },
-      r = { '<cmd>FzfLua oldfiles<CR>', 'Recent files' },
+      r = { '<cmd>Telescope oldfiles<CR>', 'Recent files' },
       T = { ':e ~/.config/alacritty/alacritty.yml<CR>', 'Config terminal' },
       t = { ':e ~/.config/kitty/kitty.conf<CR>', 'Config kitty' },
       x = { ':e ~/.config/tmux/tmux.conf<CR>', 'Config tmux' },
@@ -79,35 +74,35 @@ wk.register({
 
    h = {
       name = 'Help',
-      h = { '<cmd>FzfLua help_tags<CR>', 'Help tags' },
-      k = { '<cmd>FzfLua keymaps<CR>', 'Keymaps' },
-      l = { '<cmd>FzfLua highlights<CR>', 'Highlights' },
-      t = { '<cmd>FzfLua colorschemes<CR>', 'Colorscheme' },
+      h = { '<cmd>Telescope help_tags<CR>', 'Help tags' },
+      k = { '<cmd>Telescope keymaps<CR>', 'Keymaps' },
+      l = { '<cmd>Telescope highlights<CR>', 'Highlights' },
+      t = { '<cmd>Telescope colorscheme<CR>', 'Colorscheme' },
    },
 
-   k = {
-      name = 'Mark',
-      i = { '<cmd>GrappleTag<CR>', 'Tag file' },
-      k = { '<cmd>GrapplePopup tags<CR>', 'Tag popup' },
-      n = { '<cmd>GrappleCycle forward<CR>', 'Switch to next tag' },
-      p = { '<cmd>GrappleCycle backward<CR>', 'Switch to prev tag' },
-      u = { '<cmd>GrappleUntag<CR>', 'Untag file' },
-      ['1'] = { '<cmd>GrappleSelect key=1<CR>', 'Switch to tag 1' },
-      ['2'] = { '<cmd>GrappleSelect key=2<CR>', 'Switch to tag 2' },
-      ['3'] = { '<cmd>GrappleSelect key=3<CR>', 'Switch to tag 3' },
-      ['4'] = { '<cmd>GrappleSelect key=4<CR>', 'Switch to tag 4' },
-      ['5'] = { '<cmd>GrappleSelect key=5<CR>', 'Switch to tag 5' },
-      ['6'] = { '<cmd>GrappleSelect key=6<CR>', 'Switch to tag 6' },
-      ['7'] = { '<cmd>GrappleSelect key=7<CR>', 'Switch to tag 7' },
-      ['8'] = { '<cmd>GrappleSelect key=8<CR>', 'Switch to tag 8' },
-      ['9'] = { '<cmd>GrappleSelect key=9<CR>', 'Switch to tag 9' },
-      ['0'] = { '<cmd>GrappleSelect key=10<CR>', 'Swtich to tag 10' },
-   },
+   -- k = {
+   --    name = 'Mark',
+   --    i = { '<cmd>GrappleTag<CR>', 'Tag file' },
+   --    k = { '<cmd>GrapplePopup tags<CR>', 'Tag popup' },
+   --    n = { '<cmd>GrappleCycle forward<CR>', 'Switch to next tag' },
+   --    p = { '<cmd>GrappleCycle backward<CR>', 'Switch to prev tag' },
+   --    u = { '<cmd>GrappleUntag<CR>', 'Untag file' },
+   --    ['1'] = { '<cmd>GrappleSelect key=1<CR>', 'Switch to tag 1' },
+   --    ['2'] = { '<cmd>GrappleSelect key=2<CR>', 'Switch to tag 2' },
+   --    ['3'] = { '<cmd>GrappleSelect key=3<CR>', 'Switch to tag 3' },
+   --    ['4'] = { '<cmd>GrappleSelect key=4<CR>', 'Switch to tag 4' },
+   --    ['5'] = { '<cmd>GrappleSelect key=5<CR>', 'Switch to tag 5' },
+   --    ['6'] = { '<cmd>GrappleSelect key=6<CR>', 'Switch to tag 6' },
+   --    ['7'] = { '<cmd>GrappleSelect key=7<CR>', 'Switch to tag 7' },
+   --    ['8'] = { '<cmd>GrappleSelect key=8<CR>', 'Switch to tag 8' },
+   --    ['9'] = { '<cmd>GrappleSelect key=9<CR>', 'Switch to tag 9' },
+   --    ['0'] = { '<cmd>GrappleSelect key=10<CR>', 'Swtich to tag 10' },
+   -- },
 
-   m = {
-      name = 'Terminal',
-      m = { '<cmd>TermSelect<CR>', 'Toggle terminal' },
-   },
+   -- m = {
+   --    name = 'Terminal',
+   --    m = { '<cmd>TermSelect<CR>', 'Toggle terminal' },
+   -- },
 
    -- n = {
    --    name = 'Run',
@@ -115,6 +110,10 @@ wk.register({
    --    n = { '<cmd>OverseerRun<CR>', 'Run tasks from template' },
    --    c = { '<cmd>OverseerRunCmd<CR>', 'Run cmd in shell' },
    -- },
+
+   o = {
+      t = { '<cmd>TermOpen<CR>', 'Open term' },
+   },
 
    -- r = {
    --    name = 'Rest',
@@ -125,18 +124,17 @@ wk.register({
 
    s = {
       name = 'Search',
-      l = { '<cmd>FzfLua blines<CR>', 'Search this buffer' },
-      p = { '<cmd>FzfLua grep_project<CR>', 'Grep in project' },
-      r = { '<cmd>FzfLua grep_last<CR>', 'Last grep' },
+      l = { '<cmd>Telescope current_buffer_fuzzy_find<CR>', 'Search this buffer' },
+      p = { '<cmd>Telescope live_grep<CR>', 'Grep in project' },
    },
 
    t = {
       name = 'Test',
-      a = { '<cmd>TestSuite<CR>', 'Test suite' },
-      b = { '<cmd>TestVisit<CR>', 'Test visit' },
-      f = { '<cmd>TestFile<CR>', 'Test file' },
-      s = { '<cmd>TestNearest<CR>', 'Test single' },
-      t = { '<cmd>TestLast<CR>', 'Test last' },
+      -- a = { '<cmd>TestSuite<CR>', 'Test suite' },
+      -- b = { '<cmd>TestVisit<CR>', 'Test visit' },
+      -- f = { '<cmd>TestFile<CR>', 'Test file' },
+      -- s = { '<cmd>TestNearest<CR>', 'Test single' },
+      -- t = { '<cmd>TestLast<CR>', 'Test last' },
       -- s = { '<cmd>Neotest run<CR>', 'Test single' },
       -- t = { '<cmd>Neotest run last<CR>', 'Test last' },
       -- f = { '<cmd>Neotest run file<CR>', 'Test file' },
@@ -154,7 +152,6 @@ wk.register({
       o = { '<C-W>o', 'Close other window' },
       s = { '<C-W>s', 'Split horizontal' },
       v = { '<C-W>v', 'Split vertical' },
-      z = { '<cmd>$quit<CR>', 'Close last window' },
    },
 
    g = {

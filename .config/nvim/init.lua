@@ -1,7 +1,13 @@
--- fzf sort
--- nvim-docs jump to docs window and q to quit
--- resize window with alt
+-- nvim-cmp auto?
+-- nvim-cmp snippet parameters go/typescript
 -- vim-test
+-- mason auto download except go
+-- fzf transparent background?
+-- nvim-cmp . keyword_length
+-- load plugin files on demand in init.lua
+-- move plugins keybinds to plugin configs better keybind function
+
+-- nvim-hover-docs write own plugins
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not vim.loop.fs_stat(lazypath) then
    vim.fn.system {
