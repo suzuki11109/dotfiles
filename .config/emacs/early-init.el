@@ -1,12 +1,11 @@
 ;;; early-init.el --- early init -*- lexical-binding: t; -*-
 
+;; Don’t compact font caches during GC
+(setq inhibit-compacting-font-caches t)
+
+;; Minimal UI
 (setq
- ;; Do not make installed packages available when Emacs starts
- package-enable-at-startup nil
- ;; Increase the garbage collection (GC) threshold for faster startup.
- gc-cons-threshold most-positive-fixnum
- ;; Do not wast time checking the modification time of each file
- load-prefer-newer noninteractive
+ inhibit-startup-screen t
  ;; Remove some unneeded UI elements
  default-frame-alist '((tool-bar-lines . 0)
                        (menu-bar-lines . 0)
@@ -19,14 +18,14 @@
  menu-bar-mode nil
  scroll-bar-mode nil)
 
-;; In Emacs29+, frames can have a transparent background via the
-;; `alpha-background' parameter
-(when (>= emacs-major-version 29)
-    (push (cons 'alpha-background 93) default-frame-alist))
+;; Inhibit startup message in echo area
+(fset 'display-startup-echo-area-message #'ignore)
+
+;; Match theme color early on (smoother transition).
+(add-to-list 'default-frame-alist '(background-color . "#000000"))
+
+;; If you want transaparent background
+(push (cons 'alpha-background 93) default-frame-alist)
 
 ;; set "$LSP_USE_PLISTS=true" to improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
-
-;; set default font
-(set-face-attribute 'default nil :family "monospace" :height 110)
-
