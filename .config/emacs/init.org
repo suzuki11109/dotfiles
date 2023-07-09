@@ -1,3 +1,44 @@
+#+PROPERTY: header-args :results silent :tangle ~/.config/emacs/init.el
+#+STARTUP: overview
+#+AUTO_TANGLE: t
+
+* Early init
+#+begin_src emacs-lisp :tangle ~/.config/emacs/early-init.el
+  ;;; early-init.el --- early init -*- lexical-binding: t; -*-
+  ;;; Commentary:
+  ;;; Code:
+
+  ;; Don’t compact font caches during GC
+  (setq inhibit-compacting-font-caches t)
+
+  ;; Minimal UI
+  (setq
+   inhibit-startup-screen t
+   ;; Remove some unneeded UI elements
+   default-frame-alist '((tool-bar-lines . 0)
+                         (menu-bar-lines . 0)
+                         (vertical-scroll-bars)
+                         ;; (left-fringe . 8)
+                         ;; (right-fringe . 13)
+                         (fullscreen . maximized))
+   ;; Explicitly set modes disabled in `default-frame-alist' to nil
+   tool-bar-mode nil
+   menu-bar-mode nil
+   scroll-bar-mode nil)
+
+  ;; Inhibit startup message in echo area
+  (fset 'display-startup-echo-area-message #'ignore)
+
+  ;; If you want transaparent background
+  ;; (push (cons 'alpha-background 93) default-frame-alist)
+
+  ;; set "$LSP_USE_PLISTS=true" to improve `lsp-mode' performances
+  (setenv "LSP_USE_PLISTS" "true")
+  ;;; early-init.el ends here
+#+end_src
+
+* Performance
+#+begin_src emacs-lisp
 ;; Profile emacs startup
 (add-hook 'emacs-startup-hook
           (lambda ()
@@ -30,46 +71,53 @@
 (setq bidi-inhibit-bpa t)
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
+#+end_src
 
-;; Do not make installed packages available when Emacs starts
-(setq package-enable-at-startup nil)
+* Package management
+#+begin_src emacs-lisp
+  ;; Do not make installed packages available when Emacs starts
+  (setq package-enable-at-startup nil)
 
-;; (setq straight-vc-git-default-clone-depth '(1 single-branch))
+  ;; (setq straight-vc-git-default-clone-depth '(1 single-branch))
 
-;; Use imenu with use-package
-(setq use-package-enable-imenu-support t)
+  ;; Use imenu with use-package
+  (setq use-package-enable-imenu-support t)
 
-;; Bootstraping straight.el
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 6))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+  ;; Bootstraping straight.el
+  (defvar bootstrap-version)
+  (let ((bootstrap-file
+         (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
+        (bootstrap-version 6))
+    (unless (file-exists-p bootstrap-file)
+      (with-current-buffer
+          (url-retrieve-synchronously
+           "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+           'silent 'inhibit-cookies)
+        (goto-char (point-max))
+        (eval-print-last-sexp)))
+    (load bootstrap-file nil 'nomessage))
 
-;; Configure `use-package'
-(unless (require 'use-package nil t)
-  (straight-use-package 'use-package))
-(setq straight-use-package-by-default t)
+  ;; Configure `use-package'
+  (unless (require 'use-package nil t)
+    (straight-use-package 'use-package))
+  (setq straight-use-package-by-default t)
 
-;; For :bind
-(require 'bind-key)
+  ;; For :bind
+  (require 'bind-key)
 
-;; reduce gc threadshold after init
-(use-package gcmh
-  :hook (after-init . gcmh-mode)
-  :init
-  (setq gcmh-idle-delay 'auto
-        gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold (* 32 1024 1024)))
+  ;; reduce gc threadshold after init
+  (use-package gcmh
+    :hook (after-init . gcmh-mode)
+    :init
+    (setq gcmh-idle-delay 'auto
+          gcmh-auto-idle-delay-factor 10
+          gcmh-high-cons-threshold (* 32 1024 1024)))
+#+end_src
 
-;; Escape once
+* Keybindings
+** Whichkey
+#+begin_src emacs-lisp
+  ;; Escape once
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 ;; key bindings
@@ -81,6 +129,10 @@
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1))
 
+#+end_src
+
+** General
+#+begin_src emacs-lisp
 (use-package general
   :config
   (general-auto-unbind-keys)
@@ -239,12 +291,19 @@
     "TAB" '(nil :wk "workspace")
     )
   )
+#+end_src
 
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file "~/.config/emacs/custom.el")
-(when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
-  (load custom-file))
+* General Settings
+** Custom file
+#+begin_src emacs-lisp
+    ;; Save custom vars to separate file from init.el.
+    (setq-default custom-file "~/.config/emacs/custom.el")
+    (when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
+      (load custom-file))
 
+#+end_src
+** Scrolling
+#+begin_src emacs-lisp
 ;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
 (if (>= emacs-major-version 29)
     (pixel-scroll-precision-mode 1)
@@ -263,7 +322,10 @@
  scroll-conservatively 101
  ;; Scroll at a margin of one line
  scroll-margin 3)
+#+end_src
 
+** Minibuffer
+#+begin_src emacs-lisp
 ;; Enable saving minibuffer history
 (savehist-mode 1)
 
@@ -276,99 +338,105 @@
  ;; Use completion in the minibuffer instead of definitions buffer; already use vertico, needed?
  ;; xref-show-definitions-function #'xref-show-definitions-completing-read)
  )
+#+end_src
 
-;; Move stuff to trash
-(setq delete-by-moving-to-trash t)
+** Files
+#+begin_src emacs-lisp
+  ;; Move stuff to trash
+  (setq delete-by-moving-to-trash t)
 
-(setq
- ;; Disable lockfiles
- create-lockfiles nil
- ;; Disable making backup files
- make-backup-files nil)
+  (setq
+   ;; Disable lockfiles
+   create-lockfiles nil
+   ;; Disable making backup files
+   make-backup-files nil)
 
-;; files
-;; Auto load files changed on disk
-(setq global-auto-revert-non-file-buffers t)
-(global-auto-revert-mode 1)
+  ;; files
+  ;; Auto load files changed on disk
+  (setq global-auto-revert-non-file-buffers t)
+  (global-auto-revert-mode 1)
 
-;;  funtions put to custom lisp file
-(defun +delete-this-file (&optional forever)
-  "Delete the file associated with `current-buffer'.
-    If FOREVER is non-nil, the file is deleted without being moved to trash."
-  (interactive "P")
-  (when-let ((file (or (buffer-file-name)
-                       (user-error "Current buffer is not visiting a file")))
-             ((y-or-n-p "Delete this file? ")))
-    (delete-file file (not forever))
-    (kill-buffer (current-buffer))))
+  ;;  funtions put to custom lisp file
+  (defun +delete-this-file (&optional forever)
+    "Delete the file associated with `current-buffer'.
+      If FOREVER is non-nil, the file is deleted without being moved to trash."
+    (interactive "P")
+    (when-let ((file (or (buffer-file-name)
+                         (user-error "Current buffer is not visiting a file")))
+               ((y-or-n-p "Delete this file? ")))
+      (delete-file file (not forever))
+      (kill-buffer (current-buffer))))
 
-(defun +rename-this-file ()
-  "Rename the current buffer and file it is visiting."
-  (interactive)
-  (let ((filename (buffer-file-name)))
-    (if (not (and filename (file-exists-p filename)))
-        (message "Buffer is not visiting a file!")
-      (let ((new-name (read-file-name "New name: " filename)))
-        (cond
-         ((vc-backend filename) (vc-rename-file filename new-name))
-         (t
-          (rename-file filename new-name t)
-          (set-visited-file-name new-name t t)))))))
+  (defun +rename-this-file ()
+    "Rename the current buffer and file it is visiting."
+    (interactive)
+    (let ((filename (buffer-file-name)))
+      (if (not (and filename (file-exists-p filename)))
+          (message "Buffer is not visiting a file!")
+        (let ((new-name (read-file-name "New name: " filename)))
+          (cond
+           ((vc-backend filename) (vc-rename-file filename new-name))
+           (t
+            (rename-file filename new-name t)
+            (set-visited-file-name new-name t t)))))))
 
-;; Automatically make script executable
-(add-hook 'after-save-hook
-          'executable-make-buffer-file-executable-if-script-p)
+  ;; Automatically make script executable
+  (add-hook 'after-save-hook
+            'executable-make-buffer-file-executable-if-script-p)
 
-;; Guess the major mode after saving a file in `fundamental-mode' (adapted
-;; from Doom Emacs).
-(add-hook
- 'after-save-hook
- (defun +save--guess-file-mode-h ()
-   "Guess major mode when saving a file in `fundamental-mode'.
-    Likely, something has changed since the buffer was opened. e.g. A shebang line
-    or file path may exist now."
-   (when (eq major-mode 'fundamental-mode)
-     (let ((buffer (or (buffer-base-buffer) (current-buffer))))
-       (and (buffer-file-name buffer)
-            (eq buffer (window-buffer (selected-window))) ;; Only visible buffers
-            (set-auto-mode))))))
+  ;; Guess the major mode after saving a file in `fundamental-mode' (adapted
+  ;; from Doom Emacs).
+  (add-hook
+   'after-save-hook
+   (defun +save--guess-file-mode-h ()
+     "Guess major mode when saving a file in `fundamental-mode'.
+      Likely, something has changed since the buffer was opened. e.g. A shebang line
+      or file path may exist now."
+     (when (eq major-mode 'fundamental-mode)
+       (let ((buffer (or (buffer-base-buffer) (current-buffer))))
+         (and (buffer-file-name buffer)
+              (eq buffer (window-buffer (selected-window))) ;; Only visible buffers
+              (set-auto-mode))))))
 
-;; Better handling for files with so long lines
-(global-so-long-mode 1)
+  ;; Better handling for files with so long lines
+  (global-so-long-mode 1)
 
-;; Saving multiple files saves only in sub-directories of current project
-(setq save-some-buffers-default-predicate #'save-some-buffers-root)
+  ;; Saving multiple files saves only in sub-directories of current project
+  (setq save-some-buffers-default-predicate #'save-some-buffers-root)
 
-(setq
- ;; Do not ask obvious questions, follow symlinks
- vc-follow-symlinks t
- ;; Display the true file name for symlinks
- find-file-visit-truename t)
+  (setq
+   ;; Do not ask obvious questions, follow symlinks
+   vc-follow-symlinks t
+   ;; Display the true file name for symlinks
+   find-file-visit-truename t)
 
-;; suppress large file opening confirmation
-(setq large-file-warning-threshold nil)
-;; open files externallyt
-(use-package openwith
-  :config
-  (setq openwith-associations
-        (list
-         (list (openwith-make-extension-regexp
-                '("mpg" "mpeg" "mp3" "mp4" "avi" "wmv" "wav" "mov" "flv" "ogm" "ogg" "mkv"))
-               "vlc"
-               '(file))
-         ;; (list (openwith-make-extension-regexp
-         ;;        '("xbm" "pbm" "pgm" "ppm" "pnm"
-         ;;          "png" "gif" "bmp" "tif" "jpeg")) ;; Removed jpg because Telega was
-         ;;       ;; causing feh to be opened...
-         ;;       "feh"
-         ;;       '(file))
-         ;; (list (openwith-make-extension-regexp
-         ;;        '("pdf"))
-         ;;       "zathura"
-         ;;       '(file))
-         ))
-  (openwith-mode 1))
+  ;; suppress large file opening confirmation
+  (setq large-file-warning-threshold nil)
+  ;; open files externallyt
+  (use-package openwith
+    :config
+    (setq openwith-associations
+          (list
+           (list (openwith-make-extension-regexp
+                  '("mpg" "mpeg" "mp3" "mp4" "avi" "wmv" "wav" "mov" "flv" "ogm" "ogg" "mkv"))
+                 "vlc"
+                 '(file))
+           ;; (list (openwith-make-extension-regexp
+           ;;        '("xbm" "pbm" "pgm" "ppm" "pnm"
+           ;;          "png" "gif" "bmp" "tif" "jpeg")) ;; Removed jpg because Telega was
+           ;;       ;; causing feh to be opened...
+           ;;       "feh"
+           ;;       '(file))
+           ;; (list (openwith-make-extension-regexp
+           ;;        '("pdf"))
+           ;;       "zathura"
+           ;;       '(file))
+           ))
+    (openwith-mode 1))
+#+end_src
 
+** Recent files
+#+begin_src emacs-lisp
 ;; recent files
 (use-package recentf
   :straight (:type built-in)
@@ -393,37 +461,42 @@
           (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
           (* any))))
   (recentf-mode 1))
+#+end_src
+** Dired
+#+begin_src emacs-lisp
+  (use-package dired
+    :straight (:type built-in)
+    :custom
+    (dired-dwim-target t)
+    ;; (dired-auto-revert-buffer #'dired-buffer-stale-p)
+    (dired-recursive-copies  'always)
+    (dired-create-destination-dirs 'ask)
+    )
 
-(use-package dired
-  :straight (:type built-in)
-  :custom
-  (dired-dwim-target t)
-  ;; (dired-auto-revert-buffer #'dired-buffer-stale-p)
-  (dired-recursive-copies  'always)
-  (dired-create-destination-dirs 'ask)
-  )
+  (use-package dired-single
+    :config
+    (defun my-dired-init ()
+      "Bunch of stuff to run for dired, either immediately or when it's
+     loaded."
+      ;; <add other stuff here>
+      (define-key dired-mode-map [remap dired-find-file]
+                  'dired-single-buffer)
+      (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
+                  'dired-single-buffer-mouse)
+      (define-key dired-mode-map [remap dired-up-directory]
+                  'dired-single-up-directory))
 
-(use-package dired-single
-  :config
-  (defun my-dired-init ()
-    "Bunch of stuff to run for dired, either immediately or when it's
-   loaded."
-    ;; <add other stuff here>
-    (define-key dired-mode-map [remap dired-find-file]
-                'dired-single-buffer)
-    (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
-                'dired-single-buffer-mouse)
-    (define-key dired-mode-map [remap dired-up-directory]
-                'dired-single-up-directory))
+    ;; if dired's already loaded, then the keymap will be bound
+    (if (boundp 'dired-mode-map)
+        ;; we're good to go; just add our bindings
+        (my-dired-init)
+      ;; it's not loaded yet, so add our bindings to the load-hook
+      (add-hook 'dired-load-hook 'my-dired-init))
+    )
 
-  ;; if dired's already loaded, then the keymap will be bound
-  (if (boundp 'dired-mode-map)
-      ;; we're good to go; just add our bindings
-      (my-dired-init)
-    ;; it's not loaded yet, so add our bindings to the load-hook
-    (add-hook 'dired-load-hook 'my-dired-init))
-  )
-
+#+end_src
+** Project
+#+begin_src emacs-lisp
 ;; project
 (use-package project
   :demand t
@@ -446,10 +519,16 @@ Use this as :around advice to commands that must make a new frame."
 	"pt" #'project-vterm
 	))
 
-;; (setq eldoc-echo-area-use-multiline-p nil)
-;; It's actually annoying
-(global-eldoc-mode -1)
+#+end_src
+** Eldoc
+#+begin_src emacs-lisp
+  ;; (setq eldoc-echo-area-use-multiline-p nil)
+  ;; It's actually annoying
+  (global-eldoc-mode -1)
 
+#+end_src
+** Scratch buffer
+#+begin_src emacs-lisp
 (defun bury-or-kill ()
   (if (eq (current-buffer) (get-buffer "*scratch*"))
       (progn (bury-buffer)
@@ -459,98 +538,109 @@ Use this as :around advice to commands that must make a new frame."
 (use-package persistent-scratch
   :hook
   (after-init . persistent-scratch-setup-default))
+#+end_src
+** Misc
+#+begin_src emacs-lisp
+  (setq
+   ;; Silent mode
+   ring-bell-function #'ignore
+   ;; Set to non-nil to flash!
+   visible-bell nil)
 
-(setq
- ;; Silent mode
- ring-bell-function #'ignore
- ;; Set to non-nil to flash!
- visible-bell nil)
+  (setq
+   ;; Use y or n instead of yes or no
+   use-short-answers t
+   ;; Confirm before quitting
+   confirm-kill-emacs #'y-or-n-p)
 
-(setq
- ;; Use y or n instead of yes or no
- use-short-answers t
- ;; Confirm before quitting
- confirm-kill-emacs #'y-or-n-p)
-
-;; Always prompt in minibuffer (no GUI)
-(setq use-dialog-box nil)
-
+  ;; Always prompt in minibuffer (no GUI)
+  (setq use-dialog-box nil)
+#+end_src
+* Editing
+** White space
+#+begin_src emacs-lisp
 ;; Show trailing whitespaces
 ;; (setq show-trailing-whitespace t)
 ;; Use only spaces
 (setq indent-tabs-mode nil)
 ;; Tab width 8 is too long
 (setq-default tab-width 4)
+#+end_src
 
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
-;; ***** Editing
-;; Use single space between sentences
-(setq sentence-end-double-space nil)
-;; Don't store duplicated entries
-(setq history-delete-duplicates t)
+** Editing
+#+begin_src emacs-lisp
+  (add-hook 'before-save-hook 'delete-trailing-whitespace)
+  ;; ***** Editing
+  ;; Use single space between sentences
+  (setq sentence-end-double-space nil)
+  ;; Don't store duplicated entries
+  (setq history-delete-duplicates t)
 
-;; ====== Editing ======
-;; Hitting TAB behavior
-(setq tab-always-indent 'complete)
-;; Always add final newline
-(setq require-final-newline t)
+  ;; ====== Editing ======
+  ;; Hitting TAB behavior
+  (setq tab-always-indent 'complete)
+  ;; Always add final newline
+  (setq require-final-newline t)
 
-;; Wrap long lines
-(add-hook 'prog-mode-hook #'visual-line-mode)
-(add-hook 'conf-mode-hook #'visual-line-mode)
-(add-hook 'text-mode-hook #'visual-line-mode)
+  ;; Wrap long lines
+  (add-hook 'prog-mode-hook #'visual-line-mode)
+  (add-hook 'conf-mode-hook #'visual-line-mode)
+  (add-hook 'text-mode-hook #'visual-line-mode)
 
-;; Display long lines
-(setq truncate-lines nil)
+  ;; Display long lines
+  (setq truncate-lines nil)
 
-;; Remember cursor position in files
-(save-place-mode 1)
+  ;; Remember cursor position in files
+  (save-place-mode 1)
 
-  ;;; Why use anything but UTF-8?
-(prefer-coding-system 'utf-8)
-(set-charset-priority 'unicode)
-(set-default-coding-systems 'utf-8)
-(set-selection-coding-system 'utf-8)
+    ;;; Why use anything but UTF-8?
+  (prefer-coding-system 'utf-8)
+  (set-charset-priority 'unicode)
+  (set-default-coding-systems 'utf-8)
+  (set-selection-coding-system 'utf-8)
 
-;; pairs
-;; Editor
-(use-package elec-pair
-  ;; TODO: refactor these
-  :straight (:type built-in)
-  :hook ((git-commit-mode . git-commit-add-electric-pairs)
-         (markdown-mode . markdown-add-electric-pairs)
-         (go-ts-mode . go-add-electric-pairs)
-         (yaml-ts-mode . yaml-add-electric-pairs))
-  :preface
-  (defun git-commit-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`) (?= . ?=))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  (defun markdown-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  (defun go-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  (defun yaml-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?\( . ?\)))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  :init
-  ;; disable <> auto pairing in electric-pair-mode for org-mode
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local electric-pair-inhibit-predicate
-                          `(lambda (c)
-                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-  (electric-pair-mode t))
+  ;; pairs
+  ;; Editor
+  (use-package elec-pair
+    ;; TODO: refactor these
+    :straight (:type built-in)
+    :hook ((git-commit-mode . git-commit-add-electric-pairs)
+           (markdown-mode . markdown-add-electric-pairs)
+           (go-ts-mode . go-add-electric-pairs)
+           (yaml-ts-mode . yaml-add-electric-pairs))
+    :preface
+    (defun git-commit-add-electric-pairs ()
+      (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`) (?= . ?=))))
+      (setq-local electric-pair-text-pairs electric-pair-pairs))
+    (defun markdown-add-electric-pairs ()
+      (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`))))
+      (setq-local electric-pair-text-pairs electric-pair-pairs))
+    (defun go-add-electric-pairs ()
+      (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`))))
+      (setq-local electric-pair-text-pairs electric-pair-pairs))
+    (defun yaml-add-electric-pairs ()
+      (setq-local electric-pair-pairs (append electric-pair-pairs '((?\( . ?\)))))
+      (setq-local electric-pair-text-pairs electric-pair-pairs))
+    :init
+    ;; disable <> auto pairing in electric-pair-mode for org-mode
+    (add-hook 'org-mode-hook
+              (lambda ()
+                (setq-local electric-pair-inhibit-predicate
+                            `(lambda (c)
+                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+    (electric-pair-mode t))
 
-;; clipboard
-(setq
- ;; Filter duplicate entries in kill ring
- kill-do-not-save-duplicates t
- ;; Save existing clipboard text into the kill ring before replacing it.
- save-interprogram-paste-before-kill t)
+  ;; clipboard
+  (setq
+   ;; Filter duplicate entries in kill ring
+   kill-do-not-save-duplicates t
+   ;; Save existing clipboard text into the kill ring before replacing it.
+   save-interprogram-paste-before-kill t)
 
-;; Evil
+#+end_src
+** Evil
+#+begin_src emacs-lisp
+  ;; Evil
   (use-package evil
     :hook (after-init . evil-mode)
     :custom
@@ -613,7 +703,9 @@ Use this as :around advice to commands that must make a new frame."
     (general-nmap "s" #'evil-avy-goto-char-2)
     :init
     (setq avy-background t))
-
+#+end_src
+** Undo
+#+begin_src emacs-lisp
 ;; undo
 (use-package undo-fu
   :init
@@ -630,8 +722,12 @@ Use this as :around advice to commands that must make a new frame."
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
   :config
   (undo-fu-session-global-mode 1))
+#+end_src
 
-;; Always prompt in minibuffer
+* UI
+** Fonts
+#+begin_src emacs-lisp
+  ;; Always prompt in minibuffer
   (setq use-dialog-box nil)
   ;; Set default fonts
   (set-face-attribute 'default nil :font "monospace" :height 103)
@@ -645,6 +741,10 @@ Use this as :around advice to commands that must make a new frame."
   ("M--" 'default-text-scale-decrease)
   ("M-=" 'default-text-scale-increase))
 
+#+end_src
+
+** Themes
+#+begin_src emacs-lisp
 (use-package nerd-icons
   :config
   (use-package nerd-icons-dired
@@ -656,14 +756,20 @@ Use this as :around advice to commands that must make a new frame."
   (setq doom-themes-padded-modeline t)
   (load-theme 'doom-material-dark t)
   (doom-themes-org-config))
+#+end_src
 
-;; Stretch cursor to the glyph width
-(setq x-stretch-cursor t)
-;; Remove visual indicators from non selected windows
-(setq-default cursor-in-non-selected-windows nil)
-;; No blinking cursor
-(blink-cursor-mode -1)
+** Cursor
+#+begin_src emacs-lisp
+  ;; Stretch cursor to the glyph width
+  (setq x-stretch-cursor t)
+  ;; Remove visual indicators from non selected windows
+  (setq-default cursor-in-non-selected-windows nil)
+  ;; No blinking cursor
+  (blink-cursor-mode -1)
+#+end_src
 
+** Line numbers
+#+begin_src emacs-lisp
 ;; Relative line numbering
 (setq display-line-numbers-type 'relative)
 
@@ -675,49 +781,59 @@ Use this as :around advice to commands that must make a new frame."
 (dolist (mode '(org-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
-;; Modelines
-(if (facep 'mode-line-active)
-    (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :height 103)
-  (set-face-attribute 'mode-line nil :family "SF Thonburi" :height 103))
-(set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :height 103)
+#+end_src
 
-;; (setq x-underline-at-descent-line t) ;; ?
-(use-package minions
-  :custom
-  (minions-prominent-modes '(flycheck-mode))
-  :config
-  (minions-mode 1))
+** Modeline
+#+begin_src emacs-lisp
+  ;; Modelines
+  (if (facep 'mode-line-active)
+      (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :height 103)
+    (set-face-attribute 'mode-line nil :family "SF Thonburi" :height 103))
+  (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :height 103)
 
-;; revert vc-mode in modeline
-(setq auto-revert-check-vc-info t)
-;; replace Git- in modeline with icon
-(defadvice vc-mode-line (after strip-backend () activate)
-  (when (stringp vc-mode)
-    (let ((gitlogo (replace-regexp-in-string "^ Git." " " vc-mode)))
-      (setq vc-mode gitlogo))))
+  ;; (setq x-underline-at-descent-line t) ;; ?
+  (use-package minions
+    :custom
+    (minions-prominent-modes '(flycheck-mode))
+    :config
+    (minions-mode 1))
 
-;; Show line, columns number in modeline
-(line-number-mode 1)
-(column-number-mode 1)
-(setq mode-line-percent-position nil)
-(setq mode-line-position-column-line-format '("%l,%c"))
+  ;; revert vc-mode in modeline
+  (setq auto-revert-check-vc-info t)
+  ;; replace Git- in modeline with icon
+  (defadvice vc-mode-line (after strip-backend () activate)
+    (when (stringp vc-mode)
+      (let ((gitlogo (replace-regexp-in-string "^ Git." " " vc-mode)))
+        (setq vc-mode gitlogo))))
 
-;; Show search count in modeline
-(use-package anzu
-  :config
-  (global-anzu-mode +1))
+  ;; Show line, columns number in modeline
+  (line-number-mode 1)
+  (column-number-mode 1)
+  (setq mode-line-percent-position nil)
+  (setq mode-line-position-column-line-format '("%l,%c"))
 
-;; Resize a frame by pixel
-(setq frame-resize-pixelwise t)
-;; Frame title
-(setq frame-title-format
-      (list
-       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
-       '(:eval
-         (let ((project (project-current)))
-           (when project
-             (format " — %s" (project-name project)))))))
+  ;; Show search count in modeline
+  (use-package anzu
+    :config
+    (global-anzu-mode +1))
+#+end_src
 
+** Frames
+#+begin_src emacs-lisp
+  ;; Resize a frame by pixel
+  (setq frame-resize-pixelwise t)
+  ;; Frame title
+  (setq frame-title-format
+        (list
+         '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+         '(:eval
+           (let ((project (project-current)))
+             (when project
+               (format " — %s" (project-name project)))))))
+#+end_src
+
+** Bufferlo
+#+begin_src emacs-lisp
 (use-package bufferlo
   :straight (:host github :repo "florommel/bufferlo")
   :config
@@ -757,8 +873,11 @@ Use this as :around advice to commands that must make a new frame."
   ;; (add-to-list 'consult-buffer-sources '+consult--source-buffer 'append)
   ;; (add-to-list 'consult-buffer-sources '+consult--source-local-buffer) 'append)
   )
+#+end_src
 
-;; Resize window combinations proportionally
+** Windows
+#+begin_src emacs-lisp
+  ;; Resize window combinations proportionally
   (setq window-combination-resize t)
   ;; Window layout undo/redo
   (winner-mode 1)
@@ -770,6 +889,10 @@ Use this as :around advice to commands that must make a new frame."
   ("S-C-<return>" 'windresize)
   :commands windresize)
 
+#+end_src
+
+** Popup
+#+begin_src emacs-lisp
 (use-package popper
   :general
   ("C-\\" 'popper-toggle-latest)
@@ -803,7 +926,10 @@ Use this as :around advice to commands that must make a new frame."
 		  ))
   (popper-mode +1)
   (popper-echo-mode +1))
-
+#+end_src
+* Completion
+** Orderless
+#+begin_src emacs-lisp
 (use-package orderless
   :config
   ;; (defun +orderless-dispatch-flex-first (_pattern index _total)
@@ -818,77 +944,81 @@ Use this as :around advice to commands that must make a new frame."
   (completion-category-overrides
    '((file (styles . (orderless partial-completion basic)))
      )))
+#+end_src
+** Completion at point
+#+begin_src emacs-lisp
+    (use-package cape)
+    (use-package company)
 
-(use-package cape)
-  (use-package company)
+    (use-package yasnippet
+      :commands (yas-minor-mode yas-expand)
+      :hook
+      (prog-mode . yas-minor-mode)
+      :init
+      (setq yas-triggers-in-field t)
+      :config
+      (use-package yasnippet-snippets)
+      (yas-reload-all)
+      (define-key yas-minor-mode-map [(tab)] nil)
+      (define-key yas-minor-mode-map (kbd "TAB") nil)
+      )
 
-  (use-package yasnippet
-    :commands (yas-minor-mode yas-expand)
-    :hook
-    (prog-mode . yas-minor-mode)
-    :init
-    (setq yas-triggers-in-field t)
-    :config
-    (use-package yasnippet-snippets)
-    (yas-reload-all)
-    (define-key yas-minor-mode-map [(tab)] nil)
-    (define-key yas-minor-mode-map (kbd "TAB") nil)
-    )
+    (use-package corfu
+      :hook (after-init . global-corfu-mode)
+      :hook
+      ((eshell-mode comint-mode) . (lambda ()
+                                     (setq-local corfu-quit-no-match t
+                                                 corfu-auto nil)
+                                     (corfu-mode)))
+      :custom
+      (corfu-auto nil)
+      ;; (corfu-auto-prefix 2)
+      ;; (corfu-auto-delay 0.0)
+      (corfu-cycle t)
+      (corfu-separator ?\s)
+      (corfu-preview-current t)
+      (corfu-quit-no-match t)
+      ;; (corfu-quit-at-boundary nil)
+      (corfu-min-width 25)
+      (corfu-on-exact-match nil)
+      (corfu-preselect 'prompt)
+      :bind
+      (:map corfu-map
+            ;; ("SPC" . corfu-insert-separator)
+            ("C-e" . corfu-quit)
+            ("TAB" . corfu-next)
+            ([tab] . corfu-next)
+            ("S-TAB" . corfu-previous)
+            ([backtab] . corfu-previous))
+      :config
+      (defun corfu-enable-in-minibuffer ()
+        "Enable Corfu in the minibuffer if `completion-at-point' is bound."
+        (when (where-is-internal #'completion-at-point (list (current-local-map)))
+          (setq-local corfu-echo-delay nil)
+          (corfu-mode 1)))
+      (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
+      )
 
-  (use-package corfu
-    :hook (after-init . global-corfu-mode)
-    :hook
-    ((eshell-mode comint-mode) . (lambda ()
-                                   (setq-local corfu-quit-no-match t
-                                               corfu-auto nil)
-                                   (corfu-mode)))
+    ;; (use-package corfu-candidate-overlay
+    ;;   :straight (:type git
+    ;; 				   :repo "https://code.bsdgeek.org/adam/corfu-candidate-overlay"
+    ;; 				   :files (:defaults "*.el"))
+    ;;   :after corfu
+    ;;   :config
+    ;;   ;; enable corfu-candidate-overlay mode globally
+    ;;   ;; this relies on having corfu-auto set to nil
+  ;;   (corfu-candidae-overlay-mode +1))
+
+  (use-package kind-icon
+    :after corfu
     :custom
-    (corfu-auto nil)
-    ;; (corfu-auto-prefix 2)
-    ;; (corfu-auto-delay 0.0)
-    (corfu-cycle t)
-    (corfu-separator ?\s)
-    (corfu-preview-current t)
-    (corfu-quit-no-match t)
-    ;; (corfu-quit-at-boundary nil)
-    (corfu-min-width 25)
-    (corfu-on-exact-match nil)
-    (corfu-preselect 'prompt)
-    :bind
-    (:map corfu-map
-          ;; ("SPC" . corfu-insert-separator)
-          ("C-e" . corfu-quit)
-          ("TAB" . corfu-next)
-          ([tab] . corfu-next)
-          ("S-TAB" . corfu-previous)
-          ([backtab] . corfu-previous))
+    (kind-icon-default-face 'corfu-default)
+    (kind-icon-blend-background nil)
     :config
-    (defun corfu-enable-in-minibuffer ()
-      "Enable Corfu in the minibuffer if `completion-at-point' is bound."
-      (when (where-is-internal #'completion-at-point (list (current-local-map)))
-        (setq-local corfu-echo-delay nil)
-        (corfu-mode 1)))
-    (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
-    )
-
-  ;; (use-package corfu-candidate-overlay
-  ;;   :straight (:type git
-  ;; 				   :repo "https://code.bsdgeek.org/adam/corfu-candidate-overlay"
-  ;; 				   :files (:defaults "*.el"))
-  ;;   :after corfu
-  ;;   :config
-  ;;   ;; enable corfu-candidate-overlay mode globally
-  ;;   ;; this relies on having corfu-auto set to nil
-;;   (corfu-candidae-overlay-mode +1))
-
-(use-package kind-icon
-  :after corfu
-  :custom
-  (kind-icon-default-face 'corfu-default)
-  (kind-icon-blend-background nil)
-  :config
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
-
+    (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+#+end_src
+** Completion UI
+#+begin_src emacs-lisp
 (use-package consult
   :bind
   ([remap bookmark-jump]                 . consult-bookmark)
@@ -1039,6 +1169,11 @@ Use this as :around advice to commands that must make a new frame."
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   (minibuffer-setup . vertico-repeat-save))
 
+#+end_src
+
+* Git
+** Magit
+#+begin_src emacs-lisp
 (use-package magit
   :demand t
   :general
@@ -1070,7 +1205,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (advice-add 'magit-process-environment
               :filter-return #'+magit-process-environment)
   )
-
+#+end_src
+** Gutter
+#+begin_src emacs-lisp
 (use-package diff-hl
   :defer 2
   :commands
@@ -1112,55 +1249,64 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
               (set-face-background 'diff-hl-change nil)))
   )
 
+#+end_src
+** Modes
+#+begin_src emacs-lisp
+#+end_src
 
+* Programming
+** Treesitter
+#+begin_src emacs-lisp
+    (use-package treesit
+      :straight nil
+      :init
+      (setq treesit-font-lock-level 4)
+      (setq treesit-language-source-alist
+            '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+              (c "https://github.com/tree-sitter/tree-sitter-c")
+              (css "https://github.com/tree-sitter/tree-sitter-css")
+              (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+              (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
+              (go "https://github.com/tree-sitter/tree-sitter-go")
+              (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+              (html "https://github.com/tree-sitter/tree-sitter-html")
+              (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
+              (json "https://github.com/tree-sitter/tree-sitter-json")
+              (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
+              (python "https://github.com/tree-sitter/tree-sitter-python")
+              (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
+              (rust "https://github.com/tree-sitter/tree-sitter-rust")
+              (toml "https://github.com/tree-sitter/tree-sitter-toml")
+              (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+              (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+              (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
-(use-package treesit
-  :straight nil
-  :init
-  (setq treesit-font-lock-level 4)
-  (setq treesit-language-source-alist
-        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-          (c "https://github.com/tree-sitter/tree-sitter-c")
-          (css "https://github.com/tree-sitter/tree-sitter-css")
-          (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-          (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
-          (go "https://github.com/tree-sitter/tree-sitter-go")
-          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-          (html "https://github.com/tree-sitter/tree-sitter-html")
-          (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
-          (json "https://github.com/tree-sitter/tree-sitter-json")
-          (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
-          (python "https://github.com/tree-sitter/tree-sitter-python")
-          (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust")
-          (toml "https://github.com/tree-sitter/tree-sitter-toml")
-          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-          (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+      ;; remap built-in modes to new ts-modes
+      (setq major-mode-remap-alist
+            '(
+              (html-mode . html-ts-mode)
+              (mhtml-mode . html-ts-mode)
+              (bash-mode . bash-ts-mode)
+              (js-mode . js-ts-mode)
+              (json-mode . json-ts-mode)
+              (css-mode . css-ts-mode)
+              (python-mode . python-ts-mode)
+              (ruby-mode . ruby-ts-mode)
+              ))
 
-  ;; remap built-in modes to new ts-modes
-  (setq major-mode-remap-alist
-        '(
-          (html-mode . html-ts-mode)
-          (mhtml-mode . html-ts-mode)
-          (bash-mode . bash-ts-mode)
-          (js-mode . js-ts-mode)
-          (json-mode . json-ts-mode)
-          (css-mode . css-ts-mode)
-          (python-mode . python-ts-mode)
-          (ruby-mode . ruby-ts-mode)
-          ))
+      (defun +treesit-install-all-languages ()
+        "Install all languages specified by `treesit-language-source-alist'."
+        (interactive)
+        (let ((languages (mapcar 'car treesit-language-source-alist)))
+          (dolist (lang languages)
+            (treesit-install-language-grammar lang)
+            (message "`%s' parser was installed." lang)
+            (sit-for 0.75)))))
 
-  (defun +treesit-install-all-languages ()
-    "Install all languages specified by `treesit-language-source-alist'."
-    (interactive)
-    (let ((languages (mapcar 'car treesit-language-source-alist)))
-      (dolist (lang languages)
-        (treesit-install-language-grammar lang)
-        (message "`%s' parser was installed." lang)
-        (sit-for 0.75)))))
-
-;; lsp
+#+end_src
+** LSP
+#+begin_src emacs-lisp
+  ;; lsp
   (use-package lsp-mode
     :hook
     (after-init . +lsp-auto-enable)
@@ -1231,7 +1377,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
     "cS" '(consult-lsp-symbols :wk "Workspace symbols")))
-
+#+end_src
+** Checker
+#+begin_src emacs-lisp
 (use-package flycheck
   :preface
   (defvar-local flycheck-local-checkers nil)
@@ -1266,6 +1414,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :hook
   (flycheck-mode . flycheck-status-emoji-mode))
 
+#+end_src
+** Go
+#+begin_src emacs-lisp
 (use-package flycheck-golangci-lint
   :after (flycheck)
   :config
@@ -1296,7 +1447,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "tf" 'go-test-current-file
     "ta" 'go-test-current-project
     "tb" 'go-test-current-benchmark))
-
+#+end_src
+** Rust
+#+begin_src emacs-lisp
 (use-package rust-ts-mode
   :straight (:type built-in)
   :mode "\\.rs\\'"
@@ -1307,148 +1460,168 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
         lsp-rust-analyzer-proc-macro-enable t
         lsp-rust-analyzer-server-display-inlay-hints t))
 
-(setq js-chain-indent t)
-(setq js-indent-level 2) ;; has package?
-;; (setq css-indent-offset 2)
+#+end_src
+** Web
+#+begin_src emacs-lisp
+  (setq js-chain-indent t)
+  (setq js-indent-level 2) ;; has package?
+  ;; (setq css-indent-offset 2)
 
-(use-package typescript-ts-mode
-  :straight (:type built-in))
+  (use-package typescript-ts-mode
+    :straight (:type built-in))
 
-(use-package web-mode
-  ;; :mode "\\.erb\\'"
-  :custom
-  (web-mode-enable-html-entities-fontification t)
-  (web-mode-markup-indent-offset 2)
-  (web-mode-markup-comment-indent-offset 2)
-  (web-mode-code-indent-offset 2)
-  (web-mode-css-indent-offset 2)
-  (web-mode-attr-indent-offset 2)
-  (web-mode-attr-value-indent-offset 2)
-  (web-mode-auto-close-style 1)
-  :config
-  (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
-  (define-derived-mode erb-mode web-mode
-    "HTML[erb]")
-  (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
-  )
+  (use-package web-mode
+    ;; :mode "\\.erb\\'"
+    :custom
+    (web-mode-enable-html-entities-fontification t)
+    (web-mode-markup-indent-offset 2)
+    (web-mode-markup-comment-indent-offset 2)
+    (web-mode-code-indent-offset 2)
+    (web-mode-css-indent-offset 2)
+    (web-mode-attr-indent-offset 2)
+    (web-mode-attr-value-indent-offset 2)
+    (web-mode-auto-close-style 1)
+    :config
+    (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
+    (define-derived-mode erb-mode web-mode
+      "HTML[erb]")
+    (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
+    )
 
+#+end_src
+** Python
+#+begin_src emacs-lisp
 (use-package lsp-pyright
   :hook
   ((python-mode python-ts-mode) . lsp-deferred))
+#+end_src
+** Ruby
+#+begin_src emacs-lisp
+  (use-package inf-ruby
+    :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
 
-(use-package inf-ruby
-  :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
+  (use-package ruby-end)
 
-(use-package ruby-end)
+  (use-package rspec-mode
+    :mode ("/\\.rspec\\'" . text-mode)
+    ;; :init
+    ;; (setq rspec-use-spring-when-possible nil)
+    ;; (when (modulep! :editor evil)
+    ;;   (add-hook 'rspec-mode-hook #'evil-normalize-keymaps))
+    :general
+    (+local-leader-def
+      :keymaps '(rspec-mode-map)
+      "t" '(nil :wk "test")
+      "ta" #'rspec-verify-all
+      "tr" #'rspec-rerun
+      "tv" #'rspec-verify
+      "tc" #'rspec-verify-continue
+      "tl" #'rspec-run-last-failed
+      "tT" #'rspec-toggle-spec-and-target
+      "tt" #'rspec-toggle-spec-and-target-find-example
+      "ts" #'rspec-verify-single
+      "te" #'rspec-toggle-example-pendingness))
 
-(use-package rspec-mode
-  :mode ("/\\.rspec\\'" . text-mode)
-  ;; :init
-  ;; (setq rspec-use-spring-when-possible nil)
-  ;; (when (modulep! :editor evil)
-  ;;   (add-hook 'rspec-mode-hook #'evil-normalize-keymaps))
-  :general
-  (+local-leader-def
-    :keymaps '(rspec-mode-map)
-    "t" '(nil :wk "test")
-    "ta" #'rspec-verify-all
-    "tr" #'rspec-rerun
-    "tv" #'rspec-verify
-    "tc" #'rspec-verify-continue
-    "tl" #'rspec-run-last-failed
-    "tT" #'rspec-toggle-spec-and-target
-    "tt" #'rspec-toggle-spec-and-target-find-example
-    "ts" #'rspec-verify-single
-    "te" #'rspec-toggle-example-pendingness))
+  (use-package rake
+    :init
+    (setq rake-completion-system 'default)
+    :general
+    (+local-leader-def
+      :keymaps '(ruby-ts-mode-map)
+      "k" '(nil :wk "rake")
+      "kk" #'rake
+      "kr" #'rake-rerun
+      "kR" #'rake-regenerate-cache
+      "kf" #'rake-find-task))
 
-(use-package rake
-  :init
-  (setq rake-completion-system 'default)
-  :general
-  (+local-leader-def
-    :keymaps '(ruby-ts-mode-map)
-    "k" '(nil :wk "rake")
-    "kk" #'rake
-    "kr" #'rake-rerun
-    "kR" #'rake-regenerate-cache
-    "kf" #'rake-find-task))
+  (use-package bundler
+    :general
+    (+local-leader-def
+      :keymaps '(ruby-ts-mode-map)
+      "b" '(nil :wk "bundle")
+      "bc" #'bundle-check
+      "bC" #'bundle-console
+      "bi" #'bundle-install
+      "bu" #'bundle-update
+      "be" #'bundle-exec
+      "bo" #'bundle-open))
 
-(use-package bundler
-  :general
-  (+local-leader-def
-    :keymaps '(ruby-ts-mode-map)
-    "b" '(nil :wk "bundle")
-    "bc" #'bundle-check
-    "bC" #'bundle-console
-    "bi" #'bundle-install
-    "bu" #'bundle-update
-    "be" #'bundle-exec
-    "bo" #'bundle-open))
+#+end_src
+** Emacs lisp
+#+begin_src emacs-lisp
+  (use-package elisp-mode
+    :straight (:type built-in)
+    :general
+    (+local-leader-def
+      :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map ielm-map lisp-mode-map racket-mode-map scheme-mode-map)
+      "p" #'check-parens)
+    (+local-leader-def :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map)
+      "e"   '(nil :wk "eval")
+      "eb"  'eval-buffer
+      "ed"  'eval-defun
+      "ee"  'eval-last-sexp
+      "er"  'eval-region
+      "eR"  'elisp-eval-region-or-buffer
+      "el"  'load-library
+      "g"   '(nil :wk "goto/find")
+      "gf"  'find-function-at-point
+      "gR"  'find-function
+      "gv"  'find-variable-at-point
+      "gV"  'find-variable
+      "gL"  'find-library))
 
-(use-package elisp-mode
-  :straight (:type built-in)
-  :general
-  (+local-leader-def
-    :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map ielm-map lisp-mode-map racket-mode-map scheme-mode-map)
-    "p" #'check-parens)
-  (+local-leader-def :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map)
-    "e"   '(nil :wk "eval")
-    "eb"  'eval-buffer
-    "ed"  'eval-defun
-    "ee"  'eval-last-sexp
-    "er"  'eval-region
-    "eR"  'elisp-eval-region-or-buffer
-    "el"  'load-library
-    "g"   '(nil :wk "goto/find")
-    "gf"  'find-function-at-point
-    "gR"  'find-function
-    "gv"  'find-variable-at-point
-    "gV"  'find-variable
-    "gL"  'find-library))
+  (use-package eros
+    :custom
+    (eros-eval-result-prefix "⟹ ")
+    :hook
+    (emacs-lisp-mode . eros-mode))
 
-(use-package eros
-  :custom
-  (eros-eval-result-prefix "⟹ ")
-  :hook
-  (emacs-lisp-mode . eros-mode))
+#+end_src
+** Others
+#+begin_src emacs-lisp
+  ;; others
+  ;; (use-package yaml-ts-mode
+  ;;   :mode "\\.ya?ml\\'"
+  ;;   :straight nil)
 
-;; others
-;; (use-package yaml-ts-mode
-;;   :mode "\\.ya?ml\\'"
-;;   :straight nil)
+  (use-package json-ts-mode
+    :straight nil
+    :mode "\\.prettierrc\\'")
 
-(use-package json-ts-mode
-  :straight nil
-  :mode "\\.prettierrc\\'")
+  (use-package dockerfile-mode
+    :mode "\\Dockerfile\\'")
 
-(use-package dockerfile-mode
-  :mode "\\Dockerfile\\'")
+  (use-package terraform-mode
+    :mode "\\.tf\\'")
 
-(use-package terraform-mode
-  :mode "\\.tf\\'")
+  (use-package git-modes
+    :mode ("/.dockerignore\\'" . gitignore-mode))
 
-(use-package git-modes
-  :mode ("/.dockerignore\\'" . gitignore-mode))
+#+end_src
+** Formatter
+#+begin_src emacs-lisp
+  (use-package editorconfig
+    :hook
+    (after-init . editorconfig-mode))
 
-(use-package editorconfig
-  :hook
-  (after-init . editorconfig-mode))
-
-(use-package apheleia
-  :general
-  (+leader-def
-    "cf" #'apheleia-format-buffer)
-  :config
-  (setf (alist-get 'erb-formatter apheleia-formatters)
-        '("erb-format" filepath))
-  (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
-  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
-  :hook
-  ((go-ts-mode rust-ts-mode ruby-ts-mode
-               css-ts-mode web-mode erb-mode
-               typescript-ts-mode tsx-ts-mode js-ts-mode
-               emacs-lisp-mode) . apheleia-mode))
-
+  (use-package apheleia
+    :general
+    (+leader-def
+      "cf" #'apheleia-format-buffer)
+    :config
+    (setf (alist-get 'erb-formatter apheleia-formatters)
+          '("erb-format" filepath))
+    (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
+    (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
+    :hook
+    ((go-ts-mode rust-ts-mode ruby-ts-mode
+                 css-ts-mode web-mode erb-mode
+                 typescript-ts-mode tsx-ts-mode js-ts-mode
+                 emacs-lisp-mode) . apheleia-mode))
+#+end_src
+* Terminals
+** Eshell
+#+begin_src emacs-lisp
 (use-package eshell
   :straight (:type built-in)
   :general
@@ -1466,6 +1639,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :after eshell
   :hook (eshell-mode . (lambda () (require 'eshell-z))))
 
+#+end_src
+** Vterm
+#+begin_src emacs-lisp
 ;; Term
 (use-package vterm
   :general
@@ -1521,7 +1697,10 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :general
   (+leader-def
     "oT" #'ulti-vterm))
-
+#+end_src
+* Org
+** Org file
+#+begin_src emacs-lisp
 (use-package org
   :straight (:type built-in)
   :custom
@@ -1601,11 +1780,16 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (setq org-superstar-special-todo-items t
         org-superstar-remove-leading-stars t)
   :hook (org-mode . org-superstar-mode))
-
+#+end_src
+** Tangle
+#+begin_src emacs-lisp
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
-
-(setq help-window-select t)
+#+end_src
+* Tools
+** Help
+#+begin_src emacs-lisp
+  (setq help-window-select t)
   (use-package helpful
     :hook
     (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
@@ -1660,6 +1844,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
    (window-height . 0.5)
    ))
 
+#+end_src
+** Compilation
+#+begin_src emacs-lisp
 (use-package compile
   :straight (:type built-in)
   :custom
@@ -1673,15 +1860,24 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   ;; colorize compilation buffer
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
-(use-package envrc
-  :hook
-  (after-init . envrc-global-mode))
+#+end_src
+** Env
+#+begin_src emacs-lisp
+  (use-package envrc
+    :hook
+    (after-init . envrc-global-mode))
 
+#+end_src
+** Docker
+#+begin_src emacs-lisp
 (use-package docker
   :general
   (+leader-def
     "oD" #'docker))
 
+#+end_src
+** Command runner
+#+begin_src emacs-lisp
 (use-package helm-make)
 (use-package run-command
   :config
@@ -1747,6 +1943,9 @@ used with any of the selectors supported by `run-command'."
   (+leader-def
     "rc" #'run-command))
 
+#+end_src
+** Http
+#+begin_src emacs-lisp
 (use-package verb
   :init
   (setq verb-auto-kill-response-buffers t
@@ -1757,3 +1956,4 @@ used with any of the selectors supported by `run-command'."
 	"v" '(:ignore t :wk "verb")
 	"vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
 	"vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
+#+end_src
