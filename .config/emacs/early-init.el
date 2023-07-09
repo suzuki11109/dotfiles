@@ -12,8 +12,6 @@
  default-frame-alist '((tool-bar-lines . 0)
                        (menu-bar-lines . 0)
                        (vertical-scroll-bars)
-                       ;; (left-fringe . 8)
-                       ;; (right-fringe . 13)
                        (fullscreen . maximized))
  ;; Explicitly set modes disabled in `default-frame-alist' to nil
  tool-bar-mode nil
@@ -26,6 +24,6 @@
 ;; If you want transaparent background
 ;; (push (cons 'alpha-background 93) default-frame-alist)
 
-;; set "$LSP_USE_PLISTS=true" to improve `lsp-mode' performances
+;; Improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
 ;;; early-init.el ends here

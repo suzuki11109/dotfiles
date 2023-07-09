@@ -34,8 +34,6 @@
 ;; Do not make installed packages available when Emacs starts
 (setq package-enable-at-startup nil)
 
-;; (setq straight-vc-git-default-clone-depth '(1 single-branch))
-
 ;; Use imenu with use-package
 (setq use-package-enable-imenu-support t)
 
@@ -70,9 +68,8 @@
         gcmh-high-cons-threshold (* 32 1024 1024)))
 
 ;; Escape once
-  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
-;; key bindings
 (use-package which-key
   :hook (after-init . which-key-mode)
   :custom
@@ -88,7 +85,6 @@
   (general-evil-setup t)
 
   (general-create-definer +leader-def
-    ;; The order of states matters, the last is prioritized
     :states '(visual normal)
     :keymaps 'override
     :prefix "SPC")
@@ -98,92 +94,58 @@
     :keymaps 'local
     :prefix "SPC m")
 
-  ;; Define the built-in global keybindings
   (+leader-def
-    ;; ====== Top level functions ======
     "SPC" '(execute-extended-command :wk "M-x")
-    ;; ">"   '(switch-to-next-buffer :wk "Next buffer")
-    ;; "<"   '(switch-to-prev-buffer :wk "Previous buffer")
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
     "!"   #'shell-command
     "|"   #'shell-command-on-region
     "RET" #'bookmark-jump
-    ;; RET jump to bookmark
-    ;; / search in project
-    ;; *
-    ;; .
-    ;; ,
-    ;; `'
-    ;; ;
-    ;; \
 
-    ;; ====== Buffers ======
     "b"   '(nil :wk "buffer")
     "bb"  #'switch-to-buffer
     "bB"  #'switch-to-buffer
     "bd"  #'kill-this-buffer
     "bD"  #'kill-buffer
     "bi"  #'ibuffer
-    ;; bI ibuffer workspafce
     "bo"  #'switch-to-buffer-other-window
     ;; "bu"  #'+sudo-save-buffer
-    ;; save-buffer
     "bs"  #'save-buffer
     "bS"  #'save-some-buffers
-    ;; "bM"  #'view-echo-area-messages
     "br"  '(revert-buffer :wk "Revert")
     "bR"  '(rename-buffer :wk "Rename")
     "bx"  #'scratch-buffer
     "bz"  #'bury-buffer
 
-    ;; Bookmarks
     "k"  '(nil :wk "bookmark")
     "ki"  #'bookmark-set
     "kj"  #'bookmark-jump
     "kk"  #'list-bookmarks
     "kd"  #'bookmark-delete
 
-    ;; ;; Files / Local variables
-    ;; "bv"  '(nil :wk "locals")
-    ;; "bvv" '(add-file-local-variable :wk "Add")
-    ;; "bvV" '(delete-file-local-variable :wk "Delete")
-    ;; "bvp" '(add-file-local-variable-prop-line :wk "Add in prop line")
-    ;; "bvP" '(delete-file-local-variable-prop-line :wk "Delete from prop line")
-    ;; "bvd" '(add-dir-local-variable :wk "Add to dir-locals")
-    ;; "bvD" '(delete-dir-local-variable :wk "Delete from dir-locals")
-    ;; "bvr"  '(nil :wk "reload dir-locals for...")
-    ;; "bvrr" '(+dir-locals-reload-for-this-buffer :wk "This buffer")
-    ;; "bvrd" '(+dir-locals-reload-for-all-buffers-in-this-directory :wk "All buffers in this directory")
-
-    ;; ====== Code ======
     "c"  '(nil :wk "code")
     "cc" #'compile
     "cd" #'xref-find-definitions
     "cD" #'xref-find-references
 
-
-    ;; ====== Files ======
     "f"   '(nil :wk "file")
     "fd"  #'dired
     "fD"  '(+delete-this-file :wk "Delete this file")
     ;; fe find in emacs.d project?
     "ff"  #'find-file
-    "fg"  '((lambda () (interactive) (find-file "~/.gitconfig")) :wk "Edit .gitconfig") ;; use variable
-    "fi"  '((lambda () (interactive) (find-file "~/.config/emacs/init.el")) :wk "Edit init.el") ;; use variable
+    "fg"  '((lambda () (interactive) (find-file "~/.gitconfig")) :wk "Edit .gitconfig")
+    "fi"  '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Edit init.org")
     "fl"  #'locate
     "fr"  #'recentf
     "fR"  '(+rename-this-file :wk "Rename/move file")
     "fs"  #'save-buffer
     "fS"  '(write-file :wk "Save as ...")
     "fy"  '((lambda () (interactive) (kill-new (buffer-file-name)) (message "Copied %s to clipboard" (buffer-file-name))) :wk "Yank buffer file name")
-    "fz"  '((lambda () (interactive) (find-file "~/.zshrc")) :wk "Edit zsh config") ;; use variable
+    "fz"  '((lambda () (interactive) (find-file "~/.zshrc")) :wk "Edit zsh config")
 
-    ;; ====== Git ======
     "g"   '(nil :wk "git")
 
-    ;; ====== Help ======
     "h" '(nil :wk "help")
 	"hb" #'about-emacs
 	"he" #'view-echo-area-message
@@ -194,49 +156,33 @@
 	"hp" #'describe-package
     "h'" #'describe-char
 
-    ;; ====== Insert ======
-    ;; "i"   '(nil :wk "insert")
-    ;; "iu"  '(insert-char :wk "Unicode char")
-    ;; "ie"  `(,(when (>= emacs-major-version 29) #'emoji-search) :wk "Emoji")
+    "i"   '(nil :wk "insert")
+    "iu"  '(insert-char :wk "Unicode char")
+    "ie"  `(,(when (>= emacs-major-version 29) #'emoji-search) :wk "Emoji")
+    "in"  #'nerd-icons-insert
 
-    ;; ======  Mode specific a.k.a. "local leader" ======
     "m"   '(nil :wk "mode-specific")
 
-
-    ;; ====== Applications (Open) ======
     "o"   '(nil   :wk "app/open")
     ;; "oa"  #'org-agenda
-    ;; "of"  #'make-frame
+    "of"  #'make-frame
 
-    ;; ====== Project ======
     "p"   '(nil :wk "project")
 
-    ;; ====== Quit/Session ======
     "q"   '(nil :wk "quit/session")
     "qf"  #'delete-frame
     "qq"  #'save-buffers-kill-terminal
     "qQ"  #'kill-emacs
     "qR"  #'restart-emacs
-    ;; "ql"  #'desktop-read load last/from file session
-    ;; "qL"  #'desktop-read load last/from file session
-    ;; "qs"  #'desktop-save save session
-    ;; "qS"  #'desktop-save save session to file
 
-
-    ;; ====== Search ======
     "s"   '(nil :wk "search")
     "si" #'imenu
-    ;; "sw"  '+webjump
 
-    ;; ====== Toggle ======
     "t"   '(nil :wk "toggle")
-    ;; F fullscreen
+    ;; tf fullscreen
     "th"  #'load-theme
-    ;; "tl"  #'toggle line number current buffer
+    ;; tl  #'toggle line number current buffer
     "tr"  #'read-only-mode
-
-    ;; ====== Workspaces ======
-    "TAB" '(nil :wk "workspace")
     )
   )
 
@@ -286,7 +232,6 @@
  ;; Disable making backup files
  make-backup-files nil)
 
-;; files
 ;; Auto load files changed on disk
 (setq global-auto-revert-non-file-buffers t)
 (global-auto-revert-mode 1)
@@ -294,7 +239,7 @@
 ;;  funtions put to custom lisp file
 (defun +delete-this-file (&optional forever)
   "Delete the file associated with `current-buffer'.
-    If FOREVER is non-nil, the file is deleted without being moved to trash."
+If FOREVER is non-nil, the file is deleted without being moved to trash."
   (interactive "P")
   (when-let ((file (or (buffer-file-name)
                        (user-error "Current buffer is not visiting a file")))
@@ -325,12 +270,11 @@
  'after-save-hook
  (defun +save--guess-file-mode-h ()
    "Guess major mode when saving a file in `fundamental-mode'.
-    Likely, something has changed since the buffer was opened. e.g. A shebang line
-    or file path may exist now."
+    e.g. A shebang line or file path may exist now."
    (when (eq major-mode 'fundamental-mode)
      (let ((buffer (or (buffer-base-buffer) (current-buffer))))
        (and (buffer-file-name buffer)
-            (eq buffer (window-buffer (selected-window))) ;; Only visible buffers
+            (eq buffer (window-buffer (selected-window)))
             (set-auto-mode))))))
 
 ;; Better handling for files with so long lines
@@ -398,33 +342,25 @@
   :straight (:type built-in)
   :custom
   (dired-dwim-target t)
-  ;; (dired-auto-revert-buffer #'dired-buffer-stale-p)
+  (dired-auto-revert-buffer #'dired-buffer-stale-p)
   (dired-recursive-copies  'always)
-  (dired-create-destination-dirs 'ask)
-  )
+  (dired-create-destination-dirs 'ask))
 
 (use-package dired-single
+  :after dired
   :config
-  (defun my-dired-init ()
-    "Bunch of stuff to run for dired, either immediately or when it's
-   loaded."
-    ;; <add other stuff here>
-    (define-key dired-mode-map [remap dired-find-file]
-                'dired-single-buffer)
-    (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
-                'dired-single-buffer-mouse)
-    (define-key dired-mode-map [remap dired-up-directory]
-                'dired-single-up-directory))
-
+  (define-key dired-mode-map [remap dired-find-file]
+              'dired-single-buffer)
+  (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
+              'dired-single-buffer-mouse)
+  (define-key dired-mode-map [remap dired-up-directory]
+              'dired-single-up-directory)
   ;; if dired's already loaded, then the keymap will be bound
-  (if (boundp 'dired-mode-map)
-      ;; we're good to go; just add our bindings
-      (my-dired-init)
-    ;; it's not loaded yet, so add our bindings to the load-hook
-    (add-hook 'dired-load-hook 'my-dired-init))
+  ;; (if (boundp 'dired-mode-map)
+  ;;     (+dired-init)
+  ;;   (add-hook 'dired-load-hook '+dired-init))
   )
 
-;; project
 (use-package project
   :demand t
   :straight (:type built-in)
@@ -446,8 +382,8 @@ Use this as :around advice to commands that must make a new frame."
 	"pt" #'project-vterm
 	))
 
-;; (setq eldoc-echo-area-use-multiline-p nil)
 ;; It's actually annoying
+(setq eldoc-echo-area-use-multiline-p nil)
 (global-eldoc-mode -1)
 
 (defun bury-or-kill ()
@@ -475,21 +411,16 @@ Use this as :around advice to commands that must make a new frame."
 ;; Always prompt in minibuffer (no GUI)
 (setq use-dialog-box nil)
 
-;; Show trailing whitespaces
-;; (setq show-trailing-whitespace t)
 ;; Use only spaces
-(setq indent-tabs-mode nil)
+(setq-default indent-tabs-mode nil)
 ;; Tab width 8 is too long
 (setq-default tab-width 4)
 
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
-;; ***** Editing
 ;; Use single space between sentences
 (setq sentence-end-double-space nil)
 ;; Don't store duplicated entries
 (setq history-delete-duplicates t)
-
-;; ====== Editing ======
 ;; Hitting TAB behavior
 (setq tab-always-indent 'complete)
 ;; Always add final newline
@@ -512,8 +443,6 @@ Use this as :around advice to commands that must make a new frame."
 (set-default-coding-systems 'utf-8)
 (set-selection-coding-system 'utf-8)
 
-;; pairs
-;; Editor
 (use-package elec-pair
   ;; TODO: refactor these
   :straight (:type built-in)
@@ -543,76 +472,70 @@ Use this as :around advice to commands that must make a new frame."
                              (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
   (electric-pair-mode t))
 
-;; clipboard
+;; Clipboard
 (setq
  ;; Filter duplicate entries in kill ring
  kill-do-not-save-duplicates t
  ;; Save existing clipboard text into the kill ring before replacing it.
  save-interprogram-paste-before-kill t)
 
-;; Evil
-  (use-package evil
-    :hook (after-init . evil-mode)
-    :custom
-    (evil-mode-line-format nil)
-    (evil-want-keybinding nil)
-    (evil-want-C-u-scroll t)
-    (evil-want-C-i-jump nil)
-    (evil-want-fine-undo t)
-    (evil-want-Y-yank-to-eol t)
-    (evil-split-window-below t)
-    (evil-vsplit-window-right t)
-    (evil-kill-on-visual-paste nil)
-    (evil-respect-visual-line-mode t)
-    (evil-ex-interactive-search-highlight 'selected-window)
-    (evil-visual-state-cursor 'hollow)
-    :general
-    (+leader-def
-      "w" '(:keymap evil-window-map :wk "window"))
-    :config
-    (modify-syntax-entry ?_ "w")
-    (evil-select-search-module 'evil-search-module 'evil-search)
-    ;; TODO: change to general
-    (define-key evil-motion-state-map ";" #'evil-ex)
-    (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state))
+(use-package evil
+  :hook (after-init . evil-mode)
+  :custom
+  (evil-mode-line-format nil)
+  (evil-want-keybinding nil)
+  (evil-want-C-u-scroll t)
+  (evil-want-C-i-jump nil)
+  (evil-want-fine-undo t)
+  (evil-want-Y-yank-to-eol t)
+  (evil-split-window-below t)
+  (evil-vsplit-window-right t)
+  (evil-kill-on-visual-paste nil)
+  (evil-respect-visual-line-mode t)
+  (evil-ex-interactive-search-highlight 'selected-window)
+  (evil-visual-state-cursor 'hollow)
+  :general
+  (+leader-def
+    "w" '(:keymap evil-window-map :wk "window"))
+  :config
+  (modify-syntax-entry ?_ "w")
+  (evil-select-search-module 'evil-search-module 'evil-search)
+  ;; TODO: change to general
+  (define-key evil-motion-state-map ";" #'evil-ex)
+  ;; (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  )
 
-  (use-package evil-collection
-    :after evil
-    :config
-    (evil-collection-init)
-    ;; TODO: change to general
-    (evil-define-minor-mode-key 'normal 'flycheck-mode
-      (kbd "[e") 'evil-collection-unimpaired-previous-error)
-    (evil-define-minor-mode-key 'normal 'flycheck-mode
-      (kbd "]e") 'evil-collection-unimpaired-next-error)
-    )
+(use-package evil-collection
+  :after evil
+  :config
+  (evil-collection-init)
+  (general-nmap
+    "[e" 'evil-collection-unimpaired-previous-error
+    "]e" 'evil-collection-unimpaired-next-error))
 
-  (use-package evil-nerd-commenter
-    :after (evil general)
-    :commands evilnc-comment-operator
-    :general
-    (general-nvmap "gc" #'evilnc-comment-operator))
+(use-package evil-nerd-commenter
+  :after (evil general)
+  :commands evilnc-comment-operator
+  :general
+  (general-nvmap "gc" #'evilnc-comment-operator))
 
-  (use-package evil-escape
-    :hook (evil-mode . evil-escape-mode)
-    :init
-    (setq evil-escape-excluded-states '(normal visual multiedit emacs motion)
-          evil-escape-excluded-major-modes '(eshell-mode vterm-mode)
-          evil-escape-delay 0.25
-          evil-escape-key-sequence "kj"))
+(use-package evil-escape
+  :hook (evil-mode . evil-escape-mode)
+  :init
+  (setq evil-escape-excluded-states '(normal visual multiedit emacs motion)
+        evil-escape-excluded-major-modes '(eshell-mode vterm-mode)
+        evil-escape-delay 0.25
+        evil-escape-key-sequence "kj"))
 
-  (use-package evil-surround
-    :hook (evil-mode . global-evil-surround-mode))
+(use-package evil-surround
+  :hook (evil-mode . global-evil-surround-mode))
 
-(use-package evil-anzu
-  :after (evil anzu))
-
-  (use-package avy
-    :commands evil-avy-goto-char-2
-    :general
-    (general-nmap "s" #'evil-avy-goto-char-2)
-    :init
-    (setq avy-background t))
+(use-package avy
+  :commands evil-avy-goto-char-2
+  :general
+  (general-nmap "s" #'evil-avy-goto-char-2)
+  :init
+  (setq avy-background t))
 
 ;; undo
 (use-package undo-fu
@@ -621,7 +544,6 @@ Use this as :around advice to commands that must make a new frame."
         undo-strong-limit 50000000
         undo-outer-limit 150000000)
   (with-eval-after-load 'evil
-    (setq evil-undo-system 'undo-fu)
     (evil-set-undo-system 'undo-fu)))
 
 (use-package undo-fu-session
@@ -632,12 +554,12 @@ Use this as :around advice to commands that must make a new frame."
   (undo-fu-session-global-mode 1))
 
 ;; Always prompt in minibuffer
-  (setq use-dialog-box nil)
-  ;; Set default fonts
-  (set-face-attribute 'default nil :font "monospace" :height 103)
-  (set-face-attribute 'variable-pitch nil :family "PT Serif" :height 1.1)
-  (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family))
-  (setq-default line-spacing 2)
+(setq use-dialog-box nil)
+;; Set default fonts
+(set-face-attribute 'default nil :font "monospace" :height 105)
+(set-face-attribute 'variable-pitch nil :family "PT Serif" :height 1.1)
+(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 105)
+(setq-default line-spacing 2)
 
 (use-package  default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
@@ -704,8 +626,12 @@ Use this as :around advice to commands that must make a new frame."
 
 ;; Show search count in modeline
 (use-package anzu
+  :defer 3
   :config
-  (global-anzu-mode +1))
+  (global-anzu-mode 1))
+
+(use-package evil-anzu
+  :after (evil anzu))
 
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
@@ -753,15 +679,12 @@ Use this as :around advice to commands that must make a new frame."
 	(setq consult-buffer-sources '(consult--source-hidden-buffer
 								   +consult--source-buffer
 								   +consult--source-local-buffer)))
-
-  ;; (add-to-list 'consult-buffer-sources '+consult--source-buffer 'append)
-  ;; (add-to-list 'consult-buffer-sources '+consult--source-local-buffer) 'append)
   )
 
 ;; Resize window combinations proportionally
-  (setq window-combination-resize t)
-  ;; Window layout undo/redo
-  (winner-mode 1)
+(setq window-combination-resize t)
+;; Window layout undo/redo
+(winner-mode 1)
 
 (use-package windresize
   :init
@@ -1040,7 +963,6 @@ Use this as :around advice to commands that must make a new frame."
   (minibuffer-setup . vertico-repeat-save))
 
 (use-package magit
-  :demand t
   :general
   (+leader-def :infix "g"
     "b" #'magit-branch
@@ -1254,7 +1176,6 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :general
   (+leader-def
     "cx" '(flycheck-list-errors :wk "list errors"))
-
   :hook
   (lsp-managed-mode . (lambda ()
         				(when (derived-mode-p 'go-ts-mode)
@@ -1674,8 +1595,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
 (use-package envrc
-  :hook
-  (after-init . envrc-global-mode))
+  :config
+  (envrc-global-mode))
 
 (use-package docker
   :general
