@@ -962,6 +962,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 
   (advice-add 'magit-process-environment
               :filter-return #'+magit-process-environment)
+  (add-hook 'git-commit-mode-hook 'evil-insert-state)
   )
 
 (use-package diff-hl
