@@ -10,7 +10,7 @@
 (setq load-prefer-newer noninteractive)
 
 ;; Increase single chunk bytes to read from subprocess (default 4096)
-(setq read-process-output-max (* 2 1024 1024)) ;; 3mb
+(setq read-process-output-max (* 2 1024 1024)) ;; 2mb
 
 ;; Set initial buffer to fundamental-mode for faster load
 (setq initial-major-mode 'fundamental-mode)
@@ -422,7 +422,7 @@ Use this as :around advice to commands that must make a new frame."
 ;; Don't store duplicated entries
 (setq history-delete-duplicates t)
 ;; Hitting TAB behavior
-(setq tab-always-indent 'complete)
+(setq tab-always-indent nil)
 ;; Always add final newline
 (setq require-final-newline t)
 
@@ -728,87 +728,59 @@ Use this as :around advice to commands that must make a new frame."
   (popper-echo-mode +1))
 
 (use-package orderless
-  :config
-  ;; (defun +orderless-dispatch-flex-first (_pattern index _total)
-  ;;   (and (eq index 0) 'orderless-flex))
-  ;; ;; Optionally configure the first word as flex filtered.
-  ;; (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
   :custom
-  (orderless-matching-styles '(orderless-literal orderless-flex orderless-regexp))
-  (completion-ignore-case t)
   (completion-styles '(orderless partial-completion basic))
   (completion-category-defaults nil)
-  (completion-category-overrides
-   '((file (styles . (orderless partial-completion basic)))
-     )))
+  (completion-category-overrides nil)
+  ;; (completion-category-overrides
+  ;;  '((file (styles . (orderless partial-completion basic)))
+  ;;    ))
+  :config
+  (defun +orderless-dispatch-flex-first (_pattern index _total)
+    (and (eq index 0) 'orderless-flex))
+
+  (defun +lsp-mode-setup-completion ()
+    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+          '(orderless))
+
+    (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local))
+  :hook
+  (lsp-completion-mode . +lsp-mode-setup-completion)
+  )
+
+(use-package yasnippet
+  :config
+  (use-package yasnippet-snippets)
+  (yas-global-mode +1))
 
 (use-package cape)
-  (use-package company)
-
-  (use-package yasnippet
-    :commands (yas-minor-mode yas-expand)
-    :hook
-    (prog-mode . yas-minor-mode)
-    :init
-    (setq yas-triggers-in-field t)
-    :config
-    (use-package yasnippet-snippets)
-    (yas-reload-all)
-    (define-key yas-minor-mode-map [(tab)] nil)
-    (define-key yas-minor-mode-map (kbd "TAB") nil)
-    )
-
-  (use-package corfu
-    :hook (after-init . global-corfu-mode)
-    :hook
-    ((eshell-mode comint-mode) . (lambda ()
-                                   (setq-local corfu-quit-no-match t
-                                               corfu-auto nil)
-                                   (corfu-mode)))
-    :custom
-    (corfu-auto nil)
-    ;; (corfu-auto-prefix 2)
-    ;; (corfu-auto-delay 0.0)
-    (corfu-cycle t)
-    (corfu-separator ?\s)
-    (corfu-preview-current t)
-    (corfu-quit-no-match t)
-    ;; (corfu-quit-at-boundary nil)
-    (corfu-min-width 25)
-    (corfu-on-exact-match nil)
-    (corfu-preselect 'prompt)
-    :bind
-    (:map corfu-map
-          ;; ("SPC" . corfu-insert-separator)
-          ("C-e" . corfu-quit)
-          ("TAB" . corfu-next)
-          ([tab] . corfu-next)
-          ("S-TAB" . corfu-previous)
-          ([backtab] . corfu-previous))
-    :config
-    (defun corfu-enable-in-minibuffer ()
-      "Enable Corfu in the minibuffer if `completion-at-point' is bound."
-      (when (where-is-internal #'completion-at-point (list (current-local-map)))
-        (setq-local corfu-echo-delay nil)
-        (corfu-mode 1)))
-    (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
-    )
-
-  ;; (use-package corfu-candidate-overlay
-  ;;   :straight (:type git
-  ;; 				   :repo "https://code.bsdgeek.org/adam/corfu-candidate-overlay"
-  ;; 				   :files (:defaults "*.el"))
-  ;;   :after corfu
-  ;;   :config
-  ;;   ;; enable corfu-candidate-overlay mode globally
-  ;;   ;; this relies on having corfu-auto set to nil
-;;   (corfu-candidae-overlay-mode +1))
+(use-package corfu
+  :hook
+  (after-init . global-corfu-mode)
+  ((eshell-mode comint-mode) . (lambda ()
+                                 (setq-local corfu-auto nil)
+                                 (corfu-mode 1)))
+  :custom
+  (corfu-auto t)
+  (corfu-auto-prefix 2)
+  (corfu-auto-delay 0.1)
+  (corfu-min-width 25)
+  (corfu-quit-no-match t)
+  (corfu-preview-current nil)
+  (corfu-on-exact-match nil)
+  (corfu-preselect 'first)
+  :config
+  (defun corfu-enable-in-minibuffer ()
+    (when (where-is-internal #'completion-at-point (list (current-local-map)))
+      (setq-local corfu-auto nil)
+      (corfu-mode 1)))
+  (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
+  )
 
 (use-package kind-icon
   :after corfu
   :custom
   (kind-icon-default-face 'corfu-default)
-  (kind-icon-blend-background nil)
   :config
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
@@ -1084,14 +1056,15 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 
 ;; lsp
   (use-package lsp-mode
+    :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
     :hook
     (after-init . +lsp-auto-enable)
-    (lsp-completion-mode . +update-completions-list)
-    (lsp-managed-mode . (lambda ()
-                          (general-nmap :keymaps 'local "K" 'lsp-describe-thing-at-point)))
+    ;; (lsp-completion-mode . +update-completions-list)
+    (lsp-managed-mode . (lambda () (general-nmap
+                                     :keymaps 'local
+                                     "K" 'lsp-describe-thing-at-point)))
     :preface
     (setq lsp-use-plists t)
-    :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
     :custom
     (lsp-keymap-prefix nil)
     (lsp-completion-provider :none)
@@ -1104,8 +1077,6 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     (lsp-insert-final-newline nil)
     (lsp-signature-auto-activate nil)
     (lsp-idle-delay 0.9)
-    ;; maybe performace improve
-    ;; (lsp-trim-trailing-whitespace nil)
     :init
     (defcustom +lsp-auto-enable-modes
       '(python-mode python-ts-mode
@@ -1124,14 +1095,15 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
         (let ((hook (intern (format "%s-hook" mode))))
           (add-hook hook #'lsp-deferred))))
 
-    (defun +update-completions-list ()
-      (progn
-        (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
-        (setq-local completion-at-point-functions
-                    (list (cape-super-capf
-                           'non-greedy-lsp
-                           (cape-company-to-capf #'company-yasnippet)
-                           )))))
+    ;; (defun +update-completions-list ()
+    ;;   (progn
+    ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+    ;;     (setq-local completion-at-point-functions
+    ;;                 (list (cape-super-capf
+    ;;                        'non-greedy-lsp
+    ;;                        (cape-company-to-capf #'company-yasnippet)
+    ;;                        )))
+    ;;     ))
 
     :general
     (+leader-def
