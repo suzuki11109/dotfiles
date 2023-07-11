@@ -67,6 +67,10 @@
         gcmh-auto-idle-delay-factor 10
         gcmh-high-cons-threshold (* 32 1024 1024)))
 
+(use-package exec-path-from-shell
+  :config
+  (exec-path-from-shell-initialize))
+
 ;; Escape once
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
@@ -362,25 +366,19 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package project
-  :demand t
   :straight (:type built-in)
-  :init
-  (setq project-vc-extra-root-markers '(".projectile.el" ".project.el" ".project")
-        project-switch-commands 'project-dired)
-
-  (defun +with-other-frame (&rest app)
-	"Apply APP with `other-frame-prefix'.
-Use this as :around advice to commands that must make a new frame."
-	(funcall #'other-frame-prefix)
-	(apply app))
-
+  :commands (project-find-file
+             project-switch-to-buffer
+             project-switch-project
+             project-switch-project-open-file)
   :config
-  (advice-add 'project-prompt-project-dir :around #'+with-other-frame)
+  ;; (setq project-switch-commands 'project-dired)
+  (project-forget-zombie-projects) ;; really need to this to make tabspaces works
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
-	"pt" #'project-vterm
-	))
+    "pt" #'project-vterm
+    ))
 
 ;; It's actually annoying
 (setq eldoc-echo-area-use-multiline-p nil)
@@ -573,11 +571,10 @@ Use this as :around advice to commands that must make a new frame."
     :hook
     (dired-mode . nerd-icons-dired-mode)))
 
-(use-package doom-themes
+(use-package catppuccin-theme
   :config
-  (setq doom-themes-padded-modeline t)
-  (load-theme 'doom-material-dark t)
-  (doom-themes-org-config))
+  (setq catppuccin-flavor 'mocha)
+  (load-theme 'catppuccin t))
 
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
@@ -615,7 +612,7 @@ Use this as :around advice to commands that must make a new frame."
 ;; replace Git- in modeline with icon
 (defadvice vc-mode-line (after strip-backend () activate)
   (when (stringp vc-mode)
-    (let ((gitlogo (replace-regexp-in-string "^ Git." " " vc-mode)))
+    (let ((gitlogo (truncate-string-to-width (replace-regexp-in-string "^ Git." " " vc-mode) 22)))
       (setq vc-mode gitlogo))))
 
 ;; Show line, columns number in modeline
@@ -636,49 +633,65 @@ Use this as :around advice to commands that must make a new frame."
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
 ;; Frame title
-(setq frame-title-format
-      (list
-       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
-       '(:eval
-         (let ((project (project-current)))
-           (when project
-             (format " — %s" (project-name project)))))))
+;; (setq frame-title-format
+;;       (list
+;;        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+;;        '(:eval
+;;          (let ((project (project-current)))
+;;            (when project
+;;              (format " — %s" (project-name project)))))))
 
-(use-package bufferlo
-  :straight (:host github :repo "florommel/bufferlo")
+(use-package tab-bar
+  :straight (:type built-in)
+  :after (project)
+  :custom
+  (tab-bar-show 1)
+  (tab-bar-new-tab-choice "*scratch*")
+  (tab-bar-close-tab-select 'recent)
+  (tab-bar-new-tab-to 'rightmost)
+  (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
+  (tab-bar-new-button nil)
+  (tab-bar-close-button nil)
+  (tab-bar-format '(tab-bar-format-history
+                    tab-bar-format-tabs
+                    ;; " " ;; Add empty space so that the last tab's face does not extend to the end."
+                    tab-bar-format-add-tab))
+  )
+
+(use-package tabspaces
+  :demand t
+  :custom
+  (tabspaces-use-filtered-buffers-as-default t)
+  (tabspaces-default-tab "home")
+  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
+  (tabspaces-keymap-prefix nil)
+  :general
+  (+leader-def
+    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
+  (+leader-def
+    "pp" #'tabspaces-open-or-create-project-and-workspace)
   :config
-  (bufferlo-mode 1)
+  (tabspaces-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab)
 
   (with-eval-after-load 'consult
-    ;; (consult-customize consult--source-buffer :hidden t :default nil)
-	(defvar +consult--source-buffer
-	  `(:name "All Buffers"
-			  :narrow   ?a
-			  :hidden   t
-			  :category buffer
-			  :face     consult-buffer
-			  :history  buffer-name-history
-			  :state    ,#'consult--buffer-state
-			  :items ,(lambda () (consult--buffer-query
-								  :sort 'visibility
-								  :as #'buffer-name))))
+    (consult-customize consult--source-buffer :hidden t :default nil)
 
-	(defvar +consult--source-local-buffer
-	  `(:name "Current frame buffers"
-			  :narrow   ?b
-			  :category buffer
-			  :face     consult-buffer
-			  :history  buffer-name-history
-			  :state    ,#'consult--buffer-state
-			  :default  t
-			  :items ,(lambda () (consult--buffer-query
-								  :predicate #'bufferlo-local-buffer-p
-								  :sort 'visibility
-								  :as #'buffer-name))))
-
-	(setq consult-buffer-sources '(consult--source-hidden-buffer
-								   +consult--source-buffer
-								   +consult--source-local-buffer)))
+    (defvar consult--source-workspace
+      (list :name     "Workspace Buffers"
+            :narrow   ?w
+            :history  'buffer-name-history
+            :category 'buffer
+            :state    #'consult--buffer-state
+            :default  t
+            :items    (lambda () (consult--buffer-query
+                                  :predicate #'tabspaces--local-buffer-p
+                                  :sort 'visibility
+                                  :as #'buffer-name))))
+    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
 
 ;; Resize window combinations proportionally
@@ -815,20 +828,6 @@ Use this as :around advice to commands that must make a new frame."
   :custom
   (consult-narrow-key "<")
   :config
-  (defvar  +consult--source-compilation
-    (list :name     "Compilation buffers"
-          :narrow   ?c
-          :category 'buffer
-		  :face     'consult-buffer
-          :history  'buffer-name-history
-          :state    #'consult--buffer-state
-		  :items (lambda () (consult--buffer-query
-							 :predicate #'bufferlo-local-buffer-p
-							 :mode '(compilation-mode)
-							 :sort 'visibility
-							 :as #'buffer-name))))
-
-  (add-to-list 'consult-buffer-sources '+consult--source-compilation 'append)
   )
 
 (use-package consult-dir
@@ -1366,14 +1365,14 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "ot" #'vterm)
   :preface
   (defun project-vterm ()
-	(interactive)
-	(defvar vterm-buffer-name)
-	(let* ((default-directory (project-root     (project-current t)))
-		   (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
-		   (vterm-buffer (get-buffer vterm-buffer-name)))
-	  (if (and vterm-buffer (not current-prefix-arg))
-		  (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
-		(vterm))))
+    (interactive)
+    (defvar vterm-buffer-name)
+    (let* ((default-directory (project-root     (project-current t)))
+    	   (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
+    	   (vterm-buffer (get-buffer vterm-buffer-name)))
+      (if (and vterm-buffer (not current-prefix-arg))
+    	  (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
+    	(vterm))))
   :init
   (setq vterm-timer-delay 0.01
         vterm-kill-buffer-on-exit t
@@ -1387,14 +1386,14 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
       (list :name     "Terminal buffers"
             :narrow   ?t
             :category 'buffer
-			:face     'consult-buffer
+    		:face     'consult-buffer
             :history  'buffer-name-history
             :state    #'consult--buffer-state
-			:items (lambda () (consult--buffer-query
-							   :predicate #'bufferlo-local-buffer-p
-							   :mode '(shell-mode eshell-mode vterm-mode)
-							   :sort 'visibility
-							   :as #'buffer-name))))
+    		:items (lambda () (consult--buffer-query
+    						   :predicate #'tabspaces--local-buffer-p
+    						   :mode '(shell-mode eshell-mode vterm-mode)
+    						   :sort 'visibility
+    						   :as #'buffer-name))))
 
     (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
@@ -1413,13 +1412,14 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :commands (multi-vterm)
   :general
   (+leader-def
-    "oT" #'ulti-vterm))
+    "oT" #'multi-vterm))
 
 (use-package org
   :straight (:type built-in)
   :custom
   ;; (org-startup-folded 'content)
   ;; (org-hide-emphasis-markers t)
+  (org-fold-core-style 'overlays)
   (org-hide-block-startup nil)
   (org-cycle-separator-lines 2)
   (org-pretty-entities t)
@@ -1564,7 +1564,24 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (compilation-always-kill t)
   :config
   ;; colorize compilation buffer
-  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
+  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+
+  (with-eval-after-load 'consult
+    (defvar  +consult--source-compilation
+      (list :name     "Compilation buffers"
+            :narrow   ?c
+            :category 'buffer
+            :face     'consult-buffer
+            :history  'buffer-name-history
+            :state    #'consult--buffer-state
+            :items (lambda () (consult--buffer-query
+                               :predicate #'tabspaces--local-buffer-p
+                               :mode '(compilation-mode)
+                               :sort 'visibility
+                               :as #'buffer-name))))
+
+    (add-to-list 'consult-buffer-sources '+consult--source-compilation 'append))
+  )
 
 (use-package envrc
   :config
