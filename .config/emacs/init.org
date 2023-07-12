@@ -778,8 +778,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (tabspaces-default-tab "home")
   (tabspaces-include-buffers '("*scratch*" "*Messages*"))
   (tabspaces-keymap-prefix nil)
-  :init
-  (tab-bar-rename-tab tabspaces-default-tab)
   :general
   (+leader-def
     "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
@@ -788,8 +786,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "<tab>p" #'tab-bar-switch-to-prev-tab)
   (+leader-def
     "pp" #'tabspaces-open-or-create-project-and-workspace)
-  :config
+  :init
   (tabspaces-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab)
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
