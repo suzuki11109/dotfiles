@@ -68,19 +68,24 @@
         gcmh-high-cons-threshold (* 32 1024 1024)))
 
 (use-package exec-path-from-shell
-  :init
-  (exec-path-from-shell-initialize))
+  :hook
+  (after-init . exec-path-from-shell-initialize))
 
 ;; Escape once
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package which-key
-  :hook (after-init . which-key-mode)
+  :hook
+  (after-init . which-key-mode)
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
-  (which-key-add-column-padding 1))
+  (which-key-add-column-padding 1)
+  ;; :defer 2
+  ;; :config
+  ;; (which-key-mode 1)
+  )
 
 (use-package general
   :config
@@ -320,6 +325,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; recent files
 (use-package recentf
   :straight (:type built-in)
+  :hook
+  (after-init . recentf-mode)
   :init
   (setq
    ;; Increase the maximum number of saved items
@@ -340,13 +347,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
      ,(rx "/"
           (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
           (* any))))
-  (recentf-mode 1))
+  )
 
 (use-package dired
   :straight (:type built-in)
   :custom
   (dired-dwim-target t)
-  (dired-auto-revert-buffer #'dired-buffer-stale-p)
   (dired-recursive-copies  'always)
   (dired-create-destination-dirs 'ask))
 
@@ -444,10 +450,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package elec-pair
   ;; TODO: refactor these
   :straight (:type built-in)
+  :hook
+  ((prog-mode text-mode) . electric-pair-mode)
   :hook ((git-commit-mode . git-commit-add-electric-pairs)
          (markdown-mode . markdown-add-electric-pairs)
          (go-ts-mode . go-add-electric-pairs)
          (yaml-ts-mode . yaml-add-electric-pairs))
+  :hook
+  (org-mode . (lambda ()
+                (setq-local electric-pair-inhibit-predicate
+                            `(lambda (c)
+                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
   :preface
   (defun git-commit-add-electric-pairs ()
     (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`) (?= . ?=))))
@@ -461,14 +474,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (defun yaml-add-electric-pairs ()
     (setq-local electric-pair-pairs (append electric-pair-pairs '((?\( . ?\)))))
     (setq-local electric-pair-text-pairs electric-pair-pairs))
-  :init
-  ;; disable <> auto pairing in electric-pair-mode for org-mode
-  (add-hook 'org-mode-hook
-            (lambda ()
-              (setq-local electric-pair-inhibit-predicate
-                          `(lambda (c)
-                             (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-  (electric-pair-mode t))
+  )
 
 ;; Clipboard
 (setq
@@ -565,17 +571,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   ("M--" 'default-text-scale-decrease)
   ("M-=" 'default-text-scale-increase))
 
-(use-package nerd-icons)
-
-(use-package nerd-icons-dired
-  :hook
-  (dired-mode . nerd-icons-dired-mode))
-
-(use-package catppuccin-theme
-  :config
-  (setq catppuccin-flavor 'mocha)
-  (load-theme 'catppuccin t))
-
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
 ;; Remove visual indicators from non selected windows
@@ -595,17 +590,27 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
 ;; Modelines
-(if (facep 'mode-line-active)
-    (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :height 103)
-  (set-face-attribute 'mode-line nil :family "SF Thonburi" :height 103))
-(set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :height 103)
+(defvar after-load-theme-hook nil
+  "Hook run after a color theme is loaded using `load-theme'.")
+(defadvice load-theme (after run-after-load-theme-hook activate)
+  "Run `after-load-theme-hook'."
+  (run-hooks 'after-load-theme-hook))
+
+(defun +set-mode-line-font ()
+  (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :height 103)
+  (if (facep 'mode-line-active)
+      (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :height 103)
+    (set-face-attribute 'mode-line nil :family "SF Thonburi" :height 103))
+  )
+
+(add-hook 'after-load-theme-hook #'+set-mode-line-font)
 
 ;; (setq x-underline-at-descent-line t) ;; ?
 (use-package minions
   :custom
   (minions-prominent-modes '(flycheck-mode))
-  :config
-  (minions-mode 1))
+  :hook
+  (after-init . minions-mode))
 
 ;; revert vc-mode in modeline
 (setq auto-revert-check-vc-info t)
@@ -633,29 +638,29 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
 ;; Frame title
-;; (setq frame-title-format
-;;       (list
-;;        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
-;;        '(:eval
-;;          (let ((project (project-current)))
-;;            (when project
-;;              (format " — %s" (project-name project)))))))
+(setq frame-title-format
+      (list
+       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+       '(:eval
+         (let ((project (project-current)))
+           (when project
+             (format " — %s" (project-name project)))))))
 
 (use-package tab-bar
   :straight (:type built-in)
   :after (project)
   :custom
   (tab-bar-show 1)
+  (tab-bar-close-button nil)
   (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-tab-select 'recent)
-  (tab-bar-new-tab-to 'rightmost)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
+  (tab-bar-new-tab-to 'rightmost)
   (tab-bar-new-button nil)
-  (tab-bar-close-button nil)
-  (tab-bar-format '(tab-bar-format-history
-                    tab-bar-format-tabs
-                    ;; " " ;; Add empty space so that the last tab's face does not extend to the end."
-                    tab-bar-format-add-tab))
+  (tab-bar-separator " ")
+  (tab-bar-auto-width nil)
+  (tab-bar-format '(tab-bar-format-tabs
+                    tab-bar-separator))
   )
 
 (use-package tabspaces
@@ -739,6 +744,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (popper-mode +1)
   (popper-echo-mode +1))
 
+(use-package nerd-icons)
+
+(use-package catppuccin-theme
+  :config
+  (setq catppuccin-flavor 'mocha)
+  (load-theme 'catppuccin t))
+
 (use-package orderless
   :custom
   (completion-styles '(orderless partial-completion basic))
@@ -762,9 +774,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package yasnippet
   ;; first-input
+  :hook
+  (prog-mode . yas-minor-mode)
   :config
   (use-package yasnippet-snippets)
-  (yas-global-mode +1))
+  (yas-reload-all))
 
 (use-package cape)
 (use-package corfu
@@ -1092,10 +1106,10 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
         (sit-for 0.75)))))
 
 (use-package lsp-mode
-  :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
+  :commands (lsp lsp-deferred lsp-install-server)
   :hook
-  (after-init . +lsp-auto-enable)
-  ;; (lsp-completion-mode . +update-completions-list)
+  (prog-mode . lsp-deferred)
+  ((json-ts-mode yaml-ts-mode) . lsp-deferred)
   (lsp-managed-mode . (lambda () (general-nmap
                                    :keymaps 'local
                                    "K" 'lsp-describe-thing-at-point)))
@@ -1123,13 +1137,6 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "Modes for which LSP-mode can be automatically enabled by `+lsp-auto-enable'."
     :group 'my-prog
     :type '(repeat symbol))
-
-  (defun +lsp-auto-enable ()
-    "Auto-enable LSP-mode in configured modes in `+lsp-auto-enable-modes'."
-    (interactive)
-    (dolist (mode +lsp-auto-enable-modes)
-      (let ((hook (intern (format "%s-hook" mode))))
-        (add-hook hook #'lsp-deferred))))
 
   ;; (defun +update-completions-list ()
   ;;   (progn
@@ -1244,7 +1251,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :straight (:type built-in))
 
 (use-package web-mode
-  ;; :mode "\\.erb\\'"
+  :mode "\\.erb\\'"
+  :mode "\\.vue\\'"
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1268,7 +1276,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 (use-package inf-ruby
   :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
 
-(use-package ruby-end)
+(use-package ruby-end
+  :after (ruby-mode ruby-ts-mode))
 
 (use-package rspec-mode
   :mode ("/\\.rspec\\'" . text-mode)
@@ -1465,18 +1474,17 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   ;; (org-ellipsis " ")
   :config
   (require 'org-indent)
-
   ;; Increase the size of various headings
-  (set-face-attribute 'org-document-title nil :weight 'bold :height 1.3)
-  (dolist (face '((org-level-1 . 1.2)
-                  (org-level-2 . 1.1)
-                  (org-level-3 . 1.05)
-                  (org-level-4 . 1.0)
-                  (org-level-5 . 1.1)
-                  (org-level-6 . 1.1)
-                  (org-level-7 . 1.1)
-                  (org-level-8 . 1.1)))
-    (set-face-attribute (car face) nil :weight 'bold :height (cdr face)))
+  ;; (set-face-attribute 'org-document-title nil :weight 'bold :height 1.3)
+  ;; (dolist (face '((org-level-1 . 1.2)
+  ;;                 (org-level-2 . 1.1)
+  ;;                 (org-level-3 . 1.05)
+  ;;                 (org-level-4 . 1.0)
+  ;;                 (org-level-5 . 1.1)
+  ;;                 (org-level-6 . 1.1)
+  ;;                 (org-level-7 . 1.1)
+  ;;                 (org-level-8 . 1.1)))
+  ;;   (set-face-attribute (car face) nil :weight 'bold :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
@@ -1498,6 +1506,12 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (add-to-list 'org-structure-template-alist '("go" . "src go"))
   (add-to-list 'org-structure-template-alist '("json" . "src json"))
 
+  (define-key org-src-mode-map [remap evil-write] 'org-edit-src-save)
+  (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
+  :general
+  (+local-leader-def
+    :keymaps '(org-mode-map)
+    "se" #'org-edit-special)
   :hook
   (org-mode . visual-line-mode)
   (org-mode . org-indent-mode)
@@ -1568,13 +1582,14 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
             "q" #'kill-buffer-and-window)
   (+leader-def
     :infix "h"
-    "k" #'helpful-key
+    "a" #'describe-face
     "c" #'helpful-macro
     "f" #'helpful-callable
-    "v" #'helpful-variable
+    "F" #'helpful-function
+    "k" #'helpful-key
     "o" #'helpful-symbol
-    "x" #'helpful-command
-    "F" #'helpful-function))
+    "v" #'helpful-variable
+    "x" #'helpful-command))
 
 ;; help/helpful window placement
 (add-to-list
@@ -1621,17 +1636,17 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   )
 
 (use-package envrc
-  :config
-  (envrc-global-mode))
+  :hook
+  (after-init . envrc-global-mode))
 
 (use-package docker
   :general
   (+leader-def
     "oD" #'docker))
 
-(use-package helm-make)
 (use-package run-command
   :config
+  (use-package helm-make)
   (require 'subr-x)
   (require 'map)
   (require 'seq)
