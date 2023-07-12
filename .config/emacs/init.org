@@ -110,7 +110,8 @@
         gcmh-high-cons-threshold (* 32 1024 1024)))
 
 (use-package exec-path-from-shell
-  :config
+  :init
+  (setq exec-path-from-shell-arguments nil)
   (exec-path-from-shell-initialize))
 #+end_src
 
@@ -661,10 +662,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ** Themes
 #+begin_src emacs-lisp
 (use-package nerd-icons
-  :config
-  (use-package nerd-icons-dired
-    :hook
-    (dired-mode . nerd-icons-dired-mode)))
+  :defer 1)
+
+(use-package nerd-icons-dired
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
 
 (use-package catppuccin-theme
   :config
@@ -674,12 +676,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ** Cursor
 #+begin_src emacs-lisp
-  ;; Stretch cursor to the glyph width
-  (setq x-stretch-cursor t)
-  ;; Remove visual indicators from non selected windows
-  (setq-default cursor-in-non-selected-windows nil)
-  ;; No blinking cursor
-  (blink-cursor-mode -1)
+;; Stretch cursor to the glyph width
+(setq x-stretch-cursor t)
+;; Remove visual indicators from non selected windows
+(setq-default cursor-in-non-selected-windows nil)
+;; No blinking cursor
+(blink-cursor-mode -1)
 #+end_src
 
 ** Line numbers
@@ -728,7 +730,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Show search count in modeline
 (use-package anzu
-  :defer 3
+  :defer 2
   :config
   (global-anzu-mode 1))
 
@@ -771,12 +773,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package tabspaces
-  :demand t
   :custom
   (tabspaces-use-filtered-buffers-as-default t)
   (tabspaces-default-tab "home")
   (tabspaces-include-buffers '("*scratch*" "*Messages*"))
   (tabspaces-keymap-prefix nil)
+  :init
+  (tab-bar-rename-tab tabspaces-default-tab)
   :general
   (+leader-def
     "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
@@ -787,7 +790,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "pp" #'tabspaces-open-or-create-project-and-workspace)
   :config
   (tabspaces-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab)
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -887,6 +889,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ** Snippets
 #+begin_src emacs-lisp
 (use-package yasnippet
+  ;; first-input
   :config
   (use-package yasnippet-snippets)
   (yas-global-mode +1))
@@ -1142,126 +1145,124 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   )
 
 #+end_src
-** Modes
-#+begin_src emacs-lisp
-#+end_src
 
 * Programming
 ** Treesitter
 #+begin_src emacs-lisp
-    (use-package treesit
-      :straight nil
-      :init
-      (setq treesit-font-lock-level 4)
-      (setq treesit-language-source-alist
-            '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-              (c "https://github.com/tree-sitter/tree-sitter-c")
-              (css "https://github.com/tree-sitter/tree-sitter-css")
-              (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-              (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
-              (go "https://github.com/tree-sitter/tree-sitter-go")
-              (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-              (html "https://github.com/tree-sitter/tree-sitter-html")
-              (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
-              (json "https://github.com/tree-sitter/tree-sitter-json")
-              (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
-              (python "https://github.com/tree-sitter/tree-sitter-python")
-              (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
-              (rust "https://github.com/tree-sitter/tree-sitter-rust")
-              (toml "https://github.com/tree-sitter/tree-sitter-toml")
-              (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-              (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-              (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
-      ;; remap built-in modes to new ts-modes
-      (setq major-mode-remap-alist
-            '(
-              (html-mode . html-ts-mode)
-              (mhtml-mode . html-ts-mode)
-              (bash-mode . bash-ts-mode)
-              (js-mode . js-ts-mode)
-              (json-mode . json-ts-mode)
-              (css-mode . css-ts-mode)
-              (python-mode . python-ts-mode)
-              (ruby-mode . ruby-ts-mode)
-              ))
+(use-package treesit
+  :straight nil
+  :init
+  (setq treesit-font-lock-level 4)
+  (setq treesit-language-source-alist
+        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+          (c "https://github.com/tree-sitter/tree-sitter-c")
+          (css "https://github.com/tree-sitter/tree-sitter-css")
+          (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+          (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
+          (go "https://github.com/tree-sitter/tree-sitter-go")
+          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
+          (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
+          (json "https://github.com/tree-sitter/tree-sitter-json")
+          (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
+          (python "https://github.com/tree-sitter/tree-sitter-python")
+          (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (toml "https://github.com/tree-sitter/tree-sitter-toml")
+          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+          (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
-      (defun +treesit-install-all-languages ()
-        "Install all languages specified by `treesit-language-source-alist'."
-        (interactive)
-        (let ((languages (mapcar 'car treesit-language-source-alist)))
-          (dolist (lang languages)
-            (treesit-install-language-grammar lang)
-            (message "`%s' parser was installed." lang)
-            (sit-for 0.75)))))
+  ;; remap built-in modes to new ts-modes
+  (setq major-mode-remap-alist
+        '(
+          (html-mode . html-ts-mode)
+          (mhtml-mode . html-ts-mode)
+          (bash-mode . bash-ts-mode)
+          (js-mode . js-ts-mode)
+          (json-mode . json-ts-mode)
+          (css-mode . css-ts-mode)
+          (python-mode . python-ts-mode)
+          (ruby-mode . ruby-ts-mode)
+          ))
+
+  (defun +treesit-install-all-languages ()
+    "Install all languages specified by `treesit-language-source-alist'."
+    (interactive)
+    (let ((languages (mapcar 'car treesit-language-source-alist)))
+      (dolist (lang languages)
+        (treesit-install-language-grammar lang)
+        (message "`%s' parser was installed." lang)
+        (sit-for 0.75)))))
 
 #+end_src
 ** LSP
 #+begin_src emacs-lisp
-  ;; lsp
-  (use-package lsp-mode
-    :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
-    :hook
-    (after-init . +lsp-auto-enable)
-    ;; (lsp-completion-mode . +update-completions-list)
-    (lsp-managed-mode . (lambda () (general-nmap
-                                     :keymaps 'local
-                                     "K" 'lsp-describe-thing-at-point)))
-    :preface
-    (setq lsp-use-plists t)
-    :custom
-    (lsp-keymap-prefix nil)
-    (lsp-completion-provider :none)
-    (lsp-keep-workspace-alive nil)
-    (lsp-eldoc-enable-hover nil)
-    (lsp-headerline-breadcrumb-enable nil)
-    (lsp-enable-symbol-highlighting nil)
-    (lsp-enable-text-document-color nil)
-    (lsp-modeline-diagnostics-enable nil)
-    (lsp-insert-final-newline nil)
-    (lsp-signature-auto-activate nil)
-    (lsp-idle-delay 0.9)
-    :init
-    (defcustom +lsp-auto-enable-modes
-      '(python-mode python-ts-mode
-                    rust-mode rust-ts-mode go-mode go-ts-mode
-                    ruby-mode ruby-ts-mode
-                    js-mode js-ts-mode typescript-mode typescript-ts-mode tsx-ts-mode
-                    json-mode json-ts-mode js-json-mode)
-      "Modes for which LSP-mode can be automatically enabled by `+lsp-auto-enable'."
-      :group 'my-prog
-      :type '(repeat symbol))
 
-    (defun +lsp-auto-enable ()
-      "Auto-enable LSP-mode in configured modes in `+lsp-auto-enable-modes'."
-      (interactive)
-      (dolist (mode +lsp-auto-enable-modes)
-        (let ((hook (intern (format "%s-hook" mode))))
-          (add-hook hook #'lsp-deferred))))
+(use-package lsp-mode
+  :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
+  :hook
+  (after-init . +lsp-auto-enable)
+  ;; (lsp-completion-mode . +update-completions-list)
+  (lsp-managed-mode . (lambda () (general-nmap
+                                   :keymaps 'local
+                                   "K" 'lsp-describe-thing-at-point)))
+  :preface
+  (setq lsp-use-plists t)
+  :custom
+  (lsp-keymap-prefix nil)
+  (lsp-completion-provider :none)
+  (lsp-keep-workspace-alive nil)
+  (lsp-eldoc-enable-hover nil)
+  (lsp-headerline-breadcrumb-enable nil)
+  (lsp-enable-symbol-highlighting nil)
+  (lsp-enable-text-document-color nil)
+  (lsp-modeline-diagnostics-enable nil)
+  (lsp-insert-final-newline nil)
+  (lsp-signature-auto-activate nil)
+  (lsp-idle-delay 0.9)
+  :init
+  (defcustom +lsp-auto-enable-modes
+    '(python-mode python-ts-mode
+                  rust-mode rust-ts-mode go-mode go-ts-mode
+                  ruby-mode ruby-ts-mode
+                  js-mode js-ts-mode typescript-mode typescript-ts-mode tsx-ts-mode
+                  json-mode json-ts-mode js-json-mode)
+    "Modes for which LSP-mode can be automatically enabled by `+lsp-auto-enable'."
+    :group 'my-prog
+    :type '(repeat symbol))
 
-    ;; (defun +update-completions-list ()
-    ;;   (progn
-    ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
-    ;;     (setq-local completion-at-point-functions
-    ;;                 (list (cape-super-capf
-    ;;                        'non-greedy-lsp
-    ;;                        (cape-company-to-capf #'company-yasnippet)
-    ;;                        )))
-    ;;     ))
+  (defun +lsp-auto-enable ()
+    "Auto-enable LSP-mode in configured modes in `+lsp-auto-enable-modes'."
+    (interactive)
+    (dolist (mode +lsp-auto-enable-modes)
+      (let ((hook (intern (format "%s-hook" mode))))
+        (add-hook hook #'lsp-deferred))))
 
-    :general
-    (+leader-def
-      :keymaps 'lsp-mode-map
-      :infix "c"
-      "a" '(lsp-execute-code-action :wk "Code action")
-      "i" '(lsp-find-implementation :wk "Find implementation")
-      "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
-      "l" '(lsp-avy-lens :wk "Click lens")
-      "o" '(lsp-organize-imports :wk "Organize imports")
-      "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
-      "r" '(lsp-rename :wk "Rename")
-      "R" '(lsp-workspace-restart :wk "restart workspace"))
-    )
+  ;; (defun +update-completions-list ()
+  ;;   (progn
+  ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+  ;;     (setq-local completion-at-point-functions
+  ;;                 (list (cape-super-capf
+  ;;                        'non-greedy-lsp
+  ;;                        (cape-company-to-capf #'company-yasnippet)
+  ;;                        )))
+  ;;     ))
+
+  :general
+  (+leader-def
+    :keymaps 'lsp-mode-map
+    :infix "c"
+    "a" '(lsp-execute-code-action :wk "Code action")
+    "i" '(lsp-find-implementation :wk "Find implementation")
+    "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
+    "l" '(lsp-avy-lens :wk "Click lens")
+    "o" '(lsp-organize-imports :wk "Organize imports")
+    "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
+    "r" '(lsp-rename :wk "Rename")
+    "R" '(lsp-workspace-restart :wk "restart workspace"))
+  )
 
 (use-package consult-lsp
   :after consult lsp-mode
@@ -1470,45 +1471,46 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 #+end_src
 ** Others
 #+begin_src emacs-lisp
-  ;; others
-  ;; (use-package yaml-ts-mode
-  ;;   :mode "\\.ya?ml\\'"
-  ;;   :straight nil)
 
-  (use-package json-ts-mode
-    :straight nil
-    :mode "\\.prettierrc\\'")
+;; others
+;; (use-package yaml-ts-mode
+;;   :mode "\\.ya?ml\\'"
+;;   :straight nil)
 
-  (use-package dockerfile-mode
-    :mode "\\Dockerfile\\'")
+(use-package json-ts-mode
+  :straight nil
+  :mode "\\.prettierrc\\'")
 
-  (use-package terraform-mode
-    :mode "\\.tf\\'")
+(use-package dockerfile-mode
+  :mode "\\Dockerfile\\'")
 
-  (use-package git-modes
-    :mode ("/.dockerignore\\'" . gitignore-mode))
+(use-package terraform-mode
+  :mode "\\.tf\\'")
+
+(use-package git-modes
+  :mode ("/.dockerignore\\'" . gitignore-mode))
 
 #+end_src
 ** Formatter
 #+begin_src emacs-lisp
-  (use-package editorconfig
-    :hook
-    (after-init . editorconfig-mode))
+(use-package editorconfig
+  :hook
+  ((prog-mode text-mode conf-mode) . editorconfig-mode))
 
-  (use-package apheleia
-    :general
-    (+leader-def
-      "cf" #'apheleia-format-buffer)
-    :config
-    (setf (alist-get 'erb-formatter apheleia-formatters)
-          '("erb-format" filepath))
-    (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
-    (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
-    :hook
-    ((go-ts-mode rust-ts-mode ruby-ts-mode
-                 css-ts-mode web-mode erb-mode
-                 typescript-ts-mode tsx-ts-mode js-ts-mode
-                 emacs-lisp-mode) . apheleia-mode))
+(use-package apheleia
+  :general
+  (+leader-def
+    "cf" #'apheleia-format-buffer)
+  :config
+  (setf (alist-get 'erb-formatter apheleia-formatters)
+        '("erb-format" filepath))
+  (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
+  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
+  :hook
+  ((go-ts-mode rust-ts-mode ruby-ts-mode
+               css-ts-mode web-mode erb-mode
+               typescript-ts-mode tsx-ts-mode js-ts-mode
+               emacs-lisp-mode) . apheleia-mode))
 #+end_src
 * Terminals
 ** Eshell
@@ -1660,7 +1662,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (:keymaps 'org-mode-map
             "M-O" 'evil-org-org-insert-subheading-below)
   :config
-  (evil-org-set-key-theme '(navigation insert textobjects additional calendar))
+  (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
@@ -1681,46 +1683,46 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 * Tools
 ** Help
 #+begin_src emacs-lisp
-  (setq help-window-select t)
-  (use-package helpful
-    :hook
-    (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
-    :bind
-    ([remap describe-symbol]   . helpful-symbol)
-    ([remap describe-key]      . helpful-key)
-    ([remap describe-function] . helpful-callable)
-    ([remap describe-variable] . helpful-variable)
-    ([remap describe-command]  . helpful-command)
-    :preface
-    (defun +helpful-switch-to-buffer (buffer-or-name)
-      "Switch to helpful BUFFER-OR-NAME.
+(setq help-window-select t)
+(use-package helpful
+  :hook
+  (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
+  :bind
+  ([remap describe-symbol]   . helpful-symbol)
+  ([remap describe-key]      . helpful-key)
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-command]  . helpful-command)
+  :preface
+  (defun +helpful-switch-to-buffer (buffer-or-name)
+    "Switch to helpful BUFFER-OR-NAME.
 
   The logic is simple, if we are currently in the helpful buffer,
   reuse it's window, otherwise create new one."
-      (if (eq major-mode 'helpful-mode)
-          (switch-to-buffer buffer-or-name)
-        (pop-to-buffer buffer-or-name)))
-    :custom
-    (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
-    (helpful-max-buffers 1)
+    (if (eq major-mode 'helpful-mode)
+        (switch-to-buffer buffer-or-name)
+      (pop-to-buffer buffer-or-name)))
+  :custom
+  (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
+  (helpful-max-buffers 1)
+  :config
+  (use-package elisp-demos
     :config
-    (use-package elisp-demos
-      :config
-      (advice-add 'helpful-update
-                  :after
-                  #'elisp-demos-advice-helpful-update))
-    :general
-    (:keymaps 'helpful-mode-map
-              "q" #'kill-buffer-and-window)
-    (+leader-def
-      :infix "h"
-      "k" #'helpful-key
-      "c" #'helpful-macro
-      "f" #'helpful-callable
-      "v" #'helpful-variable
-      "o" #'helpful-symbol
-      "x" #'helpful-command
-      "F" #'helpful-function))
+    (advice-add 'helpful-update
+                :after
+                #'elisp-demos-advice-helpful-update))
+  :general
+  (:keymaps 'helpful-mode-map
+            "q" #'kill-buffer-and-window)
+  (+leader-def
+    :infix "h"
+    "k" #'helpful-key
+    "c" #'helpful-macro
+    "f" #'helpful-callable
+    "v" #'helpful-variable
+    "o" #'helpful-symbol
+    "x" #'helpful-command
+    "F" #'helpful-function))
 
 ;; help/helpful window placement
 (add-to-list

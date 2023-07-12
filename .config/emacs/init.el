@@ -68,7 +68,8 @@
         gcmh-high-cons-threshold (* 32 1024 1024)))
 
 (use-package exec-path-from-shell
-  :config
+  :init
+  (setq exec-path-from-shell-arguments nil)
   (exec-path-from-shell-initialize))
 
 ;; Escape once
@@ -566,10 +567,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   ("M-=" 'default-text-scale-increase))
 
 (use-package nerd-icons
-  :config
-  (use-package nerd-icons-dired
-    :hook
-    (dired-mode . nerd-icons-dired-mode)))
+  :defer 1)
+
+(use-package nerd-icons-dired
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
 
 (use-package catppuccin-theme
   :config
@@ -623,7 +625,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Show search count in modeline
 (use-package anzu
-  :defer 3
+  :defer 2
   :config
   (global-anzu-mode 1))
 
@@ -659,12 +661,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package tabspaces
-  :demand t
   :custom
   (tabspaces-use-filtered-buffers-as-default t)
   (tabspaces-default-tab "home")
   (tabspaces-include-buffers '("*scratch*" "*Messages*"))
   (tabspaces-keymap-prefix nil)
+  :init
+  (tab-bar-rename-tab tabspaces-default-tab)
   :general
   (+leader-def
     "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
@@ -675,7 +678,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "pp" #'tabspaces-open-or-create-project-and-workspace)
   :config
   (tabspaces-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab)
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -762,6 +764,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package yasnippet
+  ;; first-input
   :config
   (use-package yasnippet-snippets)
   (yas-global-mode +1))
@@ -1006,8 +1009,6 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
               (set-face-background 'diff-hl-change nil)))
   )
 
-
-
 (use-package treesit
   :straight nil
   :init
@@ -1054,70 +1055,69 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
         (message "`%s' parser was installed." lang)
         (sit-for 0.75)))))
 
-;; lsp
-  (use-package lsp-mode
-    :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
-    :hook
-    (after-init . +lsp-auto-enable)
-    ;; (lsp-completion-mode . +update-completions-list)
-    (lsp-managed-mode . (lambda () (general-nmap
-                                     :keymaps 'local
-                                     "K" 'lsp-describe-thing-at-point)))
-    :preface
-    (setq lsp-use-plists t)
-    :custom
-    (lsp-keymap-prefix nil)
-    (lsp-completion-provider :none)
-    (lsp-keep-workspace-alive nil)
-    (lsp-eldoc-enable-hover nil)
-    (lsp-headerline-breadcrumb-enable nil)
-    (lsp-enable-symbol-highlighting nil)
-    (lsp-enable-text-document-color nil)
-    (lsp-modeline-diagnostics-enable nil)
-    (lsp-insert-final-newline nil)
-    (lsp-signature-auto-activate nil)
-    (lsp-idle-delay 0.9)
-    :init
-    (defcustom +lsp-auto-enable-modes
-      '(python-mode python-ts-mode
-                    rust-mode rust-ts-mode go-mode go-ts-mode
-                    ruby-mode ruby-ts-mode
-                    js-mode js-ts-mode typescript-mode typescript-ts-mode tsx-ts-mode
-                    json-mode json-ts-mode js-json-mode)
-      "Modes for which LSP-mode can be automatically enabled by `+lsp-auto-enable'."
-      :group 'my-prog
-      :type '(repeat symbol))
+(use-package lsp-mode
+  :commands (+lsp-auto-enable lsp lsp-deferred lsp-install-server)
+  :hook
+  (after-init . +lsp-auto-enable)
+  ;; (lsp-completion-mode . +update-completions-list)
+  (lsp-managed-mode . (lambda () (general-nmap
+                                   :keymaps 'local
+                                   "K" 'lsp-describe-thing-at-point)))
+  :preface
+  (setq lsp-use-plists t)
+  :custom
+  (lsp-keymap-prefix nil)
+  (lsp-completion-provider :none)
+  (lsp-keep-workspace-alive nil)
+  (lsp-eldoc-enable-hover nil)
+  (lsp-headerline-breadcrumb-enable nil)
+  (lsp-enable-symbol-highlighting nil)
+  (lsp-enable-text-document-color nil)
+  (lsp-modeline-diagnostics-enable nil)
+  (lsp-insert-final-newline nil)
+  (lsp-signature-auto-activate nil)
+  (lsp-idle-delay 0.9)
+  :init
+  (defcustom +lsp-auto-enable-modes
+    '(python-mode python-ts-mode
+                  rust-mode rust-ts-mode go-mode go-ts-mode
+                  ruby-mode ruby-ts-mode
+                  js-mode js-ts-mode typescript-mode typescript-ts-mode tsx-ts-mode
+                  json-mode json-ts-mode js-json-mode)
+    "Modes for which LSP-mode can be automatically enabled by `+lsp-auto-enable'."
+    :group 'my-prog
+    :type '(repeat symbol))
 
-    (defun +lsp-auto-enable ()
-      "Auto-enable LSP-mode in configured modes in `+lsp-auto-enable-modes'."
-      (interactive)
-      (dolist (mode +lsp-auto-enable-modes)
-        (let ((hook (intern (format "%s-hook" mode))))
-          (add-hook hook #'lsp-deferred))))
+  (defun +lsp-auto-enable ()
+    "Auto-enable LSP-mode in configured modes in `+lsp-auto-enable-modes'."
+    (interactive)
+    (dolist (mode +lsp-auto-enable-modes)
+      (let ((hook (intern (format "%s-hook" mode))))
+        (add-hook hook #'lsp-deferred))))
 
-    ;; (defun +update-completions-list ()
-    ;;   (progn
-    ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
-    ;;     (setq-local completion-at-point-functions
-    ;;                 (list (cape-super-capf
-    ;;                        'non-greedy-lsp
-    ;;                        (cape-company-to-capf #'company-yasnippet)
-    ;;                        )))
-    ;;     ))
+  ;; (defun +update-completions-list ()
+  ;;   (progn
+  ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+  ;;     (setq-local completion-at-point-functions
+  ;;                 (list (cape-super-capf
+  ;;                        'non-greedy-lsp
+  ;;                        (cape-company-to-capf #'company-yasnippet)
+  ;;                        )))
+  ;;     ))
 
-    :general
-    (+leader-def
-      :keymaps 'lsp-mode-map
-      :infix "c"
-      "a" '(lsp-execute-code-action :wk "Code action")
-      "i" '(lsp-find-implementation :wk "Find implementation")
-      "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
-      "l" '(lsp-avy-lens :wk "Click lens")
-      "o" '(lsp-organize-imports :wk "Organize imports")
-      "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
-      "r" '(lsp-rename :wk "Rename")
-      "R" '(lsp-workspace-restart :wk "restart workspace"))
-    )
+  :general
+  (+leader-def
+    :keymaps 'lsp-mode-map
+    :infix "c"
+    "a" '(lsp-execute-code-action :wk "Code action")
+    "i" '(lsp-find-implementation :wk "Find implementation")
+    "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
+    "l" '(lsp-avy-lens :wk "Click lens")
+    "o" '(lsp-organize-imports :wk "Organize imports")
+    "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
+    "r" '(lsp-rename :wk "Rename")
+    "R" '(lsp-workspace-restart :wk "restart workspace"))
+  )
 
 (use-package consult-lsp
   :after consult lsp-mode
@@ -1325,7 +1325,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 
 (use-package editorconfig
   :hook
-  (after-init . editorconfig-mode))
+  ((prog-mode text-mode conf-mode) . editorconfig-mode))
 
 (use-package apheleia
   :general
@@ -1483,7 +1483,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (:keymaps 'org-mode-map
             "M-O" 'evil-org-org-insert-subheading-below)
   :config
-  (evil-org-set-key-theme '(navigation insert textobjects additional calendar))
+  (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
@@ -1500,45 +1500,45 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :hook (org-mode . org-auto-tangle-mode))
 
 (setq help-window-select t)
-  (use-package helpful
-    :hook
-    (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
-    :bind
-    ([remap describe-symbol]   . helpful-symbol)
-    ([remap describe-key]      . helpful-key)
-    ([remap describe-function] . helpful-callable)
-    ([remap describe-variable] . helpful-variable)
-    ([remap describe-command]  . helpful-command)
-    :preface
-    (defun +helpful-switch-to-buffer (buffer-or-name)
-      "Switch to helpful BUFFER-OR-NAME.
+(use-package helpful
+  :hook
+  (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
+  :bind
+  ([remap describe-symbol]   . helpful-symbol)
+  ([remap describe-key]      . helpful-key)
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-variable] . helpful-variable)
+  ([remap describe-command]  . helpful-command)
+  :preface
+  (defun +helpful-switch-to-buffer (buffer-or-name)
+    "Switch to helpful BUFFER-OR-NAME.
 
   The logic is simple, if we are currently in the helpful buffer,
   reuse it's window, otherwise create new one."
-      (if (eq major-mode 'helpful-mode)
-          (switch-to-buffer buffer-or-name)
-        (pop-to-buffer buffer-or-name)))
-    :custom
-    (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
-    (helpful-max-buffers 1)
+    (if (eq major-mode 'helpful-mode)
+        (switch-to-buffer buffer-or-name)
+      (pop-to-buffer buffer-or-name)))
+  :custom
+  (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
+  (helpful-max-buffers 1)
+  :config
+  (use-package elisp-demos
     :config
-    (use-package elisp-demos
-      :config
-      (advice-add 'helpful-update
-                  :after
-                  #'elisp-demos-advice-helpful-update))
-    :general
-    (:keymaps 'helpful-mode-map
-              "q" #'kill-buffer-and-window)
-    (+leader-def
-      :infix "h"
-      "k" #'helpful-key
-      "c" #'helpful-macro
-      "f" #'helpful-callable
-      "v" #'helpful-variable
-      "o" #'helpful-symbol
-      "x" #'helpful-command
-      "F" #'helpful-function))
+    (advice-add 'helpful-update
+                :after
+                #'elisp-demos-advice-helpful-update))
+  :general
+  (:keymaps 'helpful-mode-map
+            "q" #'kill-buffer-and-window)
+  (+leader-def
+    :infix "h"
+    "k" #'helpful-key
+    "c" #'helpful-macro
+    "f" #'helpful-callable
+    "v" #'helpful-variable
+    "o" #'helpful-symbol
+    "x" #'helpful-command
+    "F" #'helpful-function))
 
 ;; help/helpful window placement
 (add-to-list
