@@ -596,10 +596,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (run-hooks 'after-load-theme-hook))
 
 (defun +set-mode-line-font ()
-  (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi")
+  (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :box (list :line-width 3 :color (catppuccin-get-color 'crust)))
   (if (facep 'mode-line-active)
-      (set-face-attribute 'mode-line-active nil :family "SF Thonburi")
-    (set-face-attribute 'mode-line nil :family "SF Thonburi"))
+      (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :box (list :line-width 3 :color (catppuccin-get-color 'mantle)))
+    (set-face-attribute 'mode-line nil :family "SF Thonburi" :box (list :line-width 3 :color (catppuccin-get-color 'mantle))))
   )
 
 (add-hook 'after-load-theme-hook #'+set-mode-line-font)
@@ -615,7 +615,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; replace Git- in modeline with icon
 (defadvice vc-mode-line (after strip-backend () activate)
   (when (stringp vc-mode)
-    (let ((gitlogo (truncate-string-to-width (replace-regexp-in-string "^ Git." " " vc-mode) 22)))
+    (let ((gitlogo (truncate-string-to-width (replace-regexp-in-string "^ Git." " " vc-mode) 26)))
       (setq vc-mode gitlogo))))
 
 ;; Show line, columns number in modeline
@@ -643,6 +643,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
          (let ((project (project-current)))
            (when project
              (format " — %s" (project-name project)))))))
+
+(defun +set-frame-scratch-buffer (frame)
+  (with-selected-frame frame
+    (switch-to-buffer "*scratch*")))
+(add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
 
 (use-package tab-bar
   :straight (:type built-in)
@@ -747,8 +752,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package catppuccin-theme
   :config
+  ;; (setq catppuccin-flavor 'latte)
   (setq catppuccin-flavor 'mocha)
-  (load-theme 'catppuccin t))
+  (load-theme 'catppuccin t)
+  )
+
+;; (use-package moody
+;;   :config
+;;   (setq x-underline-at-descent-line t)
+;;   (moody-replace-mode-line-buffer-identification)
+;;   (moody-replace-vc-mode)
+;;   (moody-replace-eldoc-minibuffer-message-function))
 
 (use-package orderless
   :custom
@@ -1574,6 +1588,16 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
    (dedicated . t)
    (mode . (help-mode helpful-mode))
    (window-height . 0.5)
+   ))
+
+(add-to-list
+ 'display-buffer-alist
+ '("\\`\\*docker-\\(containers\\|images\\)\\*"
+   (display-buffer-reuse-window display-buffer-in-direction)
+   (direction . bottom)
+   (dedicated . t)
+   (window-height . 0.5)
+   ;; (window-parameters (mode-line-format . none))
    ))
 
 (use-package compile
