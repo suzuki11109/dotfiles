@@ -590,8 +590,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package doom-modeline
   :custom
-  (doom-modeline-bar-width 2)
-  (doom-modeline-height 30)
   (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
@@ -740,6 +738,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package nerd-icons
   :custom
+  (nerd-icons-font-family "JetBrains Mono Nerd Font")
   (nerd-icons-scale-factor 1.1))
 
 (use-package catppuccin-theme
