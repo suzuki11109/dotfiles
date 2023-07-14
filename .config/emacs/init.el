@@ -588,41 +588,31 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (dolist (mode '(org-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 
-;; Modelines
-(defvar after-load-theme-hook nil
-  "Hook run after a color theme is loaded using `load-theme'.")
-(defadvice load-theme (after run-after-load-theme-hook activate)
-  "Run `after-load-theme-hook'."
-  (run-hooks 'after-load-theme-hook))
-
-(defun +set-mode-line-font ()
-  (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :box (list :line-width 3 :color (catppuccin-get-color 'crust)))
-  (if (facep 'mode-line-active)
-      (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :box (list :line-width 3 :color (catppuccin-get-color 'mantle)))
-    (set-face-attribute 'mode-line nil :family "SF Thonburi" :box (list :line-width 3 :color (catppuccin-get-color 'mantle))))
-  )
-
-(add-hook 'after-load-theme-hook #'+set-mode-line-font)
-
-(use-package minions
+(use-package doom-modeline
   :custom
-  (minions-prominent-modes '(flycheck-mode))
-  :hook
-  (after-init . minions-mode))
+  (doom-modeline-bar-width 2)
+  (doom-modeline-height 30)
+  (doom-modeline-buffer-file-name-style 'buffer)
+  (doom-modeline-major-mode-icon nil)
+  (doom-modeline-workspace-name nil)
+  (doom-modeline-modal nil)
+  :init
+  (defun doom-modeline-conditional-buffer-encoding ()
+    "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
+    (setq-local doom-modeline-buffer-encoding
+                (unless (and (memq (plist-get (coding-system-plist buffer-file-coding-system) :category)
+                                   '(coding-category-undecided coding-category-utf-8))
+                             (not (memq (coding-system-eol-type buffer-file-coding-system) '(1 2))))
+                  t)))
 
-;; revert vc-mode in modeline
-(setq auto-revert-check-vc-info t)
-;; replace Git- in modeline with icon
-(defadvice vc-mode-line (after strip-backend () activate)
-  (when (stringp vc-mode)
-    (let ((gitlogo (truncate-string-to-width (replace-regexp-in-string "^ Git." " " vc-mode) 26)))
-      (setq vc-mode gitlogo))))
+  (add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
+  :hook
+  (after-init . doom-modeline-mode))
 
 ;; Show line, columns number in modeline
 (line-number-mode 1)
 (column-number-mode 1)
 (setq mode-line-percent-position nil)
-(setq mode-line-position-column-line-format '("%l,%c"))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -748,7 +738,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (popper-mode +1)
   (popper-echo-mode +1))
 
-(use-package nerd-icons)
+(use-package nerd-icons
+  :custom
+  (nerd-icons-scale-factor 1.1))
 
 (use-package catppuccin-theme
   :config
@@ -756,13 +748,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (setq catppuccin-flavor 'mocha)
   (load-theme 'catppuccin t)
   )
-
-;; (use-package moody
-;;   :config
-;;   (setq x-underline-at-descent-line t)
-;;   (moody-replace-mode-line-buffer-identification)
-;;   (moody-replace-vc-mode)
-;;   (moody-replace-eldoc-minibuffer-message-function))
 
 (use-package orderless
   :custom
@@ -1455,7 +1440,6 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
               (setq-local confirm-kill-processes nil)
               (setq-local hscroll-margin 0)
               (setq-local evil-insert-state-cursor 'box)
-              ;; (evil-insert-state)
 			  ))
   )
 
@@ -1464,7 +1448,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :commands (multi-vterm multi-vterm-project)
   :general
   (+leader-def
-    "oT" #'multi-vterm))
+    "oT" #'multi-vterm
+    "pt" #'multi-vterm-project))
 
 (use-package org
   :straight (:type built-in)
