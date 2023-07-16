@@ -1,41 +1,31 @@
-;; Profile emacs startup
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs loaded in %s." (emacs-init-time))))
-
-;; Increase the garbage collection (GC) threshold for faster startup.
-(setq gc-cons-threshold most-positive-fixnum)
-
-;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer noninteractive)
-
-;; Increase single chunk bytes to read from subprocess (default 4096)
-(setq read-process-output-max (* 2 1024 1024)) ;; 2mb
-
-;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode)
-
-;; Inhibits fontification while receiving input
-(setq redisplay-skip-fontification-on-input t)
-
 ;; Native compilation settings
 (when (featurep 'native-compile)
   (setq
    ;; Silence compiler warnings as they can be pretty disruptive.
-   native-comp-async-report-warnings-errors 'silent
+   native-comp-async-report-warnings-errors nil
    ;; Make native compilation happens asynchronously
    native-comp-jit-compilation t))
+
+;; Set initial buffer to fundamental-mode for faster load
+(setq initial-major-mode 'fundamental-mode)
+
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file "~/.config/emacs/custom.el")
+(when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
+  (load custom-file))
+
+;; Inhibits fontification while receiving input
+(setq redisplay-skip-fontification-on-input t)
 
 ;; Slightly faster re-display
 (setq bidi-inhibit-bpa t)
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
 
-;; Do not make installed packages available when Emacs starts
-(setq package-enable-at-startup nil)
-
-;; Use imenu with use-package
-(setq use-package-enable-imenu-support t)
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s." (emacs-init-time))))
 
 ;; Bootstraping straight.el
 (defvar bootstrap-version)
@@ -50,6 +40,9 @@
       (goto-char (point-max))
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
+
+;; Use imenu with use-package
+(setq use-package-enable-imenu-support t)
 
 ;; Configure `use-package'
 (unless (require 'use-package nil t)
@@ -75,16 +68,14 @@
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package which-key
-  :hook
-  (after-init . which-key-mode)
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1)
-  ;; :defer 2
-  ;; :config
-  ;; (which-key-mode 1)
+  :defer 2
+  :config
+  (which-key-mode 1)
   )
 
 (use-package general
@@ -194,11 +185,6 @@
     "tr"  #'read-only-mode
     )
   )
-
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file "~/.config/emacs/custom.el")
-(when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
-  (load custom-file))
 
 ;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
 (if (>= emacs-major-version 29)
@@ -352,9 +338,36 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package dired
   :straight (:type built-in)
   :custom
+  (dired-listing-switches "-ahl")
+  (dired-auto-revert-buffer t)
   (dired-dwim-target t)
   (dired-recursive-copies  'always)
   (dired-create-destination-dirs 'ask))
+
+(use-package dired-x
+  :straight (:type built-in)
+  :hook (dired-mode . dired-omit-mode)
+  :config
+  (setq dired-omit-verbose nil
+        dired-omit-files
+        (concat dired-omit-files
+                "\\|^\\.DS_Store\\'"
+                "\\|^\\.project\\(?:ile\\)?\\'"
+                "\\|^\\.\\(?:svn\\|git\\)\\'"
+                "\\|^\\.ccls-cache\\'"
+                "\\|\\(?:\\.js\\)?\\.meta\\'"
+                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
+  (setq dired-clean-confirm-killing-deleted-buffers nil))
+
+(use-package dired-aux
+  :straight (:type built-in)
+  :defer 1
+  :config
+  (setq dired-create-destination-dirs 'ask
+        dired-vc-rename-file t))
+
+(use-package diredfl
+  :hook (dired-mode . diredfl-mode))
 
 (use-package dired-single
   :after dired
@@ -424,8 +437,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq sentence-end-double-space nil)
 ;; Don't store duplicated entries
 (setq history-delete-duplicates t)
-;; Hitting TAB behavior
-(setq tab-always-indent nil)
 ;; Always add final newline
 (setq require-final-newline t)
 
@@ -555,6 +566,27 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
   :config
   (undo-fu-session-global-mode 1))
+
+(use-package lispyville
+  :config
+  (lispyville-set-key-theme '(operators
+                              c-w
+                              text-objects
+                              commentary
+                              (atom-motions t)
+                              (additional-insert normal insert)
+                              additional-wrap
+                              slurp/barf-cp
+                              (escape insert)))
+  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode)
+  :general
+  (:states 'motion
+           :keymaps 'lispyville-mode-map
+           ")" 'lispyville-next-closing
+           "(" 'lispyville-previous-opening
+           "{" 'lispyville-next-opening
+           "}" 'lispyville-previous-closing)
+  )
 
 ;; Always prompt in minibuffer
 (setq use-dialog-box nil)
@@ -770,13 +802,25 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package yasnippet
-  ;; first-input
   :hook
   (prog-mode . yas-minor-mode)
+  :init
+  (defun lc/yas-try-expanding-auto-snippets ()
+    (when (and (boundp 'yas-minor-mode) yas-minor-mode)
+      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
+        (yas-expand))))
   :config
   (use-package yasnippet-snippets)
-  (yas-reload-all))
+  (yas-reload-all)
+  (add-hook 'post-command-hook #'lc/yas-try-expanding-auto-snippets)
+  )
 
+(use-package cape-yasnippet
+  :straight (:host github :repo "elken/cape-yasnippet")
+  :after '(yasnippet cape))
+
+;; Hitting TAB behavior
+(setq tab-always-indent nil)
 (use-package cape)
 (use-package corfu
   :hook
@@ -807,43 +851,43 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (kind-icon-default-face 'corfu-default)
   (kind-icon-use-icons nil)
   (kind-icon-mapping
-      `(
-        (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
-        (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
-        (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
-        (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
-        (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
-        (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
-        (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
-        (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-        (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-        (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
-        (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
-        (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
-        (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
-        (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
-        (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
-        (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
-        (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
-        (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
-        (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-        (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-        (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
-        (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
-        (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
-        (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
-        (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
-        (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
-        (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
-        (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
-        (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
-        (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
-        (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-        (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-        (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
-        (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
-        (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
-        (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
+   `(
+     (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
+     (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
+     (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
+     (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
+     (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
+     (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
+     (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
+     (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
+     (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
+     (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
+     (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
+     (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
+     (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
+     (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
+     (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
+     (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
+     (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
+     (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
+     (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
+     (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
+     (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
+     (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
+     (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
+     (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
+     (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
+     (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
+     (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
+     (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
+     (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
+     (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
+     (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
+     (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
+     (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
+     (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
+     (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
+     (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
   :config
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
@@ -998,7 +1042,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
         magit-revision-show-gravatars t
         magit-save-repository-buffers nil
         magit-display-buffer-function #'magit-display-buffer-fullcolumn-most-v1
-  )
+        )
 
   (defun +magit-process-environment (env)
 	"Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
@@ -1109,6 +1153,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (lsp-managed-mode . (lambda () (general-nmap
                                    :keymaps 'local
                                    "K" 'lsp-describe-thing-at-point)))
+  (lsp-completion-mode . +update-completions-list)
   :preface
   (setq lsp-use-plists t)
   :custom
@@ -1134,15 +1179,16 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     :group 'my-prog
     :type '(repeat symbol))
 
-  ;; (defun +update-completions-list ()
-  ;;   (progn
-  ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
-  ;;     (setq-local completion-at-point-functions
-  ;;                 (list (cape-super-capf
-  ;;                        'non-greedy-lsp
-  ;;                        (cape-company-to-capf #'company-yasnippet)
-  ;;                        )))
-  ;;     ))
+  (defun +update-completions-list ()
+    (progn
+      (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+      (setq-local completion-at-point-functions
+                  (list (cape-super-capf
+                         'non-greedy-lsp
+                         #'cape-yasnippet
+                         ;; (cape-company-to-capf #'company-yasnippet)
+                         )))
+      ))
 
   :general
   (+leader-def
@@ -1407,7 +1453,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "ot" #'vterm)
   (general-imap
     :keymaps 'vterm-mode-map
-            "C-y" #'term-paste)
+    "C-y" #'term-paste)
   (general-nmap
     :keymaps 'vterm-mode-map
     "<return>" #'evil-insert-resume)

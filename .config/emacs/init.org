@@ -4,80 +4,87 @@
 
 * Early init
 #+begin_src emacs-lisp :tangle ~/.config/emacs/early-init.el
-  ;;; early-init.el --- early init -*- lexical-binding: t; -*-
-  ;;; Commentary:
-  ;;; Code:
+;;; early-init.el --- early init -*- lexical-binding: t; -*-
+;;; Commentary:
+;;; Code:
 
-  ;; Don’t compact font caches during GC
-  (setq inhibit-compacting-font-caches t)
+;; Do not make installed packages available when Emacs starts
+(setq package-enable-at-startup nil)
 
-  ;; Minimal UI
-  (setq
-   inhibit-startup-screen t
-   ;; Remove some unneeded UI elements
-   default-frame-alist '((tool-bar-lines . 0)
-                         (menu-bar-lines . 0)
-                         (vertical-scroll-bars)
-                         (fullscreen . maximized))
-   ;; Explicitly set modes disabled in `default-frame-alist' to nil
-   tool-bar-mode nil
-   menu-bar-mode nil
-   scroll-bar-mode nil)
-
-  ;; Inhibit startup message in echo area
-  (fset 'display-startup-echo-area-message #'ignore)
-
-  ;; If you want transaparent background
-  ;; (push (cons 'alpha-background 93) default-frame-alist)
-
-  ;; Improve `lsp-mode' performances
-  (setenv "LSP_USE_PLISTS" "true")
-  ;;; early-init.el ends here
-#+end_src
-
-* Performance
-#+begin_src emacs-lisp
-;; Profile emacs startup
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs loaded in %s." (emacs-init-time))))
+;; Don’t compact font caches during GC
+(setq inhibit-compacting-font-caches t)
 
 ;; Increase the garbage collection (GC) threshold for faster startup.
 (setq gc-cons-threshold most-positive-fixnum)
 
 ;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer noninteractive)
+(setq load-prefer-newer t)
+
+;; Remove some unneeded UI elements
+(setq
+ ;; Explicitly set modes disabled in `default-frame-alist' to nil
+ default-frame-alist '((tool-bar-lines . 0)
+                       (menu-bar-lines . 0)
+                       (vertical-scroll-bars)
+                       (fullscreen . maximized)))
+(setq
+ tool-bar-mode nil
+ menu-bar-mode nil
+ scroll-bar-mode nil)
+
+;; Disable start-up screen
+(setq-default inhibit-startup-screen t)
+
+;; If you want transaparent background
+;; (push (cons 'alpha-background 93) default-frame-alist)
+
+;; Inhibit startup message in echo area
+(fset 'display-startup-echo-area-message #'ignore)
 
 ;; Increase single chunk bytes to read from subprocess (default 4096)
-(setq read-process-output-max (* 2 1024 1024)) ;; 2mb
+(setq read-process-output-max (* 3 1024 1024)) ;; 3mb
 
-;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode)
+;; Improve `lsp-mode' performances
+(setenv "LSP_USE_PLISTS" "true")
+;;; early-init.el ends here
+#+end_src
 
-;; Inhibits fontification while receiving input
-(setq redisplay-skip-fontification-on-input t)
+* Startup
+#+begin_src emacs-lisp
 
 ;; Native compilation settings
 (when (featurep 'native-compile)
   (setq
    ;; Silence compiler warnings as they can be pretty disruptive.
-   native-comp-async-report-warnings-errors 'silent
+   native-comp-async-report-warnings-errors nil
    ;; Make native compilation happens asynchronously
    native-comp-jit-compilation t))
+
+;; Set initial buffer to fundamental-mode for faster load
+(setq initial-major-mode 'fundamental-mode)
+
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file "~/.config/emacs/custom.el")
+(when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
+  (load custom-file))
+
+;; Inhibits fontification while receiving input
+(setq redisplay-skip-fontification-on-input t)
 
 ;; Slightly faster re-display
 (setq bidi-inhibit-bpa t)
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
+
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s." (emacs-init-time))))
+
 #+end_src
 
 * Package management
 #+begin_src emacs-lisp
-;; Do not make installed packages available when Emacs starts
-(setq package-enable-at-startup nil)
-
-;; Use imenu with use-package
-(setq use-package-enable-imenu-support t)
 
 ;; Bootstraping straight.el
 (defvar bootstrap-version)
@@ -92,6 +99,9 @@
       (goto-char (point-max))
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
+
+;; Use imenu with use-package
+(setq use-package-enable-imenu-support t)
 
 ;; Configure `use-package'
 (unless (require 'use-package nil t)
@@ -121,16 +131,14 @@
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package which-key
-  :hook
-  (after-init . which-key-mode)
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1)
-  ;; :defer 2
-  ;; :config
-  ;; (which-key-mode 1)
+  :defer 2
+  :config
+  (which-key-mode 1)
   )
 
 #+end_src
@@ -247,13 +255,6 @@
 #+end_src
 
 * General Settings
-** Custom file
-#+begin_src emacs-lisp
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file "~/.config/emacs/custom.el")
-(when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
-  (load custom-file))
-#+end_src
 ** Scrolling
 #+begin_src emacs-lisp
 ;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
@@ -419,9 +420,36 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package dired
   :straight (:type built-in)
   :custom
+  (dired-listing-switches "-ahl")
+  (dired-auto-revert-buffer t)
   (dired-dwim-target t)
   (dired-recursive-copies  'always)
   (dired-create-destination-dirs 'ask))
+
+(use-package dired-x
+  :straight (:type built-in)
+  :hook (dired-mode . dired-omit-mode)
+  :config
+  (setq dired-omit-verbose nil
+        dired-omit-files
+        (concat dired-omit-files
+                "\\|^\\.DS_Store\\'"
+                "\\|^\\.project\\(?:ile\\)?\\'"
+                "\\|^\\.\\(?:svn\\|git\\)\\'"
+                "\\|^\\.ccls-cache\\'"
+                "\\|\\(?:\\.js\\)?\\.meta\\'"
+                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
+  (setq dired-clean-confirm-killing-deleted-buffers nil))
+
+(use-package dired-aux
+  :straight (:type built-in)
+  :defer 1
+  :config
+  (setq dired-create-destination-dirs 'ask
+        dired-vc-rename-file t))
+
+(use-package diredfl
+  :hook (dired-mode . diredfl-mode))
 
 (use-package dired-single
   :after dired
@@ -505,8 +533,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq sentence-end-double-space nil)
 ;; Don't store duplicated entries
 (setq history-delete-duplicates t)
-;; Hitting TAB behavior
-(setq tab-always-indent nil)
 ;; Always add final newline
 (setq require-final-newline t)
 
@@ -643,6 +669,29 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-fu-session-global-mode 1))
 #+end_src
 
+** Lispy
+#+begin_src emacs-lisp
+(use-package lispyville
+  :config
+  (lispyville-set-key-theme '(operators
+                              c-w
+                              text-objects
+                              commentary
+                              (atom-motions t)
+                              (additional-insert normal insert)
+                              additional-wrap
+                              slurp/barf-cp
+                              (escape insert)))
+  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode)
+  :general
+  (:states 'motion
+           :keymaps 'lispyville-mode-map
+           ")" 'lispyville-next-closing
+           "(" 'lispyville-previous-opening
+           "{" 'lispyville-next-opening
+           "}" 'lispyville-previous-closing)
+  )
+#+end_src
 * UI
 ** Fonts
 #+begin_src emacs-lisp
@@ -897,15 +946,27 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ** Snippets
 #+begin_src emacs-lisp
 (use-package yasnippet
-  ;; first-input
   :hook
   (prog-mode . yas-minor-mode)
+  :init
+  (defun lc/yas-try-expanding-auto-snippets ()
+    (when (and (boundp 'yas-minor-mode) yas-minor-mode)
+      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
+        (yas-expand))))
   :config
   (use-package yasnippet-snippets)
-  (yas-reload-all))
+  (yas-reload-all)
+  (add-hook 'post-command-hook #'lc/yas-try-expanding-auto-snippets)
+  )
+
+(use-package cape-yasnippet
+  :straight (:host github :repo "elken/cape-yasnippet")
+  :after '(yasnippet cape))
 #+end_src
 ** Completion at point
 #+begin_src emacs-lisp
+;; Hitting TAB behavior
+(setq tab-always-indent nil)
 (use-package cape)
 (use-package corfu
   :hook
@@ -1256,6 +1317,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (lsp-managed-mode . (lambda () (general-nmap
                                    :keymaps 'local
                                    "K" 'lsp-describe-thing-at-point)))
+  (lsp-completion-mode . +update-completions-list)
   :preface
   (setq lsp-use-plists t)
   :custom
@@ -1281,15 +1343,16 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     :group 'my-prog
     :type '(repeat symbol))
 
-  ;; (defun +update-completions-list ()
-  ;;   (progn
-  ;;     (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
-  ;;     (setq-local completion-at-point-functions
-  ;;                 (list (cape-super-capf
-  ;;                        'non-greedy-lsp
-  ;;                        (cape-company-to-capf #'company-yasnippet)
-  ;;                        )))
-  ;;     ))
+  (defun +update-completions-list ()
+    (progn
+      (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+      (setq-local completion-at-point-functions
+                  (list (cape-super-capf
+                         'non-greedy-lsp
+                         #'cape-yasnippet
+                         ;; (cape-company-to-capf #'company-yasnippet)
+                         )))
+      ))
 
   :general
   (+leader-def
