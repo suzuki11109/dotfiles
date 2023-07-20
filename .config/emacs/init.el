@@ -73,7 +73,7 @@
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1)
-  :defer 2
+  :defer 1
   :config
   (which-key-mode 1)
   )
@@ -132,9 +132,14 @@
     "f"   '(nil :wk "file")
     "fd"  #'dired
     "fD"  '(+delete-this-file :wk "Delete this file")
-    ;; fe find in emacs.d project?
+    "fe"  '((lambda () (interactive)
+              (let ((default-directory "~/.config/emacs/"))
+                (call-interactively 'find-file))) :wk "Find in emacs config")
     "ff"  #'find-file
     "fg"  '((lambda () (interactive) (find-file "~/.gitconfig")) :wk "Edit .gitconfig")
+    "fh"  '((lambda () (interactive)
+              (let ((default-directory "~/"))
+                (call-interactively 'find-file))) :wk "Find in home")
     "fi"  '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Edit init.org")
     "fl"  #'locate
     "fr"  #'recentf
@@ -206,6 +211,7 @@
  scroll-margin 3)
 
 ;; Enable saving minibuffer history
+(setq savehist-additional-variables '(kill-ring))
 (savehist-mode 1)
 
 ;; Show recursion depth in minibuffer (see `enable-recursive-minibuffers')
@@ -277,6 +283,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Saving multiple files saves only in sub-directories of current project
 (setq save-some-buffers-default-predicate #'save-some-buffers-root)
+
+(defun +save-all-unsaved ()
+  "Save all unsaved files. no ask"
+  (interactive)
+  (save-some-buffers t))
+(setq after-focus-change-function '+save-all-unsaved)
 
 (setq
  ;; Do not ask obvious questions, follow symlinks
@@ -521,11 +533,16 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package evil-collection
   :after evil
+  :custom
+  (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init)
-  (general-nmap
-    "[e" 'evil-collection-unimpaired-previous-error
-    "]e" 'evil-collection-unimpaired-next-error))
+  (run-hook-with-args 'evil-collection-setup-hook)
+  ;; (general-nmap
+  ;;   "[e" 'evil-collection-unimpaired-previous-error
+  ;;   "]e" 'evil-collection-unimpaired-next-error)
+
+    )
 
 (use-package evil-nerd-commenter
   :after (evil general)
@@ -742,7 +759,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (:keymaps 'vterm-mode-map
 			"C-\\" 'popper-toggle-latest)
   :init
-  (setq popper-window-height 0.35)
+  (setq popper-window-height 0.33)
   (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
 		'("\\*Messages\\*"
@@ -851,43 +868,43 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (kind-icon-default-face 'corfu-default)
   (kind-icon-use-icons nil)
   (kind-icon-mapping
-   `(
-     (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
-     (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
-     (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
-     (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
-     (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
-     (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
-     (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
-     (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-     (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-     (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
-     (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
-     (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
-     (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
-     (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
-     (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
-     (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
-     (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
-     (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
-     (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-     (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-     (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
-     (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
-     (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
-     (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
-     (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
-     (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
-     (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
-     (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
-     (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
-     (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
-     (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-     (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-     (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
-     (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
-     (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
-     (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
+      `(
+        (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
+        (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
+        (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
+        (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
+        (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
+        (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
+        (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
+        (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
+        (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
+        (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
+        (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
+        (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
+        (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
+        (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
+        (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
+        (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
+        (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
+        (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
+        (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
+        (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
+        (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
+        (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
+        (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
+        (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
+        (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
+        (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
+        (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
+        (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
+        (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
+        (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
+        (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
+        (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
+        (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
+        (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
+        (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
+        (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
   :config
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
@@ -920,20 +937,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     ;; o search online
     "hI"  #'consult-info)
   :custom
-  (consult-narrow-key "<")
-  :config
-  )
-
-(use-package consult-dir
-  :commands consult-dir
-  :init
-  (setq consult-dir-shadow-filenames nil
-        consult-dir-default-command 'consult-ripgrep)
-  :general
-  (+leader-def
-    "sd" '(consult-dir :wk "search in directory"))
-  (:keymaps 'minibuffer-local-completion-map
-            "C-d" #'consult-dir))
+  (consult-narrow-key "<"))
 
 (use-package embark
   :after vertico
@@ -977,12 +981,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                  nil
                  (window-parameters (mode-line-format . none))))
 
+  (setq prefix-help-command #'embark-prefix-help-command)
   :bind
   (:map minibuffer-local-map
         ("C-." . 'embark-dwim)
         ("C-;" . 'embark-act))
-  :config
-  (setq prefix-help-command #'embark-prefix-help-command)
   :custom
   (embark-indicators '(embark-which-key-indicator
                        embark-highlight-indicator
@@ -1014,7 +1017,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
         vertico-count 14)
   :general
   (+leader-def
-    "'" '(vertico-repeat :wk "resume last search"))
+    "." '(vertico-repeat :wk "resume last search"))
   )
 
 (use-package vertico-directory
@@ -1037,38 +1040,37 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "d" #'magit-diff-dwim
     "g" #'magit-status
     "l" #'magit-log)
-  :init
-  (setq magit-diff-refine-hunk t
-        magit-revision-show-gravatars t
-        magit-save-repository-buffers nil
-        magit-display-buffer-function #'magit-display-buffer-fullcolumn-most-v1
-        )
-
+  :custom
+  (magit-diff-refine-hunk t)
+  (magit-revision-show-gravatars t)
+  (magit-save-repository-buffers nil)
+  (magit-display-buffer-function #'magit-display-buffer-fullcolumn-most-v1)
+  :config
+  (add-hook 'git-commit-mode-hook 'evil-insert-state)
+  ;; for dotfiles
   (defun +magit-process-environment (env)
-	"Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
+    "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
 https://github.com/magit/magit/issues/460 (@cpitclaudel)."
-	(let ((default (file-name-as-directory (expand-file-name default-directory)))
+    (let ((default (file-name-as-directory (expand-file-name default-directory)))
           (home (expand-file-name "~/")))
       (when (string= default home)
-		(let ((gitdir (expand-file-name "~/.cfg")))
+	    (let ((gitdir (expand-file-name "~/.cfg")))
           (push (format "GIT_WORK_TREE=%s" home) env)
           (push (format "GIT_DIR=%s" gitdir) env))))
-	env)
+    env)
 
   (advice-add 'magit-process-environment
               :filter-return #'+magit-process-environment)
-  (add-hook 'git-commit-mode-hook 'evil-insert-state)
   )
 
 (use-package diff-hl
-  :defer 2
-  :commands
-  (diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk diff-hl-diff-goto-hunk)
-  :hook
-  (find-file    . diff-hl-mode)
-  (diff-hl-mode . diff-hl-flydiff-mode)
-  (magit-pre-refresh . 'diff-hl-magit-pre-refresh)
-  (magit-post-refresh . 'diff-hl-magit-post-refresh)
+  :hook (find-file . diff-hl-mode)
+  :hook (dired-mode . diff-hl-dired-mode)
+  :hook (vc-dir-mode . diff-hl-dir-mode)
+  :hook (diff-hl-mode . diff-hl-flydiff-mode)
+  :hook (diff-hl-mode . +fix-diff-hl-faces)
+  :hook (magit-pre-refresh . diff-hl-magit-pre-refresh)
+  :hook (magit-post-refresh . diff-hl-magit-post-refresh)
   :general
   (+leader-def
     "gs" '(diff-hl-stage-current-hunk :wk "stage hunk")
@@ -1076,28 +1078,53 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "g]" '(diff-hl-next-hunk :wk "next hunk")
     "g[" '(diff-hl-previous-hunk :wk "previous hunk")
     "gr" '(diff-hl-revert-hunk :wk "revert hunk"))
+  :custom
+  (diff-hl-draw-borders nil)
+  :preface
+  (defun +fix-diff-hl-faces ()
+    (set-face-background 'diff-hl-insert nil)
+    (set-face-background 'diff-hl-delete nil)
+    (set-face-background 'diff-hl-change nil))
   :init
-  (setq vc-git-diff-switches '("--histogram")
-        diff-hl-flydiff-delay 0.5
-        diff-hl-show-staged-changes nil
-        diff-hl-draw-borders nil)
-  :config
-  (defun +vc-gutter-define-thin-bitmaps ()
-    (define-fringe-bitmap 'diff-hl-bmp-middle [224] nil nil '(center repeated))
-    (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top))
-  (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
   (defun +vc-gutter-type-at-pos-fn (type _pos)
     (if (eq type 'delete)
         'diff-hl-bmp-delete
-      'diff-hl-bmp-middle))
+      'diff-hl-bmp-modified))
   (advice-add 'diff-hl-fringe-bmp-from-pos  :override #'+vc-gutter-type-at-pos-fn)
   (advice-add 'diff-hl-fringe-bmp-from-type :override #'+vc-gutter-type-at-pos-fn)
-  (add-hook 'diff-hl-mode-hook
-            (defun +vc-gutter-fix-diff-hl-faces-h ()
-              (set-face-background 'diff-hl-insert nil)
-              (set-face-background 'diff-hl-delete nil)
-              (set-face-background 'diff-hl-change nil)))
+  (defun +vc-gutter-define-thin-bitmaps ()
+    (define-fringe-bitmap 'diff-hl-bmp-modified [224] nil nil '(center repeated))
+    (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top)
+    )
+  (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
   )
+
+;; (use-package diff-hl
+;;   :commands
+;;   (diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk diff-hl-diff-goto-hunk)
+;;   :hook
+;;   ((prog-mode . diff-hl-mode)
+;;    (text-mode . diff-hl-mode)
+;;    (dired-mode . diff-hl-dired-mode)
+;;    (magit-pre-refresh . diff-hl-magit-pre-refresh)
+;;    (magit-post-refresh . diff-hl-magit-post-refresh))
+;;   :config
+;;   (defun +vc-gutter-define-thin-bitmaps ()
+;;     (define-fringe-bitmap 'diff-hl-bmp-middle [224] nil nil '(center repeated))
+;;     (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top))
+;;   (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
+;;   (defun +vc-gutter-type-at-pos-fn (type _pos)
+;;     (if (eq type 'delete)
+;;         'diff-hl-bmp-delete
+;;       'diff-hl-bmp-middle))
+;;   (advice-add 'diff-hl-fringe-bmp-from-pos  :override #'+vc-gutter-type-at-pos-fn)
+;;   (advice-add 'diff-hl-fringe-bmp-from-type :override #'+vc-gutter-type-at-pos-fn)
+;;   (add-hook 'diff-hl-mode-hook
+;;             (defun +vc-gutter-fix-diff-hl-faces-h ()
+;;               (set-face-background 'diff-hl-insert nil)
+;;               (set-face-background 'diff-hl-delete nil)
+;;               (set-face-background 'diff-hl-change nil)))
+;;   )
 
 (use-package treesit
   :straight nil
@@ -1453,8 +1480,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "ot" #'vterm)
   (general-imap
     :keymaps 'vterm-mode-map
-    "C-y" #'term-paste)
-  (general-nmap
+    "C-y" #'vterm-yank)
+  (general-nvmap
     :keymaps 'vterm-mode-map
     "<return>" #'evil-insert-resume)
   :config
@@ -1616,13 +1643,26 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
    (display-buffer-reuse-mode-window display-buffer-in-direction)
    (direction . bottom)
    (dedicated . t)
-   (mode . (help-mode helpful-mode))
    (window-height . 0.5)
+   (mode . (help-mode helpful-mode))
    ))
+
+;; (add-to-list
+;;  'display-buffer-alist
+;;  '((lambda (buffer _) (with-current-buffer buffer
+;; 						(seq-some (lambda (mode)
+;; 									(derived-mode-p mode))
+;; 								  '(tabulated-list-mode))))
+;;    (display-buffer-reuse-mode-window display-buffer-in-direction)
+;;    (direction . bottom)
+;;    (dedicated . t)
+;;    (window-height . 0.5)
+;;    (mode . (docker-container-mode docker-network-mode docker-volume-mode docker-image-mode docker-context-mode))
+;;    ))
 
 (add-to-list
  'display-buffer-alist
- '("\\`\\*docker-\\(containers\\|images\\)\\*"
+ '("\\`\\*docker-\\(containers\\|images\\|volumes\\|networks\\|context\\)\\*"
    (display-buffer-reuse-window display-buffer-in-direction)
    (direction . bottom)
    (dedicated . t)
@@ -1668,6 +1708,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "oD" #'docker))
 
 (use-package run-command
+  :custom
+  (run-command-default-runner 'run-command-runner-vterm)
   :config
   (use-package helm-make)
   (require 'subr-x)
@@ -1725,9 +1767,7 @@ used with any of the selectors supported by `run-command'."
             :working-dir project-dir))
          targets))))
 
-  (setq run-command-default-runner 'run-command-runner-compile)
   (setq run-command-recipes '(run-command-recipe-make run-command-recipe-package-json))
-
   :general
   (+leader-def
     "rc" #'run-command))
