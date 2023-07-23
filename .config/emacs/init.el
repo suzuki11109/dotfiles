@@ -101,33 +101,27 @@
     "u"   '(universal-argument :wk "C-u")
     "!"   #'shell-command
     "|"   #'shell-command-on-region
-    "RET" #'bookmark-jump
+    ;; "RET" #'bookmark-jump
 
     "b"   '(nil :wk "buffer")
-    "bb"  #'switch-to-buffer
-    "bB"  #'switch-to-buffer
-    "bd"  #'kill-this-buffer
-    "bD"  #'kill-buffer
+    "bb"  '(switch-to-buffer :wk "Switch buffer")
+    ;; "bB"  #'switch-to-buffer
+    "bd"  '(kill-this-buffer :wk "Kill this buffer")
+    "bD"  '(kill-buffer :wk "Kill buffer")
     "bi"  #'ibuffer
-    "bo"  #'switch-to-buffer-other-window
+    "bo"  '(switch-to-buffer-other-window :wk "Switch buffer other window")
     ;; "bu"  #'+sudo-save-buffer
-    "bs"  #'save-buffer
-    "bS"  #'save-some-buffers
-    "br"  '(revert-buffer :wk "Revert")
-    "bR"  '(rename-buffer :wk "Rename")
-    "bx"  #'scratch-buffer
-    "bz"  #'bury-buffer
-
-    "k"  '(nil :wk "bookmark")
-    "ki"  #'bookmark-set
-    "kj"  #'bookmark-jump
-    "kk"  #'list-bookmarks
-    "kd"  #'bookmark-delete
+    "bs"  '(save-buffer :wk "Save file")
+    "bS"  '(save-some-buffers :wk "Save buffers")
+    "br"  '(revert-buffer :wk "Revert buffer")
+    "bR"  '(rename-buffer :wk "Rename buffer")
+    "bx"  '(scratch-buffer :wk "Switch to scratch")
+    "bz"  '(bury-buffer :wk "Bury buffer")
 
     "c"  '(nil :wk "code")
-    "cc" #'compile
-    "cd" #'xref-find-definitions
-    "cD" #'xref-find-references
+    "cc" '(compile :wk "Compile")
+    "cd" '(xref-find-definitions :wk "Go to definitions")
+    "cD" '(xref-find-references :wk "Go to references")
 
     "f"   '(nil :wk "file")
     "fd"  #'dired
@@ -135,16 +129,16 @@
     "fe"  '((lambda () (interactive)
               (let ((default-directory "~/.config/emacs/"))
                 (call-interactively 'find-file))) :wk "Find in emacs config")
-    "ff"  #'find-file
+    "ff"  '(find-file :wk "Find file")
     "fg"  '((lambda () (interactive) (find-file "~/.gitconfig")) :wk "Edit .gitconfig")
     "fh"  '((lambda () (interactive)
               (let ((default-directory "~/"))
                 (call-interactively 'find-file))) :wk "Find in home")
     "fi"  '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Edit init.org")
     "fl"  #'locate
-    "fr"  #'recentf
+    "fr"  '(recentf :wk "Recent files")
     "fR"  '(+rename-this-file :wk "Rename/move file")
-    "fs"  #'save-buffer
+    "fs"  '(save-buffer :wk "Save file")
     "fS"  '(write-file :wk "Save as ...")
     "fy"  '((lambda () (interactive) (kill-new (buffer-file-name)) (message "Copied %s to clipboard" (buffer-file-name))) :wk "Yank buffer file name")
     "fz"  '((lambda () (interactive) (find-file "~/.zshrc")) :wk "Edit zsh config")
@@ -152,19 +146,24 @@
     "g"   '(nil :wk "git")
 
     "h" '(nil :wk "help")
-	"hb" #'about-emacs
-	"he" #'view-echo-area-message
+  "hb" #'about-emacs
+  "he" #'view-echo-area-message
     "hg" #'general-describe-keybindings
-	"hi" #'info
-	"hI" #'info-display-manual
-	"hm" #'describe-mode
-	"hp" #'describe-package
+  "hi" #'info
+  "hI" #'info-display-manual
+  "hm" #'describe-mode
+  "hp" #'describe-package
     "h'" #'describe-char
 
     "i"   '(nil :wk "insert")
     "iu"  '(insert-char :wk "Unicode char")
     "ie"  `(,(when (>= emacs-major-version 29) #'emoji-search) :wk "Emoji")
-    "in"  #'nerd-icons-insert
+
+    "k"  '(nil :wk "bookmark")
+    "ki"  #'bookmark-set
+    "kj"  #'bookmark-jump
+    "kk"  #'list-bookmarks
+    "kd"  #'bookmark-delete
 
     "m"   '(nil :wk "mode-specific")
 
@@ -175,17 +174,16 @@
     "p"   '(nil :wk "project")
 
     "q"   '(nil :wk "quit/session")
-    "qf"  #'delete-frame
-    "qq"  #'save-buffers-kill-terminal
-    "qQ"  #'kill-emacs
-    "qR"  #'restart-emacs
+    "qf"  '(delete-frame :wk "Delete this frame")
+    "qq"  '(save-buffers-kill-terminal :wk "Quit emacs")
+    "qR"  '(restart-emacs :wk "Restart emacs")
 
     "s"   '(nil :wk "search")
     "si" #'imenu
 
     "t"   '(nil :wk "toggle")
     ;; tf fullscreen
-    "th"  #'load-theme
+    "th"  '(load-theme :wk "Load theme")
     ;; tl  #'toggle line number current buffer
     "tr"  #'read-only-mode
     )
@@ -232,6 +230,9 @@
  create-lockfiles nil
  ;; Disable making backup files
  make-backup-files nil)
+
+(setq auto-save-file-name-transforms
+      `((".*" "~/.config/emacs/auto-save/" t)))
 
 ;; Auto load files changed on disk
 (setq global-auto-revert-non-file-buffers t)
@@ -283,12 +284,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Saving multiple files saves only in sub-directories of current project
 (setq save-some-buffers-default-predicate #'save-some-buffers-root)
-
-(defun +save-all-unsaved ()
-  "Save all unsaved files. no ask"
-  (interactive)
-  (save-some-buffers t))
-(setq after-focus-change-function '+save-all-unsaved)
 
 (setq
  ;; Do not ask obvious questions, follow symlinks
@@ -693,10 +688,30 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-new-button nil)
-  (tab-bar-separator " ")
   (tab-bar-auto-width nil)
   (tab-bar-format '(tab-bar-format-tabs
-                    tab-bar-separator))
+                    +tab-bar-suffix
+                    tab-bar-format-add-tab))
+  (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
+  :config
+  (defun +tab-bar-tab-name-format (tab i)
+    (let ((current-p (eq (car tab) 'current-tab)))
+      (propertize
+       (concat
+        (propertize " " 'display '(space :width (8)))
+        (alist-get 'name tab)
+        (or (and tab-bar-close-button-show
+                 (not (eq tab-bar-close-button-show
+                          (if current-p 'non-selected 'selected)))
+                 tab-bar-close-button)
+            "")
+        (propertize " " 'display '(space :width (8))))
+       'face (funcall tab-bar-tab-face-function tab))))
+  (defun +tab-bar-suffix ()
+    "Add empty space.
+This ensures that the last tab's face does not extend to the end
+of the tab bar."
+    " ")
   )
 
 (use-package tabspaces
@@ -753,35 +768,39 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   ("C-`"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
   (:keymaps 'vterm-mode-map
-			"C-\\" 'popper-toggle-latest)
+      "C-\\" 'popper-toggle-latest)
   :init
   (setq popper-window-height 0.33)
   (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
-		'("\\*Messages\\*"
-		  "\\*Warnings\\*"
-		  "Output\\*$"
-		  "\\*Async Shell Command\\*$"
-		  compilation-mode
-		  "\\*Go Test\\*$"
-		  "\\*eshell\\*"
-		  "-eshell\\*$"
-		  eshell-mode
-		  "\\*shell\\*"
-		  shell-mode
-		  "\\*term\\*"
-		  term-mode
-		  "\\*vterm\\*"
-		  "\\*vterminal\\*"
-		  "-vterm\\*$"
-		  vterm-mode
-		  "\\*rake-compilation\\*$"
-		  "\\*rspec-compilation\\*$"
-		  ))
+    '("\\*Messages\\*"
+      "\\*Warnings\\*"
+      "Output\\*$"
+      "\\*Async Shell Command\\*$"
+      compilation-mode
+      "\\*Go Test\\*$"
+      "\\*eshell\\*"
+      "-eshell\\*$"
+      eshell-mode
+      "\\*shell\\*"
+      shell-mode
+      "\\*term\\*"
+      term-mode
+      "\\*vterm\\*"
+      "\\*vterminal\\*"
+      "-vterm\\*$"
+      vterm-mode
+      "\\*rake-compilation\\*$"
+      "\\*rspec-compilation\\*$"
+      ))
   (popper-mode +1)
   (popper-echo-mode +1))
 
 (use-package nerd-icons
+  :demand t
+  :general
+  (+leader-def
+    "in" '(nerd-icons-insert :wk "Nerd icons"))
   :custom
   (nerd-icons-font-family "JetBrains Mono Nerd Font")
   (nerd-icons-scale-factor 1.1))
@@ -1027,7 +1046,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (minibuffer-setup . vertico-repeat-save))
 
 (use-package git-commit
-  :after magit
+  :after (evil magit)
   :custom
   (git-commit-summary-max-length 72) ;; defaults to Github's max commit message length
   (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
@@ -1129,19 +1148,28 @@ window that already exists in that direction. It will split otherwise."
   (setq magit-display-buffer-function #'+magit-display-buffer-fn)
 
   ;; for dotfiles
-  (defun +magit-process-environment (env)
-    "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
-https://github.com/magit/magit/issues/460 (@cpitclaudel)."
-    (let ((default (file-name-as-directory (expand-file-name default-directory)))
-          (home (expand-file-name "~/")))
-      (when (string= default home)
-	    (let ((gitdir (expand-file-name "~/.cfg")))
-          (push (format "GIT_WORK_TREE=%s" home) env)
-          (push (format "GIT_DIR=%s" gitdir) env))))
-    env)
+  (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
+  (setq dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
+  (defun dotfiles-magit-status ()
+    "calls magit status on a git bare repo with set appropriate bare-git-dir and bare-work-tree"
+    (interactive)
+    (require 'magit-git)
+    (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
+      (call-interactively 'magit-status)))
 
-  (advice-add 'magit-process-environment
-              :filter-return #'+magit-process-environment)
+    (defun +magit-process-environment (env)
+      "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
+  https://github.com/magit/magit/issues/460 (@cpitclaudel)."
+      (let ((default (file-name-as-directory (expand-file-name default-directory)))
+            (home (expand-file-name "~/")))
+        (when (string= default home)
+        (let ((gitdir (expand-file-name "~/.cfg")))
+            (push (format "GIT_WORK_TREE=%s" home) env)
+            (push (format "GIT_DIR=%s" gitdir) env))))
+      env)
+
+    (advice-add 'magit-process-environment
+                :filter-return #'+magit-process-environment)
   )
 
 (use-package diff-hl
@@ -1343,8 +1371,8 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
     "cx" '(flycheck-list-errors :wk "list errors"))
   :hook
   (lsp-managed-mode . (lambda ()
-        				(when (derived-mode-p 'go-ts-mode)
-        				  (setq flycheck-local-checkers '((lsp . ((next-checkers . (golangci-lint)))))))))
+                (when (derived-mode-p 'go-ts-mode)
+                  (setq flycheck-local-checkers '((lsp . ((next-checkers . (golangci-lint)))))))))
   (prog-mode . flycheck-mode))
 
 (use-package flycheck-status-emoji
@@ -1501,16 +1529,21 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (emacs-lisp-mode . eros-mode))
 
 ;; others
-;; (use-package yaml-ts-mode
-;;   :mode "\\.ya?ml\\'"
-;;   :straight nil)
+(use-package yaml-ts-mode
+  :mode "\\.ya?ml\\'"
+  :straight nil)
 
 (use-package json-ts-mode
   :straight nil
   :mode "\\.prettierrc\\'")
 
 (use-package dockerfile-mode
-  :mode "\\Dockerfile\\'")
+  :mode "\\Dockerfile\\'"
+  :general
+  (+local-leader-def
+    :keymaps '(dockerfile-mode)
+    "bb" #'dockerfile-build-buffer)
+    )
 
 (use-package terraform-mode
   :mode "\\.tf\\'")
@@ -1542,12 +1575,12 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   :general
   (+leader-def
     "oe"  #'eshell
-	"oE"  #'eshell-new)
+  "oE"  #'eshell-new)
   :init
   (defun eshell-new ()
-	"Open a new instance of eshell."
-	(interactive)
-	(eshell 'N))
+  "Open a new instance of eshell."
+  (interactive)
+  (eshell 'N))
   )
 
 (use-package eshell-z
@@ -1577,14 +1610,14 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
       (list :name     "Terminal buffers"
             :narrow   ?t
             :category 'buffer
-    	    :face     'consult-buffer
+          :face     'consult-buffer
             :history  'buffer-name-history
             :state    #'consult--buffer-state
-    	    :items (lambda () (consult--buffer-query
-    						   :predicate #'tabspaces--local-buffer-p
-    						   :mode '(shell-mode eshell-mode vterm-mode)
-    						   :sort 'visibility
-    						   :as #'buffer-name))))
+          :items (lambda () (consult--buffer-query
+                   :predicate #'tabspaces--local-buffer-p
+                   :mode '(shell-mode eshell-mode vterm-mode)
+                   :sort 'visibility
+                   :as #'buffer-name))))
 
     (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
@@ -1593,7 +1626,7 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
               (setq-local confirm-kill-processes nil)
               (setq-local hscroll-margin 0)
               (setq-local evil-insert-state-cursor 'box)
-			  ))
+        ))
   )
 
 
@@ -1718,9 +1751,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 (add-to-list
  'display-buffer-alist
  '((lambda (buffer _) (with-current-buffer buffer
-						(seq-some (lambda (mode)
-									(derived-mode-p mode))
-								  '(help-mode helpful-mode))))
+            (seq-some (lambda (mode)
+                  (derived-mode-p mode))
+                  '(help-mode helpful-mode))))
    (display-buffer-reuse-mode-window display-buffer-in-direction)
    (direction . bottom)
    (dedicated . t)
@@ -1731,9 +1764,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
 ;; (add-to-list
 ;;  'display-buffer-alist
 ;;  '((lambda (buffer _) (with-current-buffer buffer
-;; 						(seq-some (lambda (mode)
-;; 									(derived-mode-p mode))
-;; 								  '(tabulated-list-mode))))
+;;            (seq-some (lambda (mode)
+;;                  (derived-mode-p mode))
+;;                  '(tabulated-list-mode))))
 ;;    (display-buffer-reuse-mode-window display-buffer-in-direction)
 ;;    (direction . bottom)
 ;;    (dedicated . t)
@@ -1784,6 +1817,9 @@ https://github.com/magit/magit/issues/460 (@cpitclaudel)."
   (after-init . envrc-global-mode))
 
 (use-package docker
+  :config
+  ;; Close transient with ESC
+  (define-key transient-map [escape] #'transient-quit-one)
   :general
   (+leader-def
     "oD" #'docker))
@@ -1804,29 +1840,29 @@ Automatically detects package manager based on lockfile: npm, yarn, and pnpm."
                  (locate-dominating-file default-directory "package.json"))
                 (project-info
                  (with-temp-buffer
-				   (insert-file-contents
+           (insert-file-contents
                     (concat project-dir "package.json"))
-				   (json-parse-buffer)))
+           (json-parse-buffer)))
                 (package-manager
                  (cond
-				  ((file-exists-p
+          ((file-exists-p
                     (concat project-dir "pnpm-lock.yaml"))
-				   "pnpm")
-				  ((file-exists-p
+           "pnpm")
+          ((file-exists-p
                     (concat project-dir "yarn.lock"))
-				   "yarn")
-				  (t
-				   "npm")))
+           "yarn")
+          (t
+           "npm")))
                 (scripts (map-keys (map-elt project-info "scripts"))))
-	  (seq-map
-	   (lambda (script)
+    (seq-map
+     (lambda (script)
          (list
-		  :command-name script
-		  :command-line (concat package-manager " run " script)
-		  ;; :runner 'run-command-runner-vterm
-		  :display script
-		  :working-dir project-dir))
-	   scripts)))
+      :command-name script
+      :command-line (concat package-manager " run " script)
+      ;; :runner 'run-command-runner-vterm
+      :display script
+      :working-dir project-dir))
+     scripts)))
 
   (defun run-command-recipe-make ()
     "Provide commands to run Makefile targets.
@@ -1835,13 +1871,13 @@ read Makefile targets, but does not require `helm' and can be
 used with any of the selectors supported by `run-command'."
 
     (when (require 'helm-make nil t)
-	  (when-let* ((project-dir
-				   (locate-dominating-file default-directory "Makefile"))
-				  (makefile (concat project-dir "Makefile"))
-				  (targets (helm--make-cached-targets makefile)))
+    (when-let* ((project-dir
+           (locate-dominating-file default-directory "Makefile"))
+          (makefile (concat project-dir "Makefile"))
+          (targets (helm--make-cached-targets makefile)))
         (seq-map
          (lambda (target)
-		   (list
+       (list
             :command-name target
             :command-line (concat "make " target)
             :display target
@@ -1851,15 +1887,15 @@ used with any of the selectors supported by `run-command'."
   (setq run-command-recipes '(run-command-recipe-make run-command-recipe-package-json))
   :general
   (+leader-def
-    "rc" #'run-command))
+    "pz" #'run-command))
 
 (use-package verb
   :init
   (setq verb-auto-kill-response-buffers t
-		verb-json-use-mode 'json-ts-mode)
+    verb-json-use-mode 'json-ts-mode)
   :general
   (+leader-def
-	:keymaps 'org-mode-map
-	"v" '(:ignore t :wk "verb")
-	"vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
-	"vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
+  :keymaps 'org-mode-map
+  "v" '(:ignore t :wk "verb")
+  "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
+  "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
