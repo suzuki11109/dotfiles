@@ -1062,6 +1062,7 @@ of the tab bar."
     "c" #'magit-init
     "C" #'magit-clone
     "d" #'magit-diff-dwim
+    "D" #'dotfiles-magit-status
     "g" #'magit-status
     "l" #'magit-log)
   :custom
