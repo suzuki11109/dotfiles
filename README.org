@@ -1,0 +1,9 @@
+* Dotfiles
+** Installation
+*** Clone this repo
+#+begin_src sh
+echo ".cfg" >> .gitignore
+git clone git@github.com:suzuki11109/dotfiles.git $HOME/.cfg
+git --git-dir=$HOME/.cfg/.git --work-tree=$HOME config --local status.showUntrackedFiles no
+git --git-dir=$HOME/.cfg/.git --work-tree=$HOME checkout
+#+end_src
