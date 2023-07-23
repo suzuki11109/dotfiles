@@ -1,6 +1,0 @@
-[user]
-	email = suzuki11109@gmail.com
-	name = Suzuki Aki
-
-[alias]
-  fza = "!git ls-files -m -o --exclude-standard | fzf --height 40% --print0 -m | xargs -0 -t -o git add"
