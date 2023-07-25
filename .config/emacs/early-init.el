@@ -9,7 +9,12 @@
 (setq inhibit-compacting-font-caches t)
 
 ;; Increase the garbage collection (GC) threshold for faster startup.
-(setq gc-cons-threshold most-positive-fixnum)
+(setq gc-cons-threshold most-positive-fixnum
+      gc-cons-percentage 0.6)
+(add-hook 'elpaca-after-init-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 32 1024 1024)
+                  gc-cons-percentage 0.1)))
 
 ;; Do not wast time checking the modification time of each file
 (setq load-prefer-newer t)

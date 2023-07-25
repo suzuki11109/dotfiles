@@ -17,68 +17,86 @@
 ;; Inhibits fontification while receiving input
 (setq redisplay-skip-fontification-on-input t)
 
+(setq inhibit-x-resources t)
+
 ;; Slightly faster re-display
 (setq bidi-inhibit-bpa t)
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
 
 ;; Profile emacs startup
-(add-hook 'emacs-startup-hook
+(add-hook 'elpaca-after-init-hook
           (lambda ()
-            (message "Emacs loaded in %s." (emacs-init-time))))
+            (message "Emacs loaded in %s with %d garbage collections."
+                    (format "%.2f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
 
-;; Bootstraping straight.el
-(defvar bootstrap-version)
-(let ((bootstrap-file
-       (expand-file-name "straight/repos/straight.el/bootstrap.el" user-emacs-directory))
-      (bootstrap-version 6))
-  (unless (file-exists-p bootstrap-file)
-    (with-current-buffer
-        (url-retrieve-synchronously
-         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
-         'silent 'inhibit-cookies)
-      (goto-char (point-max))
-      (eval-print-last-sexp)))
-  (load bootstrap-file nil 'nomessage))
+(defvar elpaca-installer-version 0.5)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil
+                              :files (:defaults (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (< emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                 ((zerop (call-process "git" nil buffer t "clone"
+                                       (plist-get order :repo) repo)))
+                 ((zerop (call-process "git" nil buffer t "checkout"
+                                       (or (plist-get order :ref) "--"))))
+                 (emacs (concat invocation-directory invocation-name))
+                 ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                       "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                 ((require 'elpaca))
+                 ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (load "./elpaca-autoloads")))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+
+;; Install use-package support
+(elpaca elpaca-use-package
+  (elpaca-use-package-mode)
+  (setq elpaca-use-package-by-default t))
+
+;; Block until current queue processed.
+(elpaca-wait)
 
 ;; Use imenu with use-package
 (setq use-package-enable-imenu-support t)
 
-;; Configure `use-package'
-(unless (require 'use-package nil t)
-  (straight-use-package 'use-package))
-(setq straight-use-package-by-default t)
-
 ;; For :bind
 (require 'bind-key)
 
-;; reduce gc threadshold after init
-(use-package gcmh
-  :hook (after-init . gcmh-mode)
-  :init
-  (setq gcmh-idle-delay 'auto
-        gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold (* 32 1024 1024)))
+;; Load general first for :general
+(use-package general
+  :demand t)
+
+(elpaca-wait)
 
 (use-package exec-path-from-shell
+  :init
+  (setq exec-path-from-shell-arguments nil)
   :hook
-  (after-init . exec-path-from-shell-initialize))
-
-;; Escape once
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-
-(use-package which-key
-  :custom
-  (which-key-ellipsis "..")
-  (which-key-sort-order 'which-key-key-order-alpha)
-  (which-key-min-display-lines 5)
-  (which-key-add-column-padding 1)
-  :defer 1
-  :config
-  (which-key-mode 1)
-  )
+  (elpaca-after-init . exec-path-from-shell-initialize))
 
 (use-package general
+  :elpaca nil
   :config
   (general-auto-unbind-keys)
   ;; Set up some basic equivalents (like `general-nmap') with short named
@@ -146,13 +164,13 @@
     "g"   '(nil :wk "git")
 
     "h" '(nil :wk "help")
-  "hb" #'about-emacs
-  "he" #'view-echo-area-message
+    "hb" #'about-emacs
+    "he" #'view-echo-area-message
     "hg" #'general-describe-keybindings
-  "hi" #'info
-  "hI" #'info-display-manual
-  "hm" #'describe-mode
-  "hp" #'describe-package
+    "hi" #'info
+    "hI" #'info-display-manual
+    "hm" #'describe-mode
+    "hp" #'describe-package
     "h'" #'describe-char
 
     "i"   '(nil :wk "insert")
@@ -188,6 +206,19 @@
     "tr"  #'read-only-mode
     )
   )
+
+;; Escape once
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+
+(use-package which-key
+  :defer 1
+  :custom
+  (which-key-ellipsis "..")
+  (which-key-sort-order 'which-key-key-order-alpha)
+  (which-key-min-display-lines 5)
+  (which-key-add-column-padding 1)
+  :config
+  (which-key-mode 1))
 
 ;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
 (if (>= emacs-major-version 29)
@@ -235,8 +266,13 @@
       `((".*" "~/.config/emacs/auto-save/" t)))
 
 ;; Auto load files changed on disk
-(setq global-auto-revert-non-file-buffers t)
-(global-auto-revert-mode 1)
+(use-package autorevert
+  :defer .5
+  :elpaca nil
+  :custom
+  (global-auto-revert-non-file-buffers t)
+  :config
+  (global-auto-revert-mode 1))
 
 ;;  funtions put to custom lisp file
 (defun +delete-this-file (&optional forever)
@@ -295,6 +331,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq large-file-warning-threshold nil)
 ;; open files externallyt
 (use-package openwith
+  :defer 1
   :config
   (setq openwith-associations
         (list
@@ -317,13 +354,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; recent files
 (use-package recentf
-  :straight (:type built-in)
-  :hook
-  (after-init . recentf-mode)
+  :elpaca nil
+  :defer .5
   :init
   (setq
    ;; Increase the maximum number of saved items
-   recentf-max-saved-items 500
+   recentf-max-saved-items 100
    ;; Ignore case when searching recentf files
    recentf-case-fold-search t
    ;; Exclude some files from being remembered by recentf
@@ -340,10 +376,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
      ,(rx "/"
           (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
           (* any))))
-  )
+  :config
+  (recentf-mode 1))
 
 (use-package dired
-  :straight (:type built-in)
+  :elpaca nil
+  :commands dired
   :custom
   (dired-listing-switches "-ahl")
   (dired-auto-revert-buffer t)
@@ -352,7 +390,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dired-create-destination-dirs 'ask))
 
 (use-package dired-x
-  :straight (:type built-in)
+  :elpaca nil
   :hook (dired-mode . dired-omit-mode)
   :config
   (setq dired-omit-verbose nil
@@ -366,12 +404,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                 "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
   (setq dired-clean-confirm-killing-deleted-buffers nil))
 
-(use-package dired-aux
-  :straight (:type built-in)
-  :defer 1
-  :config
-  (setq dired-create-destination-dirs 'ask
-        dired-vc-rename-file t))
+;; (use-package dired-aux
+;;   :straight (:type built-in)
+;;   :defer 1
+;;   :config
+;;   (setq dired-create-destination-dirs 'ask
+;;         dired-vc-rename-file t))
 
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
@@ -392,7 +430,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package project
-  :straight (:type built-in)
+  :elpaca nil
   :commands (project-find-file
              project-switch-to-buffer
              project-switch-project
@@ -416,8 +454,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (add-hook 'kill-buffer-query-functions #'bury-or-kill)
 
 (use-package persistent-scratch
-  :hook
-  (after-init . persistent-scratch-setup-default))
+  :config
+  (persistent-scratch-setup-default))
 
 (setq
  ;; Silent mode
@@ -465,29 +503,18 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (set-selection-coding-system 'utf-8)
 
 (use-package elec-pair
-  ;; TODO: refactor these
-  :straight (:type built-in)
+  :elpaca nil
   :hook
-  ((prog-mode text-mode) . electric-pair-mode)
-  :hook ((markdown-mode . markdown-add-electric-pairs)
-         (go-ts-mode . go-add-electric-pairs)
-         (yaml-ts-mode . yaml-add-electric-pairs))
+  ((prog-mode text-mode conf-mode) . electric-pair-mode)
   :hook
   (org-mode . (lambda ()
                 (setq-local electric-pair-inhibit-predicate
                             `(lambda (c)
                                (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
   :preface
-  (defun markdown-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  (defun go-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?` . ?`))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  (defun yaml-add-electric-pairs ()
-    (setq-local electric-pair-pairs (append electric-pair-pairs '((?\( . ?\)))))
-    (setq-local electric-pair-text-pairs electric-pair-pairs))
-  )
+  (defun +add-pairs (pairs)
+    (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
+    (setq-local electric-pair-text-pairs electric-pair-pairs)))
 
 ;; Clipboard
 (setq
@@ -497,7 +524,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :hook (after-init . evil-mode)
+  :defer .5
+  ;; :hook (elpaca-after-init . evil-mode)
   :custom
   (evil-mode-line-format nil)
   (evil-want-keybinding nil)
@@ -515,6 +543,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
   :config
+  (evil-mode 1)
   (modify-syntax-entry ?_ "w")
   (evil-select-search-module 'evil-search-module 'evil-search)
   ;; TODO: change to general
@@ -528,12 +557,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init)
-  (run-hook-with-args 'evil-collection-setup-hook)
-  ;; (general-nmap
-  ;;   "[e" 'evil-collection-unimpaired-previous-error
-  ;;   "]e" 'evil-collection-unimpaired-next-error)
-
-    )
+  (run-hook-with-args 'evil-collection-setup-hook))
 
 (use-package evil-nerd-commenter
   :after (evil general)
@@ -556,17 +580,18 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :commands evil-avy-goto-char-2
   :general
   (general-nmap "s" #'evil-avy-goto-char-2)
-  :init
-  (setq avy-background t))
+  :custom
+  (avy-background t))
 
 ;; undo
 (use-package undo-fu
+  :after evil
   :init
   (setq undo-limit 10000000
         undo-strong-limit 50000000
         undo-outer-limit 150000000)
-  (with-eval-after-load 'evil
-    (evil-set-undo-system 'undo-fu)))
+  :config
+  (evil-set-undo-system 'undo-fu))
 
 (use-package undo-fu-session
   :after undo-fu
@@ -599,12 +624,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Always prompt in minibuffer
 (setq use-dialog-box nil)
 ;; Set default fonts
-(set-face-attribute 'default nil :font "monospace" :height 105)
+(set-face-attribute 'default nil :font "monospace" :height 110)
 (set-face-attribute 'variable-pitch nil :family "PT Serif" :height 1.1)
-(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 105)
+(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 110)
 (setq-default line-spacing 2)
 
-(use-package  default-text-scale
+(use-package default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
   :general
   ("M--" 'default-text-scale-decrease)
@@ -617,16 +642,16 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; No blinking cursor
 (blink-cursor-mode -1)
 
-;; Relative line numbering
-(setq display-line-numbers-type 'relative)
-
-;; Show line numbers in these modes
-(dolist (mode '(prog-mode-hook conf-mode-hook text-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 1))))
-
-;; Disable line numbers for these modes
-(dolist (mode '(org-mode-hook))
-  (add-hook mode (lambda () (display-line-numbers-mode 0))))
+(use-package display-line-numbers
+  :elpaca nil
+  :hook ((prog-mode conf-mode text-mode) . display-line-numbers-mode)
+  :custom
+  (display-line-numbers-type 'relative)
+  (display-line-numbers-widen t)
+  :config
+  (dolist (mode '(org-mode-hook))
+    (add-hook mode (lambda () (display-line-numbers-mode 0))))
+  )
 
 (use-package doom-modeline
   :custom
@@ -645,7 +670,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
   (add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
   :hook
-  (after-init . doom-modeline-mode))
+  (elpaca-after-init . doom-modeline-mode))
 
 ;; Show line, columns number in modeline
 (line-number-mode 1)
@@ -678,7 +703,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
 
 (use-package tab-bar
-  :straight (:type built-in)
+  :elpaca nil
   :after (project)
   :custom
   (tab-bar-show 1)
@@ -763,6 +788,7 @@ of the tab bar."
   :commands windresize)
 
 (use-package popper
+  :demand t
   :general
   ("C-\\" 'popper-toggle-latest)
   ("C-`"  'popper-cycle)
@@ -789,15 +815,26 @@ of the tab bar."
       "\\*vterm\\*"
       "\\*vterminal\\*"
       "-vterm\\*$"
+      "\\* docker vterm:"
       vterm-mode
       "\\*rake-compilation\\*$"
       "\\*rspec-compilation\\*$"
+      "\\*Flycheck errors\\*$"
       ))
+  :config
   (popper-mode +1)
   (popper-echo-mode +1))
 
+(use-package transient
+  :elpaca nil
+  :defer t
+  :config
+  ;; Map ESC and q to quit transient
+  (keymap-set transient-map "<escape>" 'transient-quit-one)
+  (keymap-set transient-map "q" 'transient-quit-one))
+
 (use-package nerd-icons
-  :demand t
+  :defer 1
   :general
   (+leader-def
     "in" '(nerd-icons-insert :wk "Nerd icons"))
@@ -809,10 +846,10 @@ of the tab bar."
   :config
   ;; (setq catppuccin-flavor 'latte)
   (setq catppuccin-flavor 'mocha)
-  (load-theme 'catppuccin t)
-  )
+  (load-theme 'catppuccin t))
 
 (use-package orderless
+  :demand t
   :custom
   (completion-styles '(orderless partial-completion basic))
   (completion-category-defaults nil)
@@ -830,33 +867,29 @@ of the tab bar."
 
     (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local))
   :hook
-  (lsp-completion-mode . +lsp-mode-setup-completion)
-  )
+  (lsp-completion-mode . +lsp-mode-setup-completion))
 
 (use-package yasnippet
-  :hook
-  (prog-mode . yas-minor-mode)
-  :init
-  (defun lc/yas-try-expanding-auto-snippets ()
-    (when (and (boundp 'yas-minor-mode) yas-minor-mode)
-      (let ((yas-buffer-local-condition ''(require-snippet-condition . auto)))
-        (yas-expand))))
+  :defer 1
   :config
-  (use-package yasnippet-snippets)
-  (yas-reload-all)
-  (add-hook 'post-command-hook #'lc/yas-try-expanding-auto-snippets)
-  )
+  (yas-global-mode 1))
+
+(use-package yasnippet-snippets
+  :after yasnippet
+  :config
+  (yas-reload-all))
 
 (use-package cape-yasnippet
-  :straight (:host github :repo "elken/cape-yasnippet")
+  :elpaca (:host github :repo "elken/cape-yasnippet")
   :after '(yasnippet cape))
 
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
 (use-package cape)
 (use-package corfu
+  :defer 1
   :hook
-  (after-init . global-corfu-mode)
+  ;; (elpaca-after-init . global-corfu-mode)
   ((eshell-mode comint-mode) . (lambda ()
                                  (setq-local corfu-auto nil)
                                  (corfu-mode 1)))
@@ -870,6 +903,7 @@ of the tab bar."
   (corfu-on-exact-match nil)
   (corfu-preselect 'first)
   :config
+  (global-corfu-mode 1)
   (defun corfu-enable-in-minibuffer ()
     (when (where-is-internal #'completion-at-point (list (current-local-map)))
       (setq-local corfu-auto nil)
@@ -1022,20 +1056,23 @@ of the tab bar."
   (marginalia-mode))
 
 (use-package vertico
-  :straight (:host github :repo "minad/vertico"
-                   :files (:defaults "extensions/*")
-                   :includes (vertico-directory))
-  :hook
-  (after-init . vertico-mode)
+  :defer 1
+  :elpaca (:host github :repo "minad/vertico"
+                   :files (:defaults "extensions/*"))
+  ;; :hook
+  ;; (elpaca-after-init . vertico-mode)
   :init
   (setq vertico-resize nil
         vertico-count 14)
+  :config
+  (vertico-mode)
   :general
   (+leader-def
     "." '(vertico-repeat :wk "resume last search"))
   )
 
 (use-package vertico-directory
+  :elpaca nil
   :after vertico
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
@@ -1077,9 +1114,6 @@ of the tab bar."
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
-  ;; Close transient with ESC
-  (define-key transient-map [escape] #'transient-quit-one)
-
   (defun +magit-display-buffer-fn (buffer)
     "Same as `magit-display-buffer-traditional', except...
 
@@ -1113,6 +1147,10 @@ of the tab bar."
                 '(display-buffer-same-window))
 
                ('(+magit--display-buffer-in-direction))))))
+
+  (defvar +magit-open-windows-in-direction 'right
+  "What direction to open new windows from the status buffer.
+For example, diffs and log buffers. Accepts `left', `right', `up', and `down'.")
 
   (defun +magit--display-buffer-in-direction (buffer alist)
     "`display-buffer-alist' handler that opens BUFFER in a direction.
@@ -1209,35 +1247,55 @@ window that already exists in that direction. It will split otherwise."
   (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
   )
 
-;; (use-package diff-hl
-;;   :commands
-;;   (diff-hl-stage-current-hunk diff-hl-revert-hunk diff-hl-next-hunk diff-hl-previous-hunk diff-hl-diff-goto-hunk)
-;;   :hook
-;;   ((prog-mode . diff-hl-mode)
-;;    (text-mode . diff-hl-mode)
-;;    (dired-mode . diff-hl-dired-mode)
-;;    (magit-pre-refresh . diff-hl-magit-pre-refresh)
-;;    (magit-post-refresh . diff-hl-magit-post-refresh))
-;;   :config
-;;   (defun +vc-gutter-define-thin-bitmaps ()
-;;     (define-fringe-bitmap 'diff-hl-bmp-middle [224] nil nil '(center repeated))
-;;     (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top))
-;;   (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
-;;   (defun +vc-gutter-type-at-pos-fn (type _pos)
-;;     (if (eq type 'delete)
-;;         'diff-hl-bmp-delete
-;;       'diff-hl-bmp-middle))
-;;   (advice-add 'diff-hl-fringe-bmp-from-pos  :override #'+vc-gutter-type-at-pos-fn)
-;;   (advice-add 'diff-hl-fringe-bmp-from-type :override #'+vc-gutter-type-at-pos-fn)
-;;   (add-hook 'diff-hl-mode-hook
-;;             (defun +vc-gutter-fix-diff-hl-faces-h ()
-;;               (set-face-background 'diff-hl-insert nil)
-;;               (set-face-background 'diff-hl-delete nil)
-;;               (set-face-background 'diff-hl-change nil)))
-;;   )
+(use-package smerge-mode
+  :elpaca nil
+  :commands +smerge-hydra/body
+  :general
+  (+leader-def
+    "gm" '(+smerge-hydra/body :wk "smerge"))
+  :config
+  (with-eval-after-load 'hydra
+    (defhydra +smerge-hydra (:hint nil
+                                   :pre (if (not smerge-mode) (smerge-mode 1))
+                                   ;; Disable `smerge-mode' when quitting hydra if
+                                   ;; no merge conflicts remain.
+                                   :post (smerge-auto-leave))
+      "
+                                                         [smerge]
+  Movement   Keep           Diff              Other         │
+  ╭─────────────────────────────────────────────────────────╯
+  │  ^_g_^       [_b_] base       [_<_] upper/base    [_C_] Combine
+  │  ^_k_ ↑^     [_u_] upper      [_=_] upper/lower   [_r_] resolve
+  │  ^_j_ ↓^     [_l_] lower      [_>_] base/lower    [_R_] remove
+  │  ^_G_^       [_a_] all        [_H_] hightlight    [_n_] next in project
+  │              [_RET_] current  [_E_] ediff
+  │                                                   [_q_] quit
+  ╰─────────────────────────────────────────────────────╯
+"
+      ("g" (progn (goto-char (point-min)) (smerge-next)))
+      ("G" (progn (goto-char (point-max)) (smerge-prev)))
+      ("j" next-line)
+      ("k" previous-line)
+      ("b" smerge-keep-base)
+      ("u" smerge-keep-upper)
+      ("l" smerge-keep-lower)
+      ("a" smerge-keep-all)
+      ("RET" smerge-keep-current)
+      ("<" smerge-diff-base-upper)
+      ("=" smerge-diff-upper-lower)
+      (">" smerge-diff-base-lower)
+      ("H" smerge-refine)
+      ("E" smerge-ediff)
+      ("C" smerge-combine-with-next)
+      ("r" smerge-resolve)
+      ("R" smerge-kill-current)
+      ;; Often after calling `smerge-vc-next-conflict', the cursor will land at
+      ;; the bottom of the window
+      ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
+      ("q" nil :color blue))))
 
 (use-package treesit
-  :straight nil
+  :elpaca nil
   :init
   (setq treesit-font-lock-level 4)
   (setq treesit-language-source-alist
@@ -1262,11 +1320,11 @@ window that already exists in that direction. It will split otherwise."
 
   ;; remap built-in modes to new ts-modes
   (setq major-mode-remap-alist
-        '(
-          (html-mode . html-ts-mode)
+        '((html-mode . html-ts-mode)
           (mhtml-mode . html-ts-mode)
           (bash-mode . bash-ts-mode)
           (js-mode . js-ts-mode)
+          (js-json-mode . json-ts-mode)
           (json-mode . json-ts-mode)
           (css-mode . css-ts-mode)
           (python-mode . python-ts-mode)
@@ -1284,13 +1342,6 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred lsp-install-server)
-  :hook
-  ((json-ts-mode yaml-ts-mode js-ts-mode typescript-ts-mode tsx-ts-mode
-                 go-ts-mode ruby-ts-mode rust-ts-mode css-ts-mode) . lsp-deferred)
-  (lsp-managed-mode . (lambda () (general-nmap
-                                   :keymaps 'local
-                                   "K" 'lsp-describe-thing-at-point)))
-  (lsp-completion-mode . +update-completions-list)
   :preface
   (setq lsp-use-plists t)
   :custom
@@ -1306,16 +1357,6 @@ window that already exists in that direction. It will split otherwise."
   (lsp-signature-auto-activate nil)
   (lsp-idle-delay 0.9)
   :init
-  (defcustom +lsp-auto-enable-modes
-    '(python-mode python-ts-mode
-                  rust-mode rust-ts-mode go-mode go-ts-mode
-                  ruby-mode ruby-ts-mode
-                  js-mode js-ts-mode typescript-mode typescript-ts-mode tsx-ts-mode
-                  json-mode json-ts-mode js-json-mode)
-    "Modes for which LSP-mode can be automatically enabled by `+lsp-auto-enable'."
-    :group 'my-prog
-    :type '(repeat symbol))
-
   (defun +update-completions-list ()
     (progn
       (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
@@ -1323,10 +1364,13 @@ window that already exists in that direction. It will split otherwise."
                   (list (cape-super-capf
                          'non-greedy-lsp
                          #'cape-yasnippet
-                         ;; (cape-company-to-capf #'company-yasnippet)
                          )))
       ))
-
+  :hook
+  (lsp-managed-mode . (lambda () (general-nmap
+                                   :keymaps 'local
+                                   "K" 'lsp-describe-thing-at-point)))
+  (lsp-completion-mode . +update-completions-list)
   :general
   (+leader-def
     :keymaps 'lsp-mode-map
@@ -1389,14 +1433,17 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode . flycheck-golangci-lint-setup))
 
 (use-package go-ts-mode
-  :straight (:type built-in)
+  :elpaca nil
+  :mode "\\.go\\'"
+  :custom
+  (go-ts-mode-indent-offset 4)
   :init
-  (setq go-ts-mode-indent-offset 4)
-  :config
   (defun +go-mode-setup ()
+    (+add-pairs '((?` . ?`)))
     (add-hook 'before-save-hook 'lsp-organize-imports t t))
-  (add-hook 'go-ts-mode-hook #'+go-mode-setup)
-  )
+  :hook
+  (go-ts-mode . +go-mode-setup)
+  (go-ts-mode . lsp-deferred))
 
 (use-package gotest
   :after go-ts-mode
@@ -1413,21 +1460,47 @@ window that already exists in that direction. It will split otherwise."
     "tb" 'go-test-current-benchmark))
 
 (use-package rust-ts-mode
-  :straight (:type built-in)
   :mode "\\.rs\\'"
-  :mode "\\.\\(?:a?rb\\|aslsx\\)\\'"
-  :mode "/\\(?:Brew\\|Fast\\)file\\'"
+  :elpaca nil
   :init
   (setq lsp-rust-analyzer-experimental-proc-attr-macros t
         lsp-rust-analyzer-proc-macro-enable t
-        lsp-rust-analyzer-server-display-inlay-hints t))
+        lsp-rust-analyzer-server-display-inlay-hints t)
+  :hook
+  (rust-ts-mode . lsp-deferred))
+
+(use-package scala-mode
+  :interpreter ("scala" . scala-mode)
+  :mode "\\.scala\\'"
+  :mode "\\.sbt\\'")
+
+(use-package sbt-mode
+  :commands sbt-start sbt-command
+  :config
+  ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
+  ;; allows using SPACE when in the minibuffer
+  (substitute-key-definition
+   'minibuffer-complete-word
+   'self-insert-command
+   minibuffer-local-completion-map)
+  ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
+  (setq sbt:program-options '("-Dsbt.supershell=false")))
+
+(use-package lsp-metals
+  :hook
+  (scala-mode . lsp-deferred))
 
 (setq js-chain-indent t)
 (setq js-indent-level 2) ;; has package?
-;; (setq css-indent-offset 2)
+(setq css-indent-offset 2)
+(add-hook 'css-ts-mode-hook #'lsp-deferred)
 
 (use-package typescript-ts-mode
-  :straight (:type built-in))
+  :elpaca nil
+  :config
+  (add-hook 'js-ts-mode-hook #'lsp-deferred)
+  (add-hook 'typescript-ts-mode-hook #'lsp-deferred)
+  (add-hook 'tsx-ts-mode-hook #'lsp-deferred))
 
 (use-package web-mode
   :mode "\\.erb\\'"
@@ -1451,6 +1524,11 @@ window that already exists in that direction. It will split otherwise."
 (use-package lsp-pyright
   :hook
   ((python-mode python-ts-mode) . lsp-deferred))
+
+(use-package ruby-ts-mode
+  :elpaca nil
+  :hook
+  (ruby-ts-mode . lsp-deferred))
 
 (use-package inf-ruby
   :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
@@ -1503,7 +1581,7 @@ window that already exists in that direction. It will split otherwise."
     "bo" #'bundle-open))
 
 (use-package elisp-mode
-  :straight (:type built-in)
+  :elpaca nil
   :general
   (+local-leader-def
     :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map ielm-map lisp-mode-map racket-mode-map scheme-mode-map)
@@ -1529,28 +1607,40 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (emacs-lisp-mode . eros-mode))
 
+(use-package markdown-mode
+  :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
+  :custom
+  (markdown-enable-math t)
+  (markdown-gfm-additional-languages '("sh")))
+
 ;; others
 (use-package yaml-ts-mode
+  :elpaca nil
   :mode "\\.ya?ml\\'"
-  :straight nil)
+  :hook
+  (yaml-ts-mode . lsp-deferred))
 
 (use-package json-ts-mode
-  :straight nil
-  :mode "\\.prettierrc\\'")
+  :elpaca nil
+  :mode "\\.prettierrc\\'"
+  :hook
+  (json-ts-mode . lsp-deferred))
 
 (use-package dockerfile-mode
   :mode "\\Dockerfile\\'"
   :general
   (+local-leader-def
     :keymaps '(dockerfile-mode)
-    "bb" #'dockerfile-build-buffer)
-    )
+    "bb" #'dockerfile-build-buffer))
 
 (use-package terraform-mode
   :mode "\\.tf\\'")
 
 (use-package git-modes
-  :mode ("/.dockerignore\\'" . gitignore-mode))
+  :defer t
+  :init
+  (add-to-list 'auto-mode-alist
+               (cons "/.dockerignore\\'" 'gitignore-mode)))
 
 (use-package editorconfig
   :hook
@@ -1572,7 +1662,7 @@ window that already exists in that direction. It will split otherwise."
                emacs-lisp-mode) . apheleia-mode))
 
 (use-package eshell
-  :straight (:type built-in)
+  :elpaca nil
   :general
   (+leader-def
     "oe"  #'eshell
@@ -1604,7 +1694,7 @@ window that already exists in that direction. It will split otherwise."
         vterm-kill-buffer-on-exit t
         vterm-always-compile-module t
         vterm-max-scrollback 10000
-        vterm-tramp-shells '(("docker" "/bin/bash")))
+        vterm-tramp-shells '(("docker" "/bin/sh")))
 
   (with-eval-after-load 'consult
     (defvar  +consult--source-term
@@ -1639,7 +1729,7 @@ window that already exists in that direction. It will split otherwise."
     "pt" #'multi-vterm-project))
 
 (use-package org
-  :straight (:type built-in)
+  :elpaca nil
   :custom
   ;; (org-ellipsis " ")
   (org-hide-emphasis-markers t)
@@ -1650,6 +1740,7 @@ window that already exists in that direction. It will split otherwise."
   (org-pretty-entities t)
   (org-src-fontify-natively t)
   (org-edit-src-content-indentation 0)
+  (org-edit-src-turn-on-auto-save t)
   :config
   (require 'org-indent)
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
@@ -1671,12 +1762,14 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'org-structure-template-alist '("go" . "src go"))
   (add-to-list 'org-structure-template-alist '("json" . "src json"))
 
-  (define-key org-src-mode-map [remap evil-write] 'org-edit-src-save)
-  (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
+  ;; (define-key org-src-mode-map [remap evil-write] 'org-edit-src-save)
+  ;; (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
   :general
   (+local-leader-def
     :keymaps '(org-mode-map)
-    "se" #'org-edit-special)
+    "'" #'org-edit-special
+    "." #'consult-org-heading
+    "l" #'org-insert-link)
   :hook
   (org-mode . visual-line-mode)
   (org-mode . org-indent-mode)
@@ -1729,11 +1822,6 @@ window that already exists in that direction. It will split otherwise."
   (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
   (helpful-max-buffers 1)
   :config
-  (use-package elisp-demos
-    :config
-    (advice-add 'helpful-update
-                :after
-                #'elisp-demos-advice-helpful-update))
   :general
   (:keymaps 'helpful-mode-map
             "q" #'kill-buffer-and-window)
@@ -1748,32 +1836,25 @@ window that already exists in that direction. It will split otherwise."
     "v" #'helpful-variable
     "x" #'helpful-command))
 
+;; (use-package elisp-demos
+;;   :config
+;;   (advice-add 'helpful-update
+;;               :after
+;;               #'elisp-demos-advice-helpful-update))
+
 ;; help/helpful window placement
 (add-to-list
  'display-buffer-alist
  '((lambda (buffer _) (with-current-buffer buffer
-            (seq-some (lambda (mode)
-                  (derived-mode-p mode))
-                  '(help-mode helpful-mode))))
+                        (seq-some (lambda (mode)
+                                    (derived-mode-p mode))
+                                  '(help-mode helpful-mode))))
    (display-buffer-reuse-mode-window display-buffer-in-direction)
    (direction . bottom)
    (dedicated . t)
    (window-height . 0.5)
    (mode . (help-mode helpful-mode))
    ))
-
-;; (add-to-list
-;;  'display-buffer-alist
-;;  '((lambda (buffer _) (with-current-buffer buffer
-;;            (seq-some (lambda (mode)
-;;                  (derived-mode-p mode))
-;;                  '(tabulated-list-mode))))
-;;    (display-buffer-reuse-mode-window display-buffer-in-direction)
-;;    (direction . bottom)
-;;    (dedicated . t)
-;;    (window-height . 0.5)
-;;    (mode . (docker-container-mode docker-network-mode docker-volume-mode docker-image-mode docker-context-mode))
-;;    ))
 
 (add-to-list
  'display-buffer-alist
@@ -1786,7 +1867,7 @@ window that already exists in that direction. It will split otherwise."
    ))
 
 (use-package compile
-  :straight (:type built-in)
+  :elpaca nil
   :custom
   ;; Always kill current compilation process before starting a new one
   (compilation-always-kill t)
@@ -1814,13 +1895,11 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package envrc
-  :hook
-  (after-init . envrc-global-mode))
+  :defer 1
+  :config
+  (envrc-global-mode))
 
 (use-package docker
-  :config
-  ;; Close transient with ESC
-  (define-key transient-map [escape] #'transient-quit-one)
   :general
   (+leader-def
     "oD" #'docker))
@@ -1841,29 +1920,29 @@ Automatically detects package manager based on lockfile: npm, yarn, and pnpm."
                  (locate-dominating-file default-directory "package.json"))
                 (project-info
                  (with-temp-buffer
-           (insert-file-contents
+                   (insert-file-contents
                     (concat project-dir "package.json"))
-           (json-parse-buffer)))
+                   (json-parse-buffer)))
                 (package-manager
                  (cond
-          ((file-exists-p
+                  ((file-exists-p
                     (concat project-dir "pnpm-lock.yaml"))
-           "pnpm")
-          ((file-exists-p
+                   "pnpm")
+                  ((file-exists-p
                     (concat project-dir "yarn.lock"))
-           "yarn")
-          (t
-           "npm")))
+                   "yarn")
+                  (t
+                   "npm")))
                 (scripts (map-keys (map-elt project-info "scripts"))))
-    (seq-map
-     (lambda (script)
+      (seq-map
+       (lambda (script)
          (list
-      :command-name script
-      :command-line (concat package-manager " run " script)
-      ;; :runner 'run-command-runner-vterm
-      :display script
-      :working-dir project-dir))
-     scripts)))
+          :command-name script
+          :command-line (concat package-manager " run " script)
+          ;; :runner 'run-command-runner-vterm
+          :display script
+          :working-dir project-dir))
+       scripts)))
 
   (defun run-command-recipe-make ()
     "Provide commands to run Makefile targets.
@@ -1872,20 +1951,93 @@ read Makefile targets, but does not require `helm' and can be
 used with any of the selectors supported by `run-command'."
 
     (when (require 'helm-make nil t)
-    (when-let* ((project-dir
-           (locate-dominating-file default-directory "Makefile"))
-          (makefile (concat project-dir "Makefile"))
-          (targets (helm--make-cached-targets makefile)))
+      (when-let* ((project-dir
+                   (locate-dominating-file default-directory "Makefile"))
+                  (makefile (concat project-dir "Makefile"))
+                  (targets (helm--make-cached-targets makefile)))
         (seq-map
          (lambda (target)
-       (list
+           (list
             :command-name target
             :command-line (concat "make " target)
             :display target
             :working-dir project-dir))
          targets))))
 
-  (setq run-command-recipes '(run-command-recipe-make run-command-recipe-package-json))
+  (defun run-command-recipe-cargo ()
+    "Provide commands for a Rust project managed with `cargo'."
+    (when-let* ((project-dir
+                 (locate-dominating-file default-directory "Cargo.toml")))
+      `((:command-name
+         "test:watch"
+         :command-line "cargo watch --watch src --watch Cargo.toml --clear -x test"
+         :display "test:watch"
+         :working-dir ,project-dir)
+        (:command-name
+         "build"
+         :command-line "cargo build"
+         :display "build"
+         :working-dir ,project-dir)
+        (:command-name
+         "build:watch"
+         :command-line "cargo watch --watch src --watch Cargo.toml --clear -x build"
+         :display "build:watch"
+         :working-dir ,project-dir)
+        (:command-name
+         "run"
+         :command-line "cargo run"
+         :display "run"
+         :working-dir ,project-dir)
+        (:command-name
+         "run:watch"
+         :command-line "cargo watch --watch src --watch Cargo.toml --clear -x run"
+         :display "run:watch"
+         :working-dir ,project-dir)
+        (:command-name
+         "lint"
+         :command-line "cargo clippy"
+         :display "lint"
+         :working-dir ,project-dir))))
+
+  (defun run-command-recipe-pyproject ()
+    "Provide commands to run tasks from a poetry `pyproject.toml' file.
+
+See https://pypi.org/project/taskipy/."
+    (when-let* ((project-dir
+                 (locate-dominating-file default-directory "pyproject.toml"))
+                (scripts
+                 (run-command-recipe-pyproject--get-scripts
+                  (concat project-dir "pyproject.toml")))
+                (script-runner "poetry"))
+      (seq-map
+       (lambda (script)
+         (list
+          :command-name script
+          :command-line (concat script-runner " run task " script)
+          :display script
+          :working-dir project-dir))
+       scripts)))
+
+  (defun run-command-recipe-pyproject--get-scripts (pyproject-file)
+    "Get names of scripts defined in `PYPROJECT-FILE'."
+    (with-temp-buffer
+      (insert-file-contents pyproject-file)
+      (when (re-search-forward "^\\[tool\\.taskipy\\.tasks\\]$" nil t)
+        (let ((scripts '())
+              (block-end
+               (save-excursion
+                 (or (and (re-search-forward "^\\[.*\\]$" nil t) (point))
+                     (point-max)))))
+          (while (re-search-forward "^\\([a-zA-Z_-]+\\)\s*=\s*\\(.+\\)$"
+                                    block-end
+                                    t)
+            (push (match-string-no-properties 1) scripts))
+          scripts))))
+
+  (setq run-command-recipes '(run-command-recipe-make
+                              run-command-recipe-cargo
+                              run-command-recipe-pyproject
+                              run-command-recipe-package-json))
   :general
   (+leader-def
     "pz" #'run-command))
@@ -1893,7 +2045,7 @@ used with any of the selectors supported by `run-command'."
 (use-package verb
   :init
   (setq verb-auto-kill-response-buffers t
-    verb-json-use-mode 'json-ts-mode)
+        verb-json-use-mode 'json-ts-mode)
   :general
   (+leader-def
   :keymaps 'org-mode-map
