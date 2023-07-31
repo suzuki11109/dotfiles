@@ -10,7 +10,7 @@
 (setq initial-major-mode 'fundamental-mode)
 
 ;; Save custom vars to separate file from init.el.
-(setq-default custom-file "~/.config/emacs/custom.el")
+(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
   (load custom-file))
 
@@ -103,12 +103,12 @@
   (general-evil-setup t)
 
   (general-create-definer +leader-def
-    :states '(visual normal)
+    :states '(visual normal motion)
     :keymaps 'override
     :prefix "SPC")
 
   (general-create-definer +local-leader-def
-    :states '(visual normal)
+    :states '(visual normal motion)
     :keymaps 'local
     :prefix "SPC m")
 
@@ -138,6 +138,7 @@
 
     "c"  '(nil :wk "code")
     "cc" '(compile :wk "Compile")
+    "cC" '(recompile :wk "Recompile")
     "cd" '(xref-find-definitions :wk "Go to definitions")
     "cD" '(xref-find-references :wk "Go to references")
 
@@ -178,16 +179,26 @@
     "ie"  `(,(when (>= emacs-major-version 29) #'emoji-search) :wk "Emoji")
 
     "k"  '(nil :wk "bookmark")
-    "ki"  #'bookmark-set
-    "kj"  #'bookmark-jump
-    "kk"  #'list-bookmarks
+    "ks"  #'bookmark-set
+    "kk"  #'bookmark-jump
+    "kl"  #'list-bookmarks
     "kd"  #'bookmark-delete
 
     "m"   '(nil :wk "mode-specific")
 
+   ;;; --- notes
+
     "o"   '(nil   :wk "app/open")
-    ;; "oa"  #'org-agenda
+    "oA"  #'org-agenda
+    "oa" '(nil :wk "agenda")
+    "oaa" #'org-agenda-list
+    "oam" #'org-tags-view
+    "oat" #'org-todo-list
+    "oav" #'org-search-view
     "of"  #'make-frame
+    "oF"  #'select-frame-by-name
+    "ol"  #'browse-url
+    "o-"  #'dired-jump
 
     "p"   '(nil :wk "project")
 
@@ -196,13 +207,18 @@
     "qq"  '(save-buffers-kill-terminal :wk "Quit emacs")
     "qR"  '(restart-emacs :wk "Restart emacs")
 
+    ;;; <leader> r --- remote
+
     "s"   '(nil :wk "search")
     "si" #'imenu
+    "st" #'dictionary-lookup-definition
+    "sT" #'dictionary
 
     "t"   '(nil :wk "toggle")
-    ;; tf fullscreen
+    "tc" '(global-display-fill-column-indicator-mode :wk "Fill column indicator")
+
+    "tf"  #'toggle-frame-fullscreen
     "th"  '(load-theme :wk "Load theme")
-    ;; tl  #'toggle line number current buffer
     "tr"  #'read-only-mode
     )
   )
@@ -220,10 +236,6 @@
   :config
   (which-key-mode 1))
 
-;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
-(if (>= emacs-major-version 29)
-    (pixel-scroll-precision-mode 1)
-  (pixel-scroll-mode 1))
 (setq
  ;; Fluid scrolling
  pixel-scroll-precision-use-momentum t
@@ -239,9 +251,17 @@
  ;; Scroll at a margin of one line
  scroll-margin 3)
 
+;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
+(pixel-scroll-precision-mode 1)
+
 ;; Enable saving minibuffer history
-(setq savehist-additional-variables '(kill-ring))
-(savehist-mode 1)
+(use-package savehist
+  :elpaca nil
+  :custom
+  (savehist-save-minibuffer-history t)
+  (savehist-additional-variables '(kill-ring register-alist))
+  :config
+  (savehist-mode 1))
 
 ;; Show recursion depth in minibuffer (see `enable-recursive-minibuffers')
 (minibuffer-depth-indicate-mode 1)
@@ -267,10 +287,11 @@
 
 ;; Auto load files changed on disk
 (use-package autorevert
-  :defer .5
+  :defer 1
   :elpaca nil
   :custom
   (global-auto-revert-non-file-buffers t)
+  (auto-revert-interval 3)
   :config
   (global-auto-revert-mode 1))
 
@@ -354,8 +375,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; recent files
 (use-package recentf
-  :elpaca nil
   :defer .5
+  :elpaca nil
   :init
   (setq
    ;; Increase the maximum number of saved items
@@ -527,10 +548,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :defer .5
   ;; :hook (elpaca-after-init . evil-mode)
   :custom
+  (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
   (evil-want-keybinding nil)
   (evil-want-C-u-scroll t)
-  (evil-want-C-i-jump nil)
   (evil-want-fine-undo t)
   (evil-want-Y-yank-to-eol t)
   (evil-split-window-below t)
@@ -627,9 +648,16 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (set-face-attribute 'default nil :font "monospace" :height 110)
 (set-face-attribute 'variable-pitch nil :family "PT Serif" :height 1.1)
 (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 110)
+;; Set thai font
+(set-fontset-font t 'thai "SF Thonburi")
+(set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
+
+;; Set line height
 (setq-default line-spacing 2)
 
 (use-package default-text-scale
+  :custom
+  (text-scale-mode-step 1.0625)
   :commands (default-text-scale-increase default-text-scale-decrease)
   :general
   ("M--" 'default-text-scale-decrease)
@@ -650,8 +678,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (display-line-numbers-widen t)
   :config
   (dolist (mode '(org-mode-hook))
-    (add-hook mode (lambda () (display-line-numbers-mode 0))))
-  )
+    (add-hook mode (lambda () (display-line-numbers-mode 0)))))
 
 (use-package doom-modeline
   :custom
@@ -679,7 +706,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Show search count in modeline
 (use-package anzu
-  :defer 2
+  :after (evil)
   :config
   (global-anzu-mode 1))
 
@@ -834,19 +861,19 @@ of the tab bar."
   (keymap-set transient-map "q" 'transient-quit-one))
 
 (use-package nerd-icons
-  :defer 1
   :general
   (+leader-def
     "in" '(nerd-icons-insert :wk "Nerd icons"))
   :custom
-  (nerd-icons-font-family "JetBrains Mono Nerd Font")
-  (nerd-icons-scale-factor 1.1))
+  (nerd-icons-font-family "JetBrainsMono Nerd Font")
+  (nerd-icons-scale-factor 1.0))
 
-(use-package catppuccin-theme
+(use-package doom-themes
   :config
-  ;; (setq catppuccin-flavor 'latte)
-  (setq catppuccin-flavor 'mocha)
-  (load-theme 'catppuccin t))
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t)
+  (load-theme 'doom-vibrant t)
+  (doom-themes-org-config))
 
 (use-package orderless
   :demand t
@@ -870,9 +897,8 @@ of the tab bar."
   (lsp-completion-mode . +lsp-mode-setup-completion))
 
 (use-package yasnippet
-  :defer 1
-  :config
-  (yas-global-mode 1))
+  :hook
+  (prog-mode . yas-minor-mode))
 
 (use-package yasnippet-snippets
   :after yasnippet
@@ -1056,7 +1082,7 @@ of the tab bar."
   (marginalia-mode))
 
 (use-package vertico
-  :defer 1
+  :defer .5
   :elpaca (:host github :repo "minad/vertico"
                    :files (:defaults "extensions/*"))
   ;; :hook
@@ -1095,13 +1121,15 @@ of the tab bar."
   :general
   (+leader-def :infix "g"
     "b" #'magit-branch
-    "B" #'magit-blame
+    "B" #'magit-blame-addition
     "c" #'magit-init
     "C" #'magit-clone
     "d" #'magit-diff-dwim
     "D" #'dotfiles-magit-status
     "g" #'magit-status
-    "l" #'magit-log)
+    "S" #'magit-stage-file
+    "U" #'magit-unstage-file
+    "L" #'magit-log-buffer-file)
   :custom
   (magit-diff-refine-hunk t)
   (magit-revision-show-gravatars t)
@@ -1323,12 +1351,14 @@ window that already exists in that direction. It will split otherwise."
         '((html-mode . html-ts-mode)
           (mhtml-mode . html-ts-mode)
           (bash-mode . bash-ts-mode)
-          (js-mode . js-ts-mode)
           (js-json-mode . json-ts-mode)
           (json-mode . json-ts-mode)
           (css-mode . css-ts-mode)
           (python-mode . python-ts-mode)
           (ruby-mode . ruby-ts-mode)
+          (javascript-mode . js-ts-mode)
+          (js-mode . js-ts-mode)
+          (js-jsx-mode . js-ts-mode)
           ))
 
   (defun +treesit-install-all-languages ()
@@ -1390,7 +1420,25 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
-    "cS" '(consult-lsp-symbols :wk "Workspace symbols")))
+    "cj" '(consult-lsp-symbols :wk "Workspace symbols")))
+
+(use-package editorconfig
+  :general
+  (+leader-def
+    "fc" #'editorconfig-find-current-editorconfig)
+  :hook
+  ((prog-mode text-mode conf-mode) . editorconfig-mode))
+
+(use-package apheleia
+  :commands apheleia-mode
+  :general
+  (+leader-def
+    "cf" #'apheleia-format-buffer)
+  :config
+  (setf (alist-get 'erb-formatter apheleia-formatters)
+        '("erb-format" "--print-width=140" filepath))
+  (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
+  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter)))
 
 (use-package flycheck
   :preface
@@ -1443,7 +1491,8 @@ window that already exists in that direction. It will split otherwise."
     (add-hook 'before-save-hook 'lsp-organize-imports t t))
   :hook
   (go-ts-mode . +go-mode-setup)
-  (go-ts-mode . lsp-deferred))
+  (go-ts-mode . lsp-deferred)
+  (go-ts-mode . apheleia-mode))
 
 (use-package gotest
   :after go-ts-mode
@@ -1467,6 +1516,7 @@ window that already exists in that direction. It will split otherwise."
         lsp-rust-analyzer-proc-macro-enable t
         lsp-rust-analyzer-server-display-inlay-hints t)
   :hook
+  (rust-ts-mode . apheleia-mode)
   (rust-ts-mode . lsp-deferred))
 
 (use-package scala-mode
@@ -1491,20 +1541,29 @@ window that already exists in that direction. It will split otherwise."
   (scala-mode . lsp-deferred))
 
 (setq js-chain-indent t)
-(setq js-indent-level 2) ;; has package?
-(setq css-indent-offset 2)
-(add-hook 'css-ts-mode-hook #'lsp-deferred)
+(setq js-indent-level 2)
+(add-hook 'js-ts-mode-hook #'lsp-deferred)
+(add-hook 'js-ts-mode-hook #'apheleia-mode)
+
+(use-package css-mode
+  :elpaca nil
+  :custom
+  (css-indent-offset 2)
+  :hook
+  (css-ts-mode . lsp-deferred)
+  (css-ts-mode . apheleia-mode))
 
 (use-package typescript-ts-mode
   :elpaca nil
-  :config
-  (add-hook 'js-ts-mode-hook #'lsp-deferred)
-  (add-hook 'typescript-ts-mode-hook #'lsp-deferred)
-  (add-hook 'tsx-ts-mode-hook #'lsp-deferred))
+  :demand t
+  :hook
+  ((tsx-ts-mode typescript-ts-mode) . apheleia-mode)
+  ((tsx-ts-mode typescript-ts-mode) . lsp-deferred)
+  )
 
 (use-package web-mode
-  :mode "\\.erb\\'"
-  :mode "\\.vue\\'"
+  :demand t
+
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1519,7 +1578,8 @@ window that already exists in that direction. It will split otherwise."
   (define-derived-mode erb-mode web-mode
     "HTML[erb]")
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
-  )
+  :hook
+  (web-mode . apheleia-mode))
 
 (use-package lsp-pyright
   :hook
@@ -1528,6 +1588,7 @@ window that already exists in that direction. It will split otherwise."
 (use-package ruby-ts-mode
   :elpaca nil
   :hook
+  (ruby-ts-mode . apheleia-mode)
   (ruby-ts-mode . lsp-deferred))
 
 (use-package inf-ruby
@@ -1582,6 +1643,8 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package elisp-mode
   :elpaca nil
+  :hook
+  (emacs-lisp-mode . apheleia-mode)
   :general
   (+local-leader-def
     :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map ielm-map lisp-mode-map racket-mode-map scheme-mode-map)
@@ -1642,36 +1705,17 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'auto-mode-alist
                (cons "/.dockerignore\\'" 'gitignore-mode)))
 
-(use-package editorconfig
-  :hook
-  ((prog-mode text-mode conf-mode) . editorconfig-mode))
-
-(use-package apheleia
-  :general
-  (+leader-def
-    "cf" #'apheleia-format-buffer)
-  :config
-  (setf (alist-get 'erb-formatter apheleia-formatters)
-        '("erb-format" filepath))
-  (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
-  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
-  :hook
-  ((go-ts-mode rust-ts-mode ruby-ts-mode
-               css-ts-mode web-mode erb-mode
-               typescript-ts-mode tsx-ts-mode js-ts-mode
-               emacs-lisp-mode) . apheleia-mode))
-
 (use-package eshell
   :elpaca nil
   :general
   (+leader-def
     "oe"  #'eshell
-  "oE"  #'eshell-new)
+    "oE"  #'eshell-new)
   :init
   (defun eshell-new ()
-  "Open a new instance of eshell."
-  (interactive)
-  (eshell 'N))
+    "Open a new instance of eshell."
+    (interactive)
+    (eshell 'N))
   )
 
 (use-package eshell-z
@@ -1728,27 +1772,66 @@ window that already exists in that direction. It will split otherwise."
     "oT" #'multi-vterm
     "pt" #'multi-vterm-project))
 
+(add-to-list
+ 'display-buffer-alist
+ '("\\`\\*Org \\(Select\\)\\*"
+   (display-buffer-reuse-window display-buffer-in-direction)
+   (direction . bottom)
+   (dedicated . t)
+   (window-height . 0.3)
+   ;; (window-parameters (mode-line-format . none))
+   ))
+
 (use-package org
   :elpaca nil
   :custom
-  ;; (org-ellipsis " ")
-  (org-hide-emphasis-markers t)
-  (org-startup-folded t)
-  (org-fold-core-style 'overlays)
-  (org-hide-block-startup nil)
+  (org-directory "~/Dropbox/org/")
+  (org-adapt-indentation t)
   (org-cycle-separator-lines 2)
+  (org-hide-emphasis-markers t)
   (org-pretty-entities t)
+  (org-ellipsis "…")
+  (org-fold-core-style 'overlays)
+
   (org-src-fontify-natively t)
+  (org-src-window-setup 'current-window)
+  (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
   (org-edit-src-turn-on-auto-save t)
+  (org-indirect-buffer-display 'current-window)
+
+  ;; (org-agenda-inhibit-startup t)
+  (org-todo-keywords
+   '((sequence "TODO(t)" "NEXT(n!)" "|" "DONE(d!)")))
+  (org-agenda-files '("~/Dropbox/org/tasks.org"))
+  (org-agenda-window-setup 'current)
+  (org-capture-templates
+        `(("t" "Tasks" entry (file "tasks.org")
+           ,(concat "* TODO %?\n"
+                    "/Entered on/ %U"))
+          ("g" "Groceries" entry (file "groceries.org")
+           "* %?")
+          ))
   :config
+  (add-hook 'org-capture-before-finalize-hook 'org-set-tags-command)
+
+  (dolist (face '((org-level-1 . 1.2)
+                  (org-level-2 . 1.1)
+                  (org-level-3 . 1.05)
+                  (org-level-4 . 1.0)
+                  (org-level-5 . 1.1)
+                  (org-level-6 . 1.1)
+                  (org-level-7 . 1.1)
+                  (org-level-8 . 1.1)))
+    (set-face-attribute (car face) nil :height (cdr face)))
+
   (require 'org-indent)
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+  (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-table nil  :inherit 'fixed-pitch)
+  (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
   (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
-  (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
   (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
   (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
@@ -1763,7 +1846,19 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'org-structure-template-alist '("json" . "src json"))
 
   ;; (define-key org-src-mode-map [remap evil-write] 'org-edit-src-save)
-  ;; (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
+  (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
+
+  (dolist (hook '(org-refile
+                  org-agenda-add-note
+                  org-agenda-deadline
+                  org-agenda-kill
+                  org-agenda-todo
+                  org-agenda-refile
+                  org-agenda-schedule
+                  org-agenda-set-property
+                  org-agenda-set-tags))
+    ;; https://github.com/bbatsov/helm-projectile/issues/51
+    (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
   :general
   (+local-leader-def
     :keymaps '(org-mode-map)
@@ -1774,18 +1869,23 @@ window that already exists in that direction. It will split otherwise."
   (org-mode . visual-line-mode)
   (org-mode . org-indent-mode)
   (org-mode . variable-pitch-mode)
+  (org-agenda-mode . hl-line-mode)
   )
 
 (use-package evil-org
   :after (org evil)
   :hook (org-mode . evil-org-mode)
+  :hook (org-agenda-mode . evil-org-mode)
+  :hook (org-capture-mode . evil-insert-state)
+  ;; :hook (evil-org-mode . evil-normalize-keymaps)
   :general
   (:keymaps 'org-mode-map
             "M-O" 'evil-org-org-insert-subheading-below)
   :config
   (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
   (require 'evil-org-agenda)
-  (evil-org-agenda-set-keys))
+  (evil-org-agenda-set-keys)
+  )
 
 (use-package org-appear
   :hook (org-mode . org-appear-mode))
@@ -1796,12 +1896,26 @@ window that already exists in that direction. It will split otherwise."
         org-superstar-remove-leading-stars t)
   :hook (org-mode . org-superstar-mode))
 
+(use-package org-super-agenda
+  :config
+  (setq org-super-agenda-groups
+        '(
+          (:name "Next"
+                 :todo "NEXT")
+          (:name "Todo"
+                 :todo "TODO")
+          ))
+  (setq org-super-agenda-header-map (make-sparse-keymap))
+  :hook (org-agenda-mode . org-super-agenda-mode)
+  )
+
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
 
 (setq help-window-select t)
 (use-package helpful
   :hook
+  (helpful-mode . visual-line-mode)
   (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
   :bind
   ([remap describe-symbol]   . helpful-symbol)
@@ -1904,11 +2018,12 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "oD" #'docker))
 
+(use-package helm-make
+  :defer t)
 (use-package run-command
   :custom
   (run-command-default-runner 'run-command-runner-vterm)
   :config
-  (use-package helm-make)
   (require 'subr-x)
   (require 'map)
   (require 'seq)
@@ -2041,6 +2156,9 @@ See https://pypi.org/project/taskipy/."
   :general
   (+leader-def
     "pz" #'run-command))
+
+(setq dictionary-use-single-buffer t)
+(setq dictionary-server "dict.org")
 
 (use-package verb
   :init

@@ -33,6 +33,7 @@
 
 ;; Disable start-up screen
 (setq-default inhibit-startup-screen t)
+(setq-default initial-scratch-message "")
 
 ;; If you want transaparent background
 ;; (push (cons 'alpha-background 93) default-frame-alist)
