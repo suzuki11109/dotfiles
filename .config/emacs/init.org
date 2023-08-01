@@ -252,15 +252,17 @@
 
     "m"   '(nil :wk "mode-specific")
 
-   ;;; --- notes
+    "n"   '(nil :wk "notes")
+    "na"  #'org-agenda
+    "nf"  '((lambda () (interactive)
+              (let ((default-directory org-directory))
+                (call-interactively 'find-file))) :wk "Find notes")
+    "nm" #'org-tags-view
+    "nt" #'org-todo-list
+
 
     "o"   '(nil   :wk "app/open")
-    "oA"  #'org-agenda
-    "oa" '(nil :wk "agenda")
-    "oaa" #'org-agenda-list
-    "oam" #'org-tags-view
-    "oat" #'org-todo-list
-    "oav" #'org-search-view
+    "oa"  #'org-agenda
     "of"  #'make-frame
     "oF"  #'select-frame-by-name
     "ol"  #'browse-url
@@ -368,7 +370,6 @@
 
 ;; Auto load files changed on disk
 (use-package autorevert
-  :defer 1
   :elpaca nil
   :custom
   (global-auto-revert-non-file-buffers t)
@@ -808,6 +809,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
+  (doom-modeline-vcs-max-length 20)
   :init
   (defun doom-modeline-conditional-buffer-encoding ()
     "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
@@ -1909,6 +1911,9 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "oe"  #'eshell
     "oE"  #'eshell-new)
+  (general-nvmap
+    :keymaps 'eshell-mode-map
+    "<return>" #'evil-insert-resume)
   :init
   (defun eshell-new ()
     "Open a new instance of eshell."
@@ -1961,7 +1966,7 @@ window that already exists in that direction. It will split otherwise."
             (lambda ()
               (setq-local confirm-kill-processes nil)
               (setq-local hscroll-margin 0)
-              (setq-local evil-insert-state-cursor 'box)
+              (setq-local evil-insert-state-cursor 'bar)
         ))
   )
 
@@ -1984,7 +1989,17 @@ window that already exists in that direction. It will split otherwise."
    (direction . bottom)
    (dedicated . t)
    (window-height . 0.3)
-   ;; (window-parameters (mode-line-format . none))
+   (window-parameters (mode-line-format . none))
+   ))
+
+(add-to-list
+ 'display-buffer-alist
+ '("\\*Agenda Commands\\*"
+   (display-buffer-reuse-window display-buffer-in-direction)
+   (direction . bottom)
+   (dedicated . t)
+   ;; (window-height . 0.3)
+   (window-parameters (mode-line-format . none))
    ))
 
 (use-package org
@@ -2003,22 +2018,10 @@ window that already exists in that direction. It will split otherwise."
   (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
   (org-edit-src-turn-on-auto-save t)
-  (org-indirect-buffer-display 'current-window)
+  ;; (org-indirect-buffer-display 'current-window)
 
-  ;; (org-agenda-inhibit-startup t)
-  (org-todo-keywords
-   '((sequence "TODO(t)" "NEXT(n!)" "|" "DONE(d!)")))
-  (org-agenda-files '("~/Dropbox/org/tasks.org"))
-  (org-agenda-window-setup 'current)
-  (org-capture-templates
-        `(("t" "Tasks" entry (file "tasks.org")
-           ,(concat "* TODO %?\n"
-                    "/Entered on/ %U"))
-          ("g" "Groceries" entry (file "groceries.org")
-           "* %?")
-          ))
   :config
-  (add-hook 'org-capture-before-finalize-hook 'org-set-tags-command)
+  ;; (add-hook 'org-capture-before-finalize-hook 'org-set-tags-command)
 
   (dolist (face '((org-level-1 . 1.2)
                   (org-level-2 . 1.1)
@@ -2050,20 +2053,8 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'org-structure-template-alist '("go" . "src go"))
   (add-to-list 'org-structure-template-alist '("json" . "src json"))
 
-  ;; (define-key org-src-mode-map [remap evil-write] 'org-edit-src-save)
   (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
 
-  (dolist (hook '(org-refile
-                  org-agenda-add-note
-                  org-agenda-deadline
-                  org-agenda-kill
-                  org-agenda-todo
-                  org-agenda-refile
-                  org-agenda-schedule
-                  org-agenda-set-property
-                  org-agenda-set-tags))
-    ;; https://github.com/bbatsov/helm-projectile/issues/51
-    (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
   :general
   (+local-leader-def
     :keymaps '(org-mode-map)
@@ -2074,23 +2065,19 @@ window that already exists in that direction. It will split otherwise."
   (org-mode . visual-line-mode)
   (org-mode . org-indent-mode)
   (org-mode . variable-pitch-mode)
-  (org-agenda-mode . hl-line-mode)
   )
 
 (use-package evil-org
   :after (org evil)
   :hook (org-mode . evil-org-mode)
   :hook (org-agenda-mode . evil-org-mode)
-  :hook (org-capture-mode . evil-insert-state)
-  ;; :hook (evil-org-mode . evil-normalize-keymaps)
   :general
   (:keymaps 'org-mode-map
             "M-O" 'evil-org-org-insert-subheading-below)
   :config
   (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
   (require 'evil-org-agenda)
-  (evil-org-agenda-set-keys)
-  )
+  (evil-org-agenda-set-keys))
 
 (use-package org-appear
   :hook (org-mode . org-appear-mode))
@@ -2101,18 +2088,72 @@ window that already exists in that direction. It will split otherwise."
         org-superstar-remove-leading-stars t)
   :hook (org-mode . org-superstar-mode))
 
+#+end_src
+** Agenda
+#+begin_src emacs-lisp
+(use-package org-agenda
+  :elpaca nil
+  :custom
+  (org-todo-keywords
+   '((sequence "TODO(t)" "NEXT(n!)" "|" "DONE(d!)")
+     (sequence "[ ](T)" "|" "[X](D)")))
+  (org-agenda-files '("~/Dropbox/org/tasks.org"))
+  (org-agenda-confirm-kill nil)
+  (org-agenda-window-setup 'only-window)
+  (org-agenda-restore-windows-after-quit t)
+  (org-agenda-custom-commands
+        '(("g" "Groceries" todo ""
+           ((org-agenda-files
+             '("~/Dropbox/org/groceries.org"))))))
+  (org-capture-templates
+   `(("t" "Tasks" entry (file "tasks.org")
+      ,(concat "* TODO %? %^g\n"
+               "/Entered on/ %U"))
+     ("g" "Groceries" entry (file+olp "groceries.org" "Groceries")
+      "* [ ] %?")
+     ))
+  :general
+  (+leader-def
+    "ng"  '((lambda () (interactive) (org-agenda nil "g")) :wk "Groceries"))
+  (:keymaps 'org-agenda-mode-map
+            "q" 'org-agenda-exit)
+  :hook
+  (org-capture-mode . evil-insert-state)
+  (org-agenda-mode . hl-line-mode)
+  :config
+  ;; Refresh agenda after capturing.
+  (add-hook 'org-capture-after-finalize-hook 'org-agenda-maybe-redo)
+
+  ;; Save agenda buffers after doing these actions
+  (dolist (hook '(org-refile
+                  org-agenda-archive
+                  org-agenda-add-note
+                  org-agenda-deadline
+                  org-agenda-kill
+                  org-agenda-todo
+                  org-agenda-refile
+                  org-agenda-schedule
+                  org-agenda-set-property
+                  org-agenda-set-tags))
+    ;; https://github.com/bbatsov/helm-projectile/issues/51
+    (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
+  )
+
 (use-package org-super-agenda
+  :after (org-agenda)
   :config
   (setq org-super-agenda-groups
-        '(
+        `(
           (:name "Next"
                  :todo "NEXT")
           (:name "Todo"
                  :todo "TODO")
+          (:name "Groceries"
+                 :file-path ,(expand-file-name "groceries.org" org-directory))
           ))
   (setq org-super-agenda-header-map (make-sparse-keymap))
-  :hook (org-agenda-mode . org-super-agenda-mode)
-  )
+  (org-super-agenda-mode 1))
+
 #+end_src
 ** Tangle
 #+begin_src emacs-lisp
