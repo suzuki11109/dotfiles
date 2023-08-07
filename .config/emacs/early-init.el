@@ -36,7 +36,7 @@
 (setq-default initial-scratch-message "")
 
 ;; If you want transaparent background
-;; (push (cons 'alpha-background 93) default-frame-alist)
+;; (push (cons 'alpha-background 95) default-frame-alist)
 
 ;; Inhibit startup message in echo area
 (fset 'display-startup-echo-area-message #'ignore)

@@ -90,8 +90,6 @@
 (elpaca-wait)
 
 (use-package exec-path-from-shell
-  :init
-  (setq exec-path-from-shell-arguments nil)
   :hook
   (elpaca-after-init . exec-path-from-shell-initialize))
 
@@ -235,6 +233,7 @@
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1)
+  (which-key-use-C-h-commands nil)
   :config
   (which-key-mode 1))
 
@@ -547,7 +546,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package evil
   :defer .5
-  ;; :hook (elpaca-after-init . evil-mode)
   :custom
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
@@ -564,13 +562,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :general
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
+  (:states 'motion
+    ";" 'evil-ex)
   :config
   (evil-mode 1)
   (modify-syntax-entry ?_ "w")
   (evil-select-search-module 'evil-search-module 'evil-search)
-  ;; TODO: change to general
-  (define-key evil-motion-state-map ";" #'evil-ex)
-  ;; (define-key evil-insert-state-map (kbd "C-g") 'evil-normal-state)
+  ;; (define-key evil-motion-state-map ";" #'evil-ex)
   )
 
 (use-package evil-collection
@@ -703,6 +701,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Show line, columns number in modeline
 (line-number-mode 1)
+(size-indication-mode 1)
 (column-number-mode 1)
 (setq mode-line-percent-position nil)
 
@@ -806,6 +805,25 @@ of the tab bar."
 ;; Resize window combinations proportionally
 (setq window-combination-resize t)
 
+;; (add-to-list
+;;  'display-buffer-alist
+;;  '("\\*Agenda Commands\\*"
+;;    (display-buffer-reuse-window display-buffer-in-direction)
+;;    (direction . bottom)
+;;    (dedicated . t)
+;;    ;; (window-height . 0.3)
+;;    (window-parameters (mode-line-format . none))
+;;    ))
+
+(use-package shackle
+  :disabled t
+  ;; :config
+  ;; (setq shackle-rules
+  ;;  '(;;    ("\\`\\*Agenda .*?\\*\\'" :regexp t :popup t :align t :size 0.3)
+  ;;    ))
+  ;; (shackle-mode 1)
+  )
+
 ;; Window layout undo/redo
 (winner-mode 1)
 
@@ -846,9 +864,20 @@ of the tab bar."
       "-vterm\\*$"
       "\\* docker vterm:"
       vterm-mode
-      "\\*rake-compilation\\*$"
-      "\\*rspec-compilation\\*$"
-      "\\*Flycheck errors\\*$"
+      "\\*rake-compilation\\*"
+      "\\*rspec-compilation\\*"
+      "\\*Flycheck errors\\*"
+      "\\*Org Select\\*"
+      help-mode
+      helpful-mode
+      docker-container-mode
+      docker-network-mode
+      docker-volume-mode
+      docker-image-mode
+      docker-context-mode
+      "\\*Org Select\\*"
+      "\\*Capture\\*"
+      "^CAPTURE-"
       ))
   :config
   (popper-mode +1)
@@ -917,7 +946,6 @@ of the tab bar."
 (use-package corfu
   :defer 1
   :hook
-  ;; (elpaca-after-init . global-corfu-mode)
   ((eshell-mode comint-mode) . (lambda ()
                                  (setq-local corfu-auto nil)
                                  (corfu-mode 1)))
@@ -1000,18 +1028,11 @@ of the tab bar."
   :general
   ("C-s" 'consult-line)
   (+leader-def
-    ;; search
-    ;; "sa"  #'consult-org-agenda
     "sb"  #'consult-line
     "sB"  #'consult-line-multi
     "sf"  #'consult-find
     "sh"  #'consult-history
     "sp"  #'consult-ripgrep
-    ;; j jumplist
-    ;; kK doc/dash
-    ;; lL jump link
-    ;; m jump book mark
-    ;; o search online
     "hI"  #'consult-info)
   :custom
   (consult-narrow-key "<"))
@@ -1022,9 +1043,9 @@ of the tab bar."
   :config
   (defun embark-which-key-indicator ()
     "An embark indicator that displays keymaps using which-key.
- The which-key help message will show the type and value of the
- current target followed by an ellipsis if there are further
- targets."
+The which-key help message will show the type and value of the
+current target followed by an ellipsis if there are further
+targets."
     (lambda (&optional keymap targets prefix)
       (if (null keymap)
           (which-key--hide-popup-ignore-command)
@@ -1043,6 +1064,11 @@ of the tab bar."
          nil nil t (lambda (binding)
                      (not (string-suffix-p "-argument" (cdr binding))))))))
 
+  (setq embark-indicators
+        '(embark-which-key-indicator
+          embark-highlight-indicator
+          embark-isearch-highlight-indicator))
+
   (defun embark-hide-which-key-indicator (fn &rest args)
     "Hide the which-key indicator immediately when using the completing-read prompter."
     (which-key--hide-popup-ignore-command)
@@ -1052,26 +1078,15 @@ of the tab bar."
 
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator)
-  ;; Hide the mode line of the Embark live/completions buffers
-  (add-to-list 'display-buffer-alist
-               '("\\`\\*Embark Collect \\(Live\\|Completions\\)\\*"
-                 nil
-                 (window-parameters (mode-line-format . none))))
 
-  (setq prefix-help-command #'embark-prefix-help-command)
   :bind
-  (:map minibuffer-local-map
-        ("C-." . 'embark-dwim)
-        ("C-;" . 'embark-act))
-  :custom
-  (embark-indicators '(embark-which-key-indicator
-                       embark-highlight-indicator
-                       embark-isearch-highlight-indicator))
-  (which-key-use-C-h-commands nil))
+  ("C-." . 'embark-dwim)
+  ("C-;" . 'embark-act))
+
+;; (:map minibuffer-local-map)
 
 (use-package embark-consult
-  :after (embark consult)
-  :demand t
+  ;; :after (embark consult)
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
 
@@ -1086,9 +1101,7 @@ of the tab bar."
 (use-package vertico
   :defer .5
   :elpaca (:host github :repo "minad/vertico"
-                   :files (:defaults "extensions/*"))
-  ;; :hook
-  ;; (elpaca-after-init . vertico-mode)
+                 :files (:defaults "extensions/*"))
   :init
   (setq vertico-resize nil
         vertico-count 14)
@@ -1284,13 +1297,12 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "gm" '(+smerge-hydra/body :wk "smerge"))
   :config
-  (with-eval-after-load 'hydra
-    (defhydra +smerge-hydra (:hint nil
-                                   :pre (if (not smerge-mode) (smerge-mode 1))
-                                   ;; Disable `smerge-mode' when quitting hydra if
-                                   ;; no merge conflicts remain.
-                                   :post (smerge-auto-leave))
-      "
+  (defhydra +smerge-hydra (:hint nil
+                                 :pre (if (not smerge-mode) (smerge-mode 1))
+                                 ;; Disable `smerge-mode' when quitting hydra if
+                                 ;; no merge conflicts remain.
+                                 :post (smerge-auto-leave))
+    "
                                                          [smerge]
   Movement   Keep           Diff              Other         │
   ╭─────────────────────────────────────────────────────────╯
@@ -1302,27 +1314,27 @@ window that already exists in that direction. It will split otherwise."
   │                                                   [_q_] quit
   ╰─────────────────────────────────────────────────────╯
 "
-      ("g" (progn (goto-char (point-min)) (smerge-next)))
-      ("G" (progn (goto-char (point-max)) (smerge-prev)))
-      ("j" next-line)
-      ("k" previous-line)
-      ("b" smerge-keep-base)
-      ("u" smerge-keep-upper)
-      ("l" smerge-keep-lower)
-      ("a" smerge-keep-all)
-      ("RET" smerge-keep-current)
-      ("<" smerge-diff-base-upper)
-      ("=" smerge-diff-upper-lower)
-      (">" smerge-diff-base-lower)
-      ("H" smerge-refine)
-      ("E" smerge-ediff)
-      ("C" smerge-combine-with-next)
-      ("r" smerge-resolve)
-      ("R" smerge-kill-current)
-      ;; Often after calling `smerge-vc-next-conflict', the cursor will land at
-      ;; the bottom of the window
-      ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
-      ("q" nil :color blue))))
+    ("g" (progn (goto-char (point-min)) (smerge-next)))
+    ("G" (progn (goto-char (point-max)) (smerge-prev)))
+    ("j" next-line)
+    ("k" previous-line)
+    ("b" smerge-keep-base)
+    ("u" smerge-keep-upper)
+    ("l" smerge-keep-lower)
+    ("a" smerge-keep-all)
+    ("RET" smerge-keep-current)
+    ("<" smerge-diff-base-upper)
+    ("=" smerge-diff-upper-lower)
+    (">" smerge-diff-base-lower)
+    ("H" smerge-refine)
+    ("E" smerge-ediff)
+    ("C" smerge-combine-with-next)
+    ("r" smerge-resolve)
+    ("R" smerge-kill-current)
+    ;; Often after calling `smerge-vc-next-conflict', the cursor will land at
+    ;; the bottom of the window
+    ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
+    ("q" nil :color blue)))
 
 (use-package treesit
   :elpaca nil
@@ -1387,7 +1399,7 @@ window that already exists in that direction. It will split otherwise."
   (lsp-modeline-diagnostics-enable nil)
   (lsp-insert-final-newline nil)
   (lsp-signature-auto-activate nil)
-  (lsp-idle-delay 0.9)
+  (lsp-idle-delay 0.5)
   :init
   (defun +update-completions-list ()
     (progn
@@ -1450,15 +1462,14 @@ window that already exists in that direction. It will split otherwise."
         (funcall fn checker property)))
   (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
   :custom
-  (flycheck-idle-change-delay 1.0)
+  (flycheck-idle-change-delay 0.8)
   (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   :config
-  ;; Rerunning checks on every newline is a mote excessive.
   (delq 'new-line flycheck-check-syntax-automatically)
 
-  ;; change it enable only
+  ;; TODO: change it enable only
   (setq-default flycheck-disabled-checkers
                 `(,@flycheck-disabled-checkers go-gofmt go-golint go-vet go-build go-test go-errcheck go-unconvert go-staticcheck))
   :general
@@ -1777,26 +1788,6 @@ window that already exists in that direction. It will split otherwise."
     "oT" #'multi-vterm
     "pt" #'multi-vterm-project))
 
-(add-to-list
- 'display-buffer-alist
- '("\\`\\*Org \\(Select\\)\\*"
-   (display-buffer-reuse-window display-buffer-in-direction)
-   (direction . bottom)
-   (dedicated . t)
-   (window-height . 0.3)
-   (window-parameters (mode-line-format . none))
-   ))
-
-(add-to-list
- 'display-buffer-alist
- '("\\*Agenda Commands\\*"
-   (display-buffer-reuse-window display-buffer-in-direction)
-   (direction . bottom)
-   (dedicated . t)
-   ;; (window-height . 0.3)
-   (window-parameters (mode-line-format . none))
-   ))
-
 (use-package org
   :elpaca nil
   :custom
@@ -1886,21 +1877,29 @@ window that already exists in that direction. It will split otherwise."
 (use-package org-agenda
   :elpaca nil
   :custom
+  (org-agenda-sorting-strategy '((agenda habit-down time-up priority-down category-keep)
+                                (todo tag-up priority-down category-keep)
+                                (tags priority-down category-keep)
+                                (search category-keep)))
   (org-todo-keywords
-   '((sequence "TODO(t)" "NEXT(n!)" "|" "DONE(d!)")
-     (sequence "[ ](T)" "|" "[X](D)")))
-  (org-agenda-files '("~/Dropbox/org/tasks.org"))
+   '((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d!)")
+     (sequence "[ ](T)" "|" "[X](x!)")))
+  (org-refile-use-outline-path 'file)
+  (org-refile-targets '(("tasks.org" :maxlevel . 1)
+                        ))
+  (org-agenda-files `(,(expand-file-name "tasks.org" org-directory)))
   (org-agenda-confirm-kill nil)
   (org-agenda-window-setup 'only-window)
   (org-agenda-restore-windows-after-quit t)
   (org-agenda-custom-commands
-        '(("g" "Groceries" todo ""
-           ((org-agenda-files
-             '("~/Dropbox/org/groceries.org"))))))
+   '(("g" "Groceries" todo ""
+      ((org-agenda-files
+        `(,(expand-file-name "groceries.org" org-directory)))))))
   (org-capture-templates
-   `(("t" "Tasks" entry (file "tasks.org")
-      ,(concat "* TODO %? %^g\n"
-               "/Entered on/ %U"))
+   `(("i" "Inbox" entry (file "inbox.org")
+      "* %?")
+     ("t" "Tasks" entry (file "tasks.org")
+      "* TODO %?")
      ("g" "Groceries" entry (file+olp "groceries.org" "Groceries")
       "* [ ] %?")
      ))
@@ -1912,6 +1911,8 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (org-capture-mode . evil-insert-state)
   (org-agenda-mode . hl-line-mode)
+  (org-agenda-mdoe . (lambda ()
+                       (interactive) (org-element-cache-reset 'all)))
   :config
   ;; Refresh agenda after capturing.
   (add-hook 'org-capture-after-finalize-hook 'org-agenda-maybe-redo)
@@ -1929,6 +1930,9 @@ window that already exists in that direction. It will split otherwise."
                   org-agenda-set-tags))
     ;; https://github.com/bbatsov/helm-projectile/issues/51
     (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
+
+    ;; need this because syncing updates from cloud show categories as ???
+    (advice-add #'org-agenda-redo :after (lambda (&rest _) (org-element-cache-reset t)))
   )
 
 (use-package org-super-agenda
@@ -1973,9 +1977,9 @@ window that already exists in that direction. It will split otherwise."
   (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
   (helpful-max-buffers 1)
   :config
+  (define-key helpful-mode-map [remap quit-window]
+              'kill-buffer-and-window)
   :general
-  (:keymaps 'helpful-mode-map
-            "q" #'kill-buffer-and-window)
   (+leader-def
     :infix "h"
     "a" #'describe-face
@@ -1986,36 +1990,6 @@ window that already exists in that direction. It will split otherwise."
     "o" #'helpful-symbol
     "v" #'helpful-variable
     "x" #'helpful-command))
-
-;; (use-package elisp-demos
-;;   :config
-;;   (advice-add 'helpful-update
-;;               :after
-;;               #'elisp-demos-advice-helpful-update))
-
-;; help/helpful window placement
-(add-to-list
- 'display-buffer-alist
- '((lambda (buffer _) (with-current-buffer buffer
-                        (seq-some (lambda (mode)
-                                    (derived-mode-p mode))
-                                  '(help-mode helpful-mode))))
-   (display-buffer-reuse-mode-window display-buffer-in-direction)
-   (direction . bottom)
-   (dedicated . t)
-   (window-height . 0.5)
-   (mode . (help-mode helpful-mode))
-   ))
-
-(add-to-list
- 'display-buffer-alist
- '("\\`\\*docker-\\(containers\\|images\\|volumes\\|networks\\|context\\)\\*"
-   (display-buffer-reuse-window display-buffer-in-direction)
-   (direction . bottom)
-   (dedicated . t)
-   (window-height . 0.5)
-   ;; (window-parameters (mode-line-format . none))
-   ))
 
 (use-package compile
   :elpaca nil
@@ -2196,6 +2170,22 @@ See https://pypi.org/project/taskipy/."
 
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")
+
+(use-package devdocs
+  :commands (devdocs-lookup devdocs-install devdocs-update-all devdocs-delete devdocs-persue)
+  :general
+  (+leader-def
+    "sk" 'devdocs-lookup))
+
+(use-package chatgpt-shell
+  :disabled t
+  :general
+  (+leader-def
+    "og" #'chatgpt-shell)
+  :config
+  (setq chatgpt-shell-openai-key
+        (lambda ()
+          (auth-source-pick-first-password :host "api.openai.com"))))
 
 (use-package verb
   :init
