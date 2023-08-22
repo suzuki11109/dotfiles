@@ -97,8 +97,6 @@
   :elpaca nil
   :config
   (general-auto-unbind-keys)
-  ;; Set up some basic equivalents (like `general-nmap') with short named
-  (general-evil-setup t)
 
   (general-create-definer +leader-def
     :states '(visual normal motion)
@@ -277,6 +275,9 @@
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
 
+;; Better unique buffer names for files with the same base name.
+(setq uniquify-buffer-name-style 'forward)
+
 (setq
  ;; Disable lockfiles
  create-lockfiles nil
@@ -407,7 +408,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dired-listing-switches "-ahl")
   (dired-auto-revert-buffer t)
   (dired-dwim-target t)
-  (dired-recursive-copies  'always)
+  (dired-recursive-copies 'always)
   (dired-create-destination-dirs 'ask))
 
 (use-package dired-x
@@ -545,7 +546,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :defer .5
+  :defer 0.5
   :custom
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
@@ -555,8 +556,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-want-Y-yank-to-eol t)
   (evil-split-window-below t)
   (evil-vsplit-window-right t)
-  (evil-kill-on-visual-paste nil)
-  (evil-respect-visual-line-mode t)
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-visual-state-cursor 'hollow)
   :general
@@ -568,7 +567,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-mode 1)
   (modify-syntax-entry ?_ "w")
   (evil-select-search-module 'evil-search-module 'evil-search)
-  ;; (define-key evil-motion-state-map ";" #'evil-ex)
   )
 
 (use-package evil-collection
@@ -577,13 +575,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init)
-  (run-hook-with-args 'evil-collection-setup-hook))
+)
 
 (use-package evil-nerd-commenter
   :after (evil general)
   :commands evilnc-comment-operator
   :general
-  (general-nvmap "gc" #'evilnc-comment-operator))
+  (:states '(normal visual)
+    "gc" #'evilnc-comment-operator))
 
 (use-package evil-escape
   :hook (evil-mode . evil-escape-mode)
@@ -599,7 +598,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package avy
   :commands evil-avy-goto-char-2
   :general
-  (general-nmap "s" #'evil-avy-goto-char-2)
+  (:states '(normal)
+    "s" #'evil-avy-goto-char-2)
   :custom
   (avy-background t))
 
@@ -624,22 +624,46 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :config
   (lispyville-set-key-theme '(operators
                               c-w
-                              text-objects
                               commentary
                               (atom-motions t)
                               (additional-insert normal insert)
                               additional-wrap
                               slurp/barf-cp
                               (escape insert)))
-  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode)
-  :general
-  (:states 'motion
-           :keymaps 'lispyville-mode-map
-           ")" 'lispyville-next-closing
-           "(" 'lispyville-previous-opening
-           "{" 'lispyville-next-opening
-           "}" 'lispyville-previous-closing)
-  )
+
+  ;; configure textobjects here due to conflicts with evil-textobj
+  (defvar +lispville-inner-text-objects-map (make-sparse-keymap))
+  (defvar +lispville-outer-text-objects-map (make-sparse-keymap))
+
+  (evil-define-key '(visual operator) 'lispyville-mode
+    "i" +lispville-inner-text-objects-map
+    "a" +lispville-outer-text-objects-map)
+
+  (general-define-key
+   :keymaps '+lispville-outer-text-objects-map
+   "f" #'lispyville-a-function
+   "a" #'lispyville-a-atom
+   "l" #'lispyville-a-list
+   "x" #'lispyville-a-sexp
+   "g" #'lispyville-a-string)
+
+  (general-define-key
+   :keymaps '+lispville-inner-text-objects-map
+   "f" #'lispyville-inner-function
+   "a" #'lispyville-inner-atom
+   "l" #'lispyville-inner-list
+   "x" #'lispyville-inner-sexp
+   "g" #'lispyville-inner-string)
+
+  (general-define-key
+   :states '(normal visual)
+   :keymaps 'lispyville-mode-map
+   ")" 'lispyville-next-closing
+   "(" 'lispyville-previous-opening
+   "{" 'lispyville-next-opening
+   "}" 'lispyville-previous-closing)
+
+  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode))
 
 ;; Always prompt in minibuffer
 (setq use-dialog-box nil)
@@ -679,6 +703,42 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dolist (mode '(org-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
 
+;; (use-package diminish)
+
+;; Modelines
+;; (defvar after-load-theme-hook nil
+;;   "Hook run after a color theme is loaded using `load-theme'.")
+;; (defadvice load-theme (after run-after-load-theme-hook activate)
+;;   "Run `after-load-theme-hook'."
+;;   (run-hooks 'after-load-theme-hook))
+
+;; (defun +set-mode-line-font ()
+;;     (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :box `(:line-width 4 :color ,(doom-color 'modeline-bg)))
+;;     (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :box `(:line-width 4 :color ,(doom-color 'modeline-bg)))
+;;     (set-face-attribute 'mode-line nil :family "SF Thonburi" :box `(:line-width 4 :color ,(doom-color 'modeline-bg))))
+
+;; (add-hook 'after-load-theme-hook #'+set-mode-line-font)
+;; ;; replace Git- in modeline with icon
+;; (defadvice vc-mode-line (after strip-backend () activate)
+;;   (when (stringp vc-mode)
+;;     (let ((gitlogo (truncate-string-to-width (replace-regexp-in-string "^ Git." " " vc-mode) 14)))
+;;       (setq vc-mode gitlogo))))
+
+;; (setq mode-line-position-column-line-format '("%l,%c"))
+
+;; (use-package minions
+;;   :custom
+;;   (minions-prominent-modes '(flycheck-mode lsp-mode))
+;;   :config
+;;   (minions-mode 1))
+
+
+;; Show line, columns number in modeline
+(size-indication-mode 1)
+(line-number-mode 1)
+(column-number-mode 1)
+(setq mode-line-percent-position nil)
+
 (use-package doom-modeline
   :custom
   (doom-modeline-buffer-file-name-style 'buffer)
@@ -686,6 +746,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
   (doom-modeline-vcs-max-length 20)
+  (doom-modeline-env-version nil)
   :init
   (defun doom-modeline-conditional-buffer-encoding ()
     "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
@@ -698,12 +759,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
   :hook
   (elpaca-after-init . doom-modeline-mode))
-
-;; Show line, columns number in modeline
-(line-number-mode 1)
-(size-indication-mode 1)
-(column-number-mode 1)
-(setq mode-line-percent-position nil)
 
 ;; Show search count in modeline
 (use-package anzu
@@ -906,6 +961,11 @@ of the tab bar."
   (load-theme 'doom-vibrant t)
   (doom-themes-org-config))
 
+(use-package hl-todo
+  :defer 1
+  :config
+  (global-hl-todo-mode 1))
+
 (use-package orderless
   :demand t
   :custom
@@ -936,9 +996,9 @@ of the tab bar."
   :config
   (yas-reload-all))
 
-(use-package cape-yasnippet
-  :elpaca (:host github :repo "elken/cape-yasnippet")
-  :after '(yasnippet cape))
+(use-package yasnippet-capf
+  :after (yasnippet cape)
+  :elpaca (:host github :repo "elken/yasnippet-capf"))
 
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
@@ -1124,13 +1184,12 @@ targets."
   (minibuffer-setup . vertico-repeat-save))
 
 (use-package git-commit
-  :after (evil magit)
   :custom
   (git-commit-summary-max-length 72) ;; defaults to Github's max commit message length
   (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
+  :mode (("COMMIT_EDITMSG" . git-commit-mode))
   :config
-  (evil-set-initial-state 'git-commit-mode 'insert)
-  (global-git-commit-mode 1))
+  (evil-set-initial-state 'git-commit-mode 'insert))
 
 (use-package magit
   :general
@@ -1149,10 +1208,8 @@ targets."
   (magit-diff-refine-hunk t)
   (magit-revision-show-gravatars t)
   (magit-save-repository-buffers nil)
-  ;; (magit-display-buffer-function #'magit-display-buffer-fullcolumn-most-v1)
   (magit-revision-insert-related-refs nil)
   (magit-bury-buffer-function #'magit-mode-quit-window)
-
   :config
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
@@ -1192,7 +1249,7 @@ targets."
                ('(+magit--display-buffer-in-direction))))))
 
   (defvar +magit-open-windows-in-direction 'right
-  "What direction to open new windows from the status buffer.
+    "What direction to open new windows from the status buffer.
 For example, diffs and log buffers. Accepts `left', `right', `up', and `down'.")
 
   (defun +magit--display-buffer-in-direction (buffer alist)
@@ -1239,56 +1296,80 @@ window that already exists in that direction. It will split otherwise."
     (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
       (call-interactively 'magit-status)))
 
-    (defun +magit-process-environment (env)
-      "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
+  (defun +magit-process-environment (env)
+    "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
   https://github.com/magit/magit/issues/460 (@cpitclaudel)."
-      (let ((default (file-name-as-directory (expand-file-name default-directory)))
-            (home (expand-file-name "~/")))
-        (when (string= default home)
+    (let ((default (file-name-as-directory (expand-file-name default-directory)))
+          (home (expand-file-name "~/")))
+      (when (string= default home)
         (let ((gitdir (expand-file-name "~/.cfg")))
-            (push (format "GIT_WORK_TREE=%s" home) env)
-            (push (format "GIT_DIR=%s" gitdir) env))))
-      env)
+          (push (format "GIT_WORK_TREE=%s" home) env)
+          (push (format "GIT_DIR=%s" gitdir) env))))
+    env)
 
-    (advice-add 'magit-process-environment
-                :filter-return #'+magit-process-environment)
+  (advice-add 'magit-process-environment
+              :filter-return #'+magit-process-environment)
   )
 
-(use-package diff-hl
-  :hook (find-file . diff-hl-mode)
-  :hook (dired-mode . diff-hl-dired-mode)
-  :hook (vc-dir-mode . diff-hl-dir-mode)
-  :hook (diff-hl-mode . diff-hl-flydiff-mode)
-  :hook (diff-hl-mode . +fix-diff-hl-faces)
-  :hook (magit-pre-refresh . diff-hl-magit-pre-refresh)
-  :hook (magit-post-refresh . diff-hl-magit-post-refresh)
-  :general
-  (+leader-def
-    "gs" '(diff-hl-stage-current-hunk :wk "stage hunk")
-    "gh" '(diff-hl-diff-goto-hunk :wk "diff hunk")
-    "g]" '(diff-hl-next-hunk :wk "next hunk")
-    "g[" '(diff-hl-previous-hunk :wk "previous hunk")
-    "gr" '(diff-hl-revert-hunk :wk "revert hunk"))
-  :custom
-  (diff-hl-draw-borders nil)
-  :preface
-  (defun +fix-diff-hl-faces ()
-    (set-face-background 'diff-hl-insert nil)
-    (set-face-background 'diff-hl-delete nil)
-    (set-face-background 'diff-hl-change nil))
-  :init
-  (defun +vc-gutter-type-at-pos-fn (type _pos)
-    (if (eq type 'delete)
-        'diff-hl-bmp-delete
-      'diff-hl-bmp-modified))
-  (advice-add 'diff-hl-fringe-bmp-from-pos  :override #'+vc-gutter-type-at-pos-fn)
-  (advice-add 'diff-hl-fringe-bmp-from-type :override #'+vc-gutter-type-at-pos-fn)
-  (defun +vc-gutter-define-thin-bitmaps ()
-    (define-fringe-bitmap 'diff-hl-bmp-modified [224] nil nil '(center repeated))
-    (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top)
-    )
-  (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
-  )
+(use-package forge
+  :after magit
+  :config
+  (evil-collection-forge-setup)
+  (general-define-key
+    :keymaps 'forge-topic-list-mode-map
+    "q" #'kill-current-buffer)
+  (+local-leader-def
+    :keymaps 'forge-topic-mode-map
+    "c"  #'forge-create-post
+    "e"  '(:ignore t :which-key "edit")
+    "ea" #'forge-edit-topic-assignees
+    "ed" #'forge-edit-topic-draft
+    "ek" #'forge-delete-comment
+    "el" #'forge-edit-topic-labels
+    "em" #'forge-edit-topic-marks
+    "eM" #'forge-merge
+    "en" #'forge-edit-topic-note
+    "ep" #'forge-edit-post
+    "er" #'forge-edit-topic-review-requests
+    "es" #'forge-edit-topic-state
+    "et" #'forge-edit-topic-title)
+)
+
+;; (use-package diff-hl
+;;   :hook (find-file . diff-hl-mode)
+;;   :hook (dired-mode . diff-hl-dired-mode)
+;;   :hook (vc-dir-mode . diff-hl-dir-mode)
+;;   :hook (diff-hl-mode . diff-hl-flydiff-mode)
+;;   :hook (diff-hl-mode . +fix-diff-hl-faces)
+;;   :hook (magit-pre-refresh . diff-hl-magit-pre-refresh)
+;;   :hook (magit-post-refresh . diff-hl-magit-post-refresh)
+;;   :general
+;;   (+leader-def
+;;     "gs" '(diff-hl-stage-current-hunk :wk "stage hunk")
+;;     "gh" '(diff-hl-diff-goto-hunk :wk "diff hunk")
+;;     "g]" '(diff-hl-next-hunk :wk "next hunk")
+;;     "g[" '(diff-hl-previous-hunk :wk "previous hunk")
+;;     "gr" '(diff-hl-revert-hunk :wk "revert hunk"))
+;;   :custom
+;;   (diff-hl-draw-borders nil)
+;;   :preface
+;;   (defun +fix-diff-hl-faces ()
+;;     (set-face-background 'diff-hl-insert nil)
+;;     (set-face-background 'diff-hl-delete nil)
+;;     (set-face-background 'diff-hl-change nil))
+;;   :init
+;;   (defun +vc-gutter-type-at-pos-fn (type _pos)
+;;     (if (eq type 'delete)
+;;         'diff-hl-bmp-delete
+;;       'diff-hl-bmp-modified))
+;;   (advice-add 'diff-hl-fringe-bmp-from-pos  :override #'+vc-gutter-type-at-pos-fn)
+;;   (advice-add 'diff-hl-fringe-bmp-from-type :override #'+vc-gutter-type-at-pos-fn)
+;;   (defun +vc-gutter-define-thin-bitmaps ()
+;;     (define-fringe-bitmap 'diff-hl-bmp-modified [224] nil nil '(center repeated))
+;;     (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top)
+;;     )
+;;   (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
+;;   )
 
 (use-package smerge-mode
   :elpaca nil
@@ -1384,6 +1465,24 @@ window that already exists in that direction. It will split otherwise."
         (message "`%s' parser was installed." lang)
         (sit-for 0.75)))))
 
+(use-package evil-textobj-tree-sitter
+  :after (evil)
+  :elpaca (:host github
+                 :repo "meain/evil-textobj-tree-sitter"
+                 :files (:defaults "queries" "treesit-queries"))
+  :config
+  (general-define-key
+     :keymaps 'evil-outer-text-objects-map
+     "f" (evil-textobj-tree-sitter-get-textobj "function.outer")
+     "a" (evil-textobj-tree-sitter-get-textobj "parameter.outer")
+     "c" (evil-textobj-tree-sitter-get-textobj "class.outer"))
+  (general-define-key
+     :keymaps 'evil-inner-text-objects-map
+     "f" (evil-textobj-tree-sitter-get-textobj "function.inner")
+     "a" (evil-textobj-tree-sitter-get-textobj "parameter.inner")
+     "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
+  )
+
 (use-package lsp-mode
   :commands (lsp lsp-deferred lsp-install-server)
   :preface
@@ -1407,11 +1506,13 @@ window that already exists in that direction. It will split otherwise."
       (setq-local completion-at-point-functions
                   (list (cape-super-capf
                          'non-greedy-lsp
-                         #'cape-yasnippet
+                         #'yasnippet-capf
                          )))
       ))
   :hook
-  (lsp-managed-mode . (lambda () (general-nmap
+  (lsp-managed-mode . evil-normalize-keymaps)
+  (lsp-managed-mode . (lambda () (general-define-key
+                                   :states '(normal)
                                    :keymaps 'local
                                    "K" 'lsp-describe-thing-at-point)))
   (lsp-completion-mode . +update-completions-list)
@@ -1462,23 +1563,15 @@ window that already exists in that direction. It will split otherwise."
         (funcall fn checker property)))
   (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
   :custom
-  (flycheck-idle-change-delay 0.8)
   (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   :config
   (delq 'new-line flycheck-check-syntax-automatically)
-
-  ;; TODO: change it enable only
-  (setq-default flycheck-disabled-checkers
-                `(,@flycheck-disabled-checkers go-gofmt go-golint go-vet go-build go-test go-errcheck go-unconvert go-staticcheck))
   :general
   (+leader-def
     "cx" '(flycheck-list-errors :wk "list errors"))
   :hook
-  (lsp-managed-mode . (lambda ()
-                (when (derived-mode-p 'go-ts-mode)
-                  (setq flycheck-local-checkers '((lsp . ((next-checkers . (golangci-lint)))))))))
   (prog-mode . flycheck-mode))
 
 (use-package flycheck-status-emoji
@@ -1491,7 +1584,13 @@ window that already exists in that direction. It will split otherwise."
   :config
   (flycheck-add-mode 'golangci-lint 'go-ts-mode)
   :hook
-  (go-ts-mode . flycheck-golangci-lint-setup))
+  (go-ts-mode . (lambda ()
+                  (setq flycheck-checker nil)))
+  (go-ts-mode . flycheck-golangci-lint-setup)
+  (lsp-managed-mode . (lambda ()
+                (when (derived-mode-p 'go-ts-mode)
+                  (setq flycheck-local-checkers '((lsp . ((next-checkers . (golangci-lint)))))))))
+  )
 
 (use-package go-ts-mode
   :elpaca nil
@@ -1594,6 +1693,12 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (web-mode . apheleia-mode))
 
+(use-package auto-rename-tag
+  :hook ((js-ts-mode . auto-rename-tag-mode)
+         (html-ts-mode . auto-rename-tag-mode)
+         (typescript-ts-mode . auto-rename-tag-mode)
+         (tsx-ts-mode . auto-rename-tag-mode)))
+
 (use-package lsp-pyright
   :hook
   ((python-mode python-ts-mode) . lsp-deferred))
@@ -1687,6 +1792,7 @@ window that already exists in that direction. It will split otherwise."
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
   :custom
   (markdown-enable-math t)
+  (markdown-fontify-code-blocks-natively t)
   (markdown-gfm-additional-languages '("sh")))
 
 ;; others
@@ -1724,7 +1830,7 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "oe"  #'eshell
     "oE"  #'eshell-new)
-  (general-nvmap
+  (:states '(normal visual)
     :keymaps 'eshell-mode-map
     "<return>" #'evil-insert-resume)
   :init
@@ -1746,7 +1852,7 @@ window that already exists in that direction. It will split otherwise."
   (general-imap
     :keymaps 'vterm-mode-map
     "C-y" #'vterm-yank)
-  (general-nvmap
+  (:states '(normal visual)
     :keymaps 'vterm-mode-map
     "<return>" #'evil-insert-resume)
   :config
@@ -1790,8 +1896,9 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package org
   :elpaca nil
+  :init
+  (setq org-directory "~/Dropbox/org/")
   :custom
-  (org-directory "~/Dropbox/org/")
   (org-adapt-indentation t)
   (org-cycle-separator-lines 2)
   (org-hide-emphasis-markers t)
@@ -1804,7 +1911,6 @@ window that already exists in that direction. It will split otherwise."
   (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
   (org-edit-src-turn-on-auto-save t)
-  ;; (org-indirect-buffer-display 'current-window)
 
   :config
   ;; (add-hook 'org-capture-before-finalize-hook 'org-set-tags-command)
@@ -1846,6 +1952,10 @@ window that already exists in that direction. It will split otherwise."
     :keymaps '(org-mode-map)
     "'" #'org-edit-special
     "." #'consult-org-heading
+    "e"   '(nil :wk "eval")
+    "ed"  'eval-defun
+    "ee"  'eval-last-sexp
+    "er"  'eval-region
     "l" #'org-insert-link)
   :hook
   (org-mode . visual-line-mode)
@@ -1862,6 +1972,8 @@ window that already exists in that direction. It will split otherwise."
             "M-O" 'evil-org-org-insert-subheading-below)
   :config
   (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
+  (evil-define-key 'motion 'evil-org-mode
+    (kbd "$") 'evil-end-of-line)
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
