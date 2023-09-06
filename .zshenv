@@ -15,19 +15,14 @@ export PATH=$PATH:$HOME/go/bin
 # export PATH="$HOME/.local/share/fnm:$PATH" # installed by pacman
 command -v fnm >/dev/null && eval "`fnm env`"
 
-# export PATH="$HOME/.rbenv/bin:$PATH"
 command -v rbenv > /dev/null && eval "$(rbenv init - zsh)"
 
 export PYENV_ROOT="$HOME/.pyenv"
-command -v pyenv >/dev/null && eval "$(pyenv init -)"
-# eval "$(pyenv virtualenv-init -)"
-
-# export PATH=$PATH:$HOME/.local/share/coursier/bin
+command -v pyenv >/dev/null && eval "$(pyenv init -)" && eval "$(pyenv virtualenv-init -)"
 
 [[ -r "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
 
-command -v pyenv >/dev/null && eval "$(direnv hook zsh)"
+command -v direnv >/dev/null && eval "$(direnv hook zsh)"
 
 export SDKMAN_DIR="$HOME/.sdkman"
 [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-

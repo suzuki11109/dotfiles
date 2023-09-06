@@ -662,14 +662,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-vsplit-window-right t)
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-visual-state-cursor 'hollow)
+  (evil-respect-visual-line-mode t)
+  (evil-symbol-word-search t)
   :general
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
   (:states 'motion
     ";" 'evil-ex)
   :config
+  ;; (modify-syntax-entry ?_ "w")
   (evil-mode 1)
-  (modify-syntax-entry ?_ "w")
+  (evil-set-undo-system 'undo-redo)
   (evil-select-search-module 'evil-search-module 'evil-search)
   )
 
@@ -710,21 +713,27 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ** Undo
 #+begin_src emacs-lisp
 ;; undo
-(use-package undo-fu
-  :after evil
-  :init
-  (setq undo-limit 10000000
-        undo-strong-limit 50000000
-        undo-outer-limit 150000000)
-  :config
-  (evil-set-undo-system 'undo-fu))
+;; (use-package undo-fu
+;;   :after evil
+;;   :init
+;;   (setq undo-limit 10000000
+;;         undo-strong-limit 50000000
+;;         undo-outer-limit 150000000)
+;;   :config
+;;   (evil-set-undo-system 'undo-redo))
 
-(use-package undo-fu-session
-  :after undo-fu
-  :custom
-  (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
+;; (use-package undo-fu-session
+;;   :after undo-fu
+;;   :custom
+;;   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
+;;   :config
+;;   (undo-fu-session-global-mode 1))
+(use-package vundo
+  :commands vundo
   :config
-  (undo-fu-session-global-mode 1))
+  (setq vundo-glyph-alist vundo-unicode-symbols)
+  :elpaca (:host github :repo "casouri/vundo")
+  )
 #+end_src
 
 ** Lispy
@@ -1295,13 +1304,13 @@ targets."
               :around #'embark-hide-which-key-indicator)
 
   :bind
-  ("C-." . 'embark-dwim)
-  ("C-;" . 'embark-act))
-
-;; (:map minibuffer-local-map)
+  ("C-." . embark-dwim)
+  ("C-;" . embark-act)
+  (:map embark-general-map
+    ("D" . xref-find-definitions-other-window))
+  )
 
 (use-package embark-consult
-  ;; :after (embark consult)
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
 
