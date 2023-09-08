@@ -1517,6 +1517,9 @@ window that already exists in that direction. It will split otherwise."
   (lsp-insert-final-newline nil)
   (lsp-signature-auto-activate nil)
   (lsp-idle-delay 0.5)
+  :config
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
+
   :init
   (defun +update-completions-list ()
     (progn
@@ -1720,6 +1723,16 @@ window that already exists in that direction. It will split otherwise."
 (use-package lsp-pyright
   :hook
   ((python-mode python-ts-mode) . lsp-deferred))
+
+(use-package pytest
+  :elpaca (:host github :repo "ionrock/pytest-el")
+  :general
+  (+local-leader-def
+    :keymaps '(python-ts-mode-map)
+    "t" '(nil :wk "test")
+    "ta" #'pytest-all
+    "tr" #'pytest-again
+    "ts" #'pytest-one))
 
 (use-package ruby-ts-mode
   :elpaca nil
