@@ -598,6 +598,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package evil-surround
   :hook (evil-mode . global-evil-surround-mode))
 
+(use-package evil-goggles
+  :after evil
+  :config
+  (setq evil-goggles-enable-delete nil)
+  (setq evil-goggles-enable-change nil)
+  (setq evil-goggles-enable-nerd-commenter nil)
+  (evil-goggles-mode 1))
+
 (use-package avy
   :commands evil-avy-goto-char-2
   :general
@@ -1193,12 +1201,13 @@ targets."
   (minibuffer-setup . vertico-repeat-save))
 
 (use-package git-commit
+  :after magit
   :custom
-  (git-commit-summary-max-length 72) ;; defaults to Github's max commit message length
+  (git-commit-summary-max-length 72)
   (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
-  :mode (("COMMIT_EDITMSG" . git-commit-mode))
   :config
-  (evil-set-initial-state 'git-commit-mode 'insert))
+  (evil-set-initial-state 'git-commit-mode 'insert)
+  (global-git-commit-mode 1))
 
 (use-package magit
   :general
@@ -1858,41 +1867,47 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def
     "ot" #'vterm)
-  (general-imap
-    :keymaps 'vterm-mode-map
-    "C-y" #'vterm-yank)
+  (:states '(insert)
+   :keymaps 'vterm-mode-map
+   "C-y" #'vterm-yank)
   (:states '(normal visual)
-    :keymaps 'vterm-mode-map
-    "<return>" #'evil-insert-resume)
+           :keymaps 'vterm-mode-map
+           "<return>" #'evil-insert-resume)
+  :custom
+  (vterm-kill-buffer-on-exit t)
+  (vterm-max-scrollback 10000)
+  (vterm-always-compile-module t)
+  (vterm-tramp-shells '(("docker" "/bin/sh")))
+  (vterm-timer-delay 0.01)
   :config
-  (setq vterm-timer-delay 0.01
-        vterm-kill-buffer-on-exit t
-        vterm-always-compile-module t
-        vterm-max-scrollback 10000
-        vterm-tramp-shells '(("docker" "/bin/sh")))
+  ;; Hide vterm install window
+  (add-to-list
+   'display-buffer-alist
+   `(" \\*Install vterm\\*"
+     (display-buffer-no-window)
+     (allow-no-window . t)))
 
   (with-eval-after-load 'consult
     (defvar  +consult--source-term
       (list :name     "Terminal buffers"
             :narrow   ?t
             :category 'buffer
-          :face     'consult-buffer
+            :face     'consult-buffer
             :history  'buffer-name-history
             :state    #'consult--buffer-state
-          :items (lambda () (consult--buffer-query
-                   :predicate #'tabspaces--local-buffer-p
-                   :mode '(shell-mode eshell-mode vterm-mode)
-                   :sort 'visibility
-                   :as #'buffer-name))))
-
+            :items (lambda () (consult--buffer-query
+                               :predicate #'tabspaces--local-buffer-p
+                               :mode '(shell-mode eshell-mode vterm-mode)
+                               :sort 'visibility
+                               :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
   (add-hook 'vterm-mode-hook
             (lambda ()
               (setq-local confirm-kill-processes nil)
               (setq-local hscroll-margin 0)
-              (setq-local evil-insert-state-cursor 'bar)
-        ))
+              (setq-local evil-insert-state-cursor 'box)
+              ))
   )
 
 
