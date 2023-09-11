@@ -136,7 +136,6 @@
     "cc" '(compile :wk "Compile")
     "cC" '(recompile :wk "Recompile")
     "cd" '(xref-find-definitions :wk "Go to definitions")
-    "cD" '(xref-find-references :wk "Go to references")
 
     "f"   '(nil :wk "file")
     "fd"  #'dired
@@ -720,36 +719,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dolist (mode '(org-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
 
-;; (use-package diminish)
-
-;; Modelines
-;; (defvar after-load-theme-hook nil
-;;   "Hook run after a color theme is loaded using `load-theme'.")
-;; (defadvice load-theme (after run-after-load-theme-hook activate)
-;;   "Run `after-load-theme-hook'."
-;;   (run-hooks 'after-load-theme-hook))
-
-;; (defun +set-mode-line-font ()
-;;     (set-face-attribute 'mode-line-inactive nil :family "SF Thonburi" :box `(:line-width 4 :color ,(doom-color 'modeline-bg)))
-;;     (set-face-attribute 'mode-line-active nil :family "SF Thonburi" :box `(:line-width 4 :color ,(doom-color 'modeline-bg)))
-;;     (set-face-attribute 'mode-line nil :family "SF Thonburi" :box `(:line-width 4 :color ,(doom-color 'modeline-bg))))
-
-;; (add-hook 'after-load-theme-hook #'+set-mode-line-font)
-;; ;; replace Git- in modeline with icon
-;; (defadvice vc-mode-line (after strip-backend () activate)
-;;   (when (stringp vc-mode)
-;;     (let ((gitlogo (truncate-string-to-width (replace-regexp-in-string "^ Git." " " vc-mode) 14)))
-;;       (setq vc-mode gitlogo))))
-
-;; (setq mode-line-position-column-line-format '("%l,%c"))
-
-;; (use-package minions
-;;   :custom
-;;   (minions-prominent-modes '(flycheck-mode lsp-mode))
-;;   :config
-;;   (minions-mode 1))
-
-
 ;; Show line, columns number in modeline
 (size-indication-mode 1)
 (line-number-mode 1)
@@ -763,7 +732,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
   (doom-modeline-vcs-max-length 20)
-  (doom-modeline-env-version nil)
   :init
   (defun doom-modeline-conditional-buffer-encoding ()
     "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
@@ -941,6 +909,7 @@ of the tab bar."
       "\\*Flycheck errors\\*"
       "\\*Org Select\\*"
       help-mode
+      lsp-help-mode
       helpful-mode
       docker-container-mode
       docker-network-mode
@@ -950,6 +919,7 @@ of the tab bar."
       "\\*Org Select\\*"
       "\\*Capture\\*"
       "^CAPTURE-"
+      "\\*xref\\*"
       ))
   :config
   (popper-mode +1)
@@ -1542,6 +1512,7 @@ window that already exists in that direction. It will split otherwise."
     :keymaps 'lsp-mode-map
     :infix "c"
     "a" '(lsp-execute-code-action :wk "Code action")
+    "D" '(lsp-find-references :wk "Find references")
     "i" '(lsp-find-implementation :wk "Find implementation")
     "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
     "l" '(lsp-avy-lens :wk "Click lens")
@@ -1731,8 +1702,12 @@ window that already exists in that direction. It will split otherwise."
     :keymaps '(python-ts-mode-map)
     "t" '(nil :wk "test")
     "ta" #'pytest-all
+    "tf" #'pytest-module
+    "t." #'pytest-run
     "tr" #'pytest-again
     "ts" #'pytest-one))
+
+(use-package pyvenv)
 
 (use-package ruby-ts-mode
   :elpaca nil
@@ -1854,6 +1829,16 @@ window that already exists in that direction. It will split otherwise."
   :init
   (add-to-list 'auto-mode-alist
                (cons "/.dockerignore\\'" 'gitignore-mode)))
+
+(use-package eat
+  :elpaca (eat :type git
+               :host codeberg
+               :repo "akib/emacs-eat"
+               :files ("*.el" ("term" "term/*.el") "*.texi"
+                       "*.ti" ("terminfo/e" "terminfo/e/*")
+                       ("terminfo/65" "terminfo/65/*")
+                       ("integration" "integration/*")
+                       (:exclude ".dir-locals.el" "*-tests.el"))))
 
 (use-package eshell
   :elpaca nil
@@ -2127,6 +2112,8 @@ window that already exists in that direction. It will split otherwise."
   (helpful-max-buffers 1)
   :config
   (define-key helpful-mode-map [remap quit-window]
+              'kill-buffer-and-window)
+  (define-key help-mode-map [remap quit-window]
               'kill-buffer-and-window)
   :general
   (+leader-def
