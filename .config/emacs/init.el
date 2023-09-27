@@ -1,3 +1,7 @@
+;; Some constants
+(defconst IS-MAC      (eq system-type 'darwin))
+(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+
 ;; Native compilation settings
 (when (featurep 'native-compile)
   (setq
@@ -179,6 +183,14 @@
     "kl"  #'list-bookmarks
     "kd"  #'bookmark-delete
 
+    "l"  '(nil :wk "package")
+    "lm" #'elpaca-manager
+    "ld" #'elpaca-delete
+    "ll" #'elpaca-log
+    "lt" #'elpaca-status
+    "lu" #'elpaca-update
+    "lU" #'elpaca-update-all
+
     "m"   '(nil :wk "mode-specific")
 
     "n"   '(nil :wk "notes")
@@ -230,7 +242,6 @@
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1)
-  (which-key-use-C-h-commands nil)
   :config
   (which-key-mode 1))
 
@@ -350,28 +361,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; suppress large file opening confirmation
 (setq large-file-warning-threshold nil)
-;; open files externallyt
-(use-package openwith
-  :defer 1
-  :config
-  (setq openwith-associations
-        (list
-         (list (openwith-make-extension-regexp
-                '("mpg" "mpeg" "mp3" "mp4" "avi" "wmv" "wav" "mov" "flv" "ogm" "ogg" "mkv"))
-               "vlc"
-               '(file))
-         ;; (list (openwith-make-extension-regexp
-         ;;        '("xbm" "pbm" "pgm" "ppm" "pnm"
-         ;;          "png" "gif" "bmp" "tif" "jpeg")) ;; Removed jpg because Telega was
-         ;;       ;; causing feh to be opened...
-         ;;       "feh"
-         ;;       '(file))
-         ;; (list (openwith-make-extension-regexp
-         ;;        '("pdf"))
-         ;;       "zathura"
-         ;;       '(file))
-         ))
-  (openwith-mode 1))
 
 ;; recent files
 (use-package recentf
@@ -408,6 +397,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dired-auto-revert-buffer t)
   (dired-dwim-target t)
   (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'top)
   (dired-create-destination-dirs 'ask))
 
 (use-package dired-x
@@ -423,7 +413,20 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                 "\\|^\\.ccls-cache\\'"
                 "\\|\\(?:\\.js\\)?\\.meta\\'"
                 "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
-  (setq dired-clean-confirm-killing-deleted-buffers nil))
+  (setq dired-clean-confirm-killing-deleted-buffers nil)
+  (when-let (cmd (cond (IS-MAC "open")
+                       (IS-LINUX "xdg-open")))
+    (setq dired-guess-shell-alist-user
+          `(("\\.\\(?:docx\\|pdf\\|djvu\\|eps\\)\\'" ,cmd)
+            ("\\.\\(?:jpe?g\\|png\\|gif\\|xpm\\)\\'" ,cmd)
+            ("\\.\\(?:xcf\\)\\'" ,cmd)
+            ("\\.csv\\'" ,cmd)
+            ("\\.tex\\'" ,cmd)
+            ("\\.\\(?:mp4\\|mkv\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'" ,cmd)
+            ("\\.\\(?:mp3\\|flac\\)\\'" ,cmd)
+            ("\\.html?\\'" ,cmd)
+            ("\\.md\\'" ,cmd))))
+)
 
 ;; (use-package dired-aux
 ;;   :straight (:type built-in)
@@ -432,6 +435,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;;   (setq dired-create-destination-dirs 'ask
 ;;         dired-vc-rename-file t))
 
+;; dired fontlock
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
@@ -565,7 +569,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (:states 'motion
     ";" 'evil-ex)
   :config
-  ;; (modify-syntax-entry ?_ "w")
+  (modify-syntax-entry ?_ "w")
+  (defalias 'forward-evil-word 'forward-evil-symbol)
+  (setq evil-visual-state-cursor '(hollow))
   (evil-mode 1)
   (evil-set-undo-system 'undo-redo)
   (evil-select-search-module 'evil-search-module 'evil-search)
@@ -956,12 +962,13 @@ of the tab bar."
 (use-package orderless
   :demand t
   :custom
-  (completion-styles '(orderless partial-completion basic))
+  (orderless-matching-styles '(orderless-literal orderless-regexp orderless-flex))
+  (completion-styles '(orderless basic))
   (completion-category-defaults nil)
   (completion-category-overrides nil)
-  ;; (completion-category-overrides
-  ;;  '((file (styles . (orderless partial-completion basic)))
-  ;;    ))
+  (completion-category-overrides
+   '((file (styles . (basic partial-completion)))
+     ))
   :config
   (defun +orderless-dispatch-flex-first (_pattern index _total)
     (and (eq index 0) 'orderless-flex))
@@ -992,6 +999,8 @@ of the tab bar."
 (use-package cape)
 (use-package corfu
   :defer 1
+  :elpaca (:host github :repo "minad/corfu"
+                 :files (:defaults "extensions/*"))
   :hook
   ((eshell-mode comint-mode) . (lambda ()
                                  (setq-local corfu-auto nil)
@@ -999,14 +1008,17 @@ of the tab bar."
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.1)
+  (corfu-auto-delay 0.15)
   (corfu-min-width 25)
-  (corfu-quit-no-match t)
+  ;; (corfu-quit-no-match t)
   (corfu-preview-current nil)
   (corfu-on-exact-match nil)
   (corfu-preselect 'first)
   :config
   (global-corfu-mode 1)
+  (add-to-list 'savehist-additional-variables 'corfu-history)
+  (corfu-history-mode 1)
+
   (defun corfu-enable-in-minibuffer ()
     (when (where-is-internal #'completion-at-point (list (current-local-map)))
       (setq-local corfu-auto nil)
@@ -1072,6 +1084,7 @@ of the tab bar."
   ([remap switch-to-buffer]              . consult-buffer)
   ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
   ([remap yank-pop]                      . consult-yank-pop)
+  ([remap project-switch-to-buffer]      . consult-project-buffer)
   :general
   ("C-s" 'consult-line)
   (+leader-def
@@ -1081,8 +1094,16 @@ of the tab bar."
     "sh"  #'consult-history
     "sp"  #'consult-ripgrep
     "hI"  #'consult-info)
+  :bind
+  (:map minibuffer-local-map
+    ("M-r" . consult-history))
   :custom
-  (consult-narrow-key "<"))
+  (xref-show-xrefs-function #'consult-xref)
+  (xref-show-definitions-function #'consult-xref)
+  (consult-narrow-key "<")
+  :config
+
+)
 
 (use-package embark
   :after vertico
@@ -1405,6 +1426,11 @@ window that already exists in that direction. It will split otherwise."
     ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
     ("q" nil :color blue)))
 
+(use-package browse-at-remote
+  :general
+  (+leader-def
+    "gw" #'browse-at-remote))
+
 (use-package treesit
   :elpaca nil
   :init
@@ -1486,7 +1512,7 @@ window that already exists in that direction. It will split otherwise."
   (lsp-modeline-diagnostics-enable nil)
   (lsp-insert-final-newline nil)
   (lsp-signature-auto-activate nil)
-  (lsp-idle-delay 0.5)
+  ;; (lsp-idle-delay 0.8)
   :config
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
 
@@ -1558,27 +1584,19 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
-  :config
-  (delq 'new-line flycheck-check-syntax-automatically)
+  (flycheck-check-syntax-automatically '(save mode-enabled))
   :general
   (+leader-def
     "cx" '(flycheck-list-errors :wk "list errors"))
   :hook
-  (prog-mode . flycheck-mode))
-
-(use-package flycheck-status-emoji
-  :after (flycheck)
-  :hook
-  (flycheck-mode . flycheck-status-emoji-mode))
+  (prog-mode . flycheck-mode)
+)
 
 (use-package flycheck-golangci-lint
-  :after (flycheck)
-  :config
-  (flycheck-add-mode 'golangci-lint 'go-ts-mode)
   :hook
   (go-ts-mode . (lambda ()
-                  (setq flycheck-checker nil)))
-  (go-ts-mode . flycheck-golangci-lint-setup)
+                  (flycheck-add-mode 'golangci-lint 'go-ts-mode)
+                  (flycheck-golangci-lint-setup)))
   (lsp-managed-mode . (lambda ()
                 (when (derived-mode-p 'go-ts-mode)
                   (setq flycheck-local-checkers '((lsp . ((next-checkers . (golangci-lint)))))))))
@@ -1704,10 +1722,18 @@ window that already exists in that direction. It will split otherwise."
     "ta" #'pytest-all
     "tf" #'pytest-module
     "t." #'pytest-run
-    "tr" #'pytest-again
+    "tt" #'pytest-again
     "ts" #'pytest-one))
 
-(use-package pyvenv)
+(use-package auto-virtualenv
+  :hook
+  ((python-mode python-ts-mode) . auto-virtualenv-set-virtualenv))
+
+(use-package pyvenv
+  :init
+  (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name ("venv:" pyvenv-virtual-env-name " ")))
+  :hook
+  ((python-mode python-ts-mode) . pyvenv-mode))
 
 (use-package ruby-ts-mode
   :elpaca nil
@@ -1838,7 +1864,14 @@ window that already exists in that direction. It will split otherwise."
                        "*.ti" ("terminfo/e" "terminfo/e/*")
                        ("terminfo/65" "terminfo/65/*")
                        ("integration" "integration/*")
-                       (:exclude ".dir-locals.el" "*-tests.el"))))
+                       (:exclude ".dir-locals.el" "*-tests.el")))
+
+  :config
+  ;; For `eat-eshell-mode'.
+  (add-hook 'eshell-load-hook #'eat-eshell-mode)
+  ;; For `eat-eshell-visual-command-mode'.
+  (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
+  )
 
 (use-package eshell
   :elpaca nil
@@ -1847,13 +1880,53 @@ window that already exists in that direction. It will split otherwise."
     "oe"  #'eshell
     "oE"  #'eshell-new)
   (:states '(normal visual)
-    :keymaps 'eshell-mode-map
-    "<return>" #'evil-insert-resume)
+           :keymaps 'eshell-mode-map
+           "<return>" #'evil-insert-resume)
+  (:states '(insert)
+   :keymaps 'eshell-mode-map
+   "C-y" #'yank)
+  :preface
+  (defface +eshell-prompt-pwd '((t (:inherit font-lock-constant-face)))
+    "TODO"
+    :group 'eshell)
+
+  (defun +eshell-default-prompt-fn ()
+    "Generate the prompt string for eshell. Use for `eshell-prompt-function'."
+    (require 'shrink-path)
+    (concat (if (bobp) "" "")
+            (let ((pwd (eshell/pwd)))
+              (propertize (if (equal pwd "~")
+                              pwd
+                            (abbreviate-file-name (shrink-path-file pwd)))
+                          'face '+eshell-prompt-pwd))
+            (propertize " λ" 'face (if (zerop eshell-last-command-status) 'success 'error))
+            " "))
   :init
   (defun eshell-new ()
     "Open a new instance of eshell."
     (interactive)
-    (eshell 'N))
+    (popper-mode 0) ;; temporarily disable popper
+    (eshell 'N)
+    (popper-mode 1)
+  )
+  (setq eshell-banner-message ""
+        eshell-scroll-to-bottom-on-input 'all
+        eshell-scroll-to-bottom-on-output 'all
+        eshell-kill-processes-on-exit t
+        eshell-hist-ignoredups t
+        eshell-prompt-regexp "^.* λ "
+        eshell-prompt-function #'+eshell-default-prompt-fn
+        eshell-glob-case-insensitive t
+        eshell-error-if-no-glob t)
+
+  (add-hook 'eshell-mode-hook
+             (defun +eshell-remove-fringes-h ()
+               (set-window-fringes nil 0 0)
+               (set-window-margins nil 1 nil)))
+  (add-hook 'eshell-mode-hook
+             (defun +eshell-enable-text-wrapping-h ()
+               (visual-line-mode +1)
+               (set-display-table-slot standard-display-table 0 ?\ )))
   )
 
 (use-package eshell-z
@@ -2087,6 +2160,11 @@ window that already exists in that direction. It will split otherwise."
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
 
+(use-package deadgrep
+  :general
+  (+leader-def
+    "sg" #'deadgrep))
+
 (setq help-window-select t)
 (use-package helpful
   :hook
@@ -2132,11 +2210,14 @@ window that already exists in that direction. It will split otherwise."
   :custom
   ;; Always kill current compilation process before starting a new one
   (compilation-always-kill t)
+  (compilation-ask-about-save nil)  ; save all buffers on `compile'
   ;; Scroll compilation buffer
   (compilation-scroll-output 'first-error)
   :config
-  ;; colorize compilation buffer
+  (add-hook 'compilation-mode-hook 'visual-line-mode)
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+  ;; (autoload 'comint-truncate-buffer "comint" nil t)
+  ;; (add-hook 'compilation-filter-hook #'comint-truncate-buffer)
 
   (with-eval-after-load 'consult
     (defvar  +consult--source-compilation
@@ -2154,6 +2235,45 @@ window that already exists in that direction. It will split otherwise."
 
     (add-to-list 'consult-buffer-sources '+consult--source-compilation 'append))
   )
+
+(use-package fancy-compilation
+  :disabled t
+  :commands (fancy-compilation-mode)
+  :init
+  (with-eval-after-load 'compile
+    (fancy-compilation-mode)))
+
+(use-package shell-command-x
+  :config
+  ;; (setq shell-command-switch "-ic")
+  (shell-command-x-mode 1))
+
+;; (use-package xterm-color
+;;   :config
+;;   (setq comint-output-filter-functions
+;;         (remove 'ansi-color-process-output comint-output-filter-functions))
+
+;;   (add-hook 'shell-mode-hook
+;;             (lambda ()
+;;               ;; Disable font-locking in this buffer to improve performance
+;;               (font-lock-mode -1)
+;;               ;; Prevent font-locking from being re-enabled in this buffer
+;;               (make-local-variable 'font-lock-function)
+;;               (setq font-lock-function (lambda (_) nil))
+;;               (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))
+
+;;   (setq compilation-environment '("TERM=xterm-256color"))
+
+;;   (defun my/advice-compilation-filter (f proc string)
+;;     (funcall f proc (xterm-color-filter string)))
+
+;;   (advice-add 'compilation-filter :around #'my/advice-compilation-filter)
+;;   ;; Also set TERM accordingly (xterm-256color) in the shell itself.
+;;   )
+
+;; (use-package bash-completion
+;;   :config
+;;   (bash-completion-setup))
 
 (use-package envrc
   :defer 1
