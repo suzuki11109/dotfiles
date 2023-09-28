@@ -364,7 +364,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; recent files
 (use-package recentf
-  :defer .5
   :elpaca nil
   :init
   (setq
@@ -391,6 +390,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package dired
   :elpaca nil
+  :defer t
   :commands dired
   :custom
   (dired-listing-switches "-ahl")
@@ -427,13 +427,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
             ("\\.html?\\'" ,cmd)
             ("\\.md\\'" ,cmd))))
 )
-
-;; (use-package dired-aux
-;;   :straight (:type built-in)
-;;   :defer 1
-;;   :config
-;;   (setq dired-create-destination-dirs 'ask
-;;         dired-vc-rename-file t))
 
 ;; dired fontlock
 (use-package diredfl
@@ -549,7 +542,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :defer 0.5
+  :defer .1
   :custom
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
@@ -560,7 +553,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-split-window-below t)
   (evil-vsplit-window-right t)
   (evil-ex-interactive-search-highlight 'selected-window)
-  (evil-visual-state-cursor 'hollow)
   (evil-respect-visual-line-mode t)
   (evil-symbol-word-search t)
   :general
@@ -586,7 +578,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 )
 
 (use-package evil-nerd-commenter
-  :after (evil general)
+  :after evil
   :commands evilnc-comment-operator
   :general
   (:states '(normal visual)
@@ -636,11 +628,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;;   :config
 ;;   (undo-fu-session-global-mode 1))
 (use-package vundo
+  :elpaca (:host github :repo "casouri/vundo")
   :commands vundo
   :config
-  (setq vundo-glyph-alist vundo-unicode-symbols)
-  :elpaca (:host github :repo "casouri/vundo")
-  )
+  (setq vundo-glyph-alist vundo-unicode-symbols))
 
 (use-package lispyville
   :config
@@ -860,15 +851,6 @@ of the tab bar."
 ;;    ;; (window-height . 0.3)
 ;;    (window-parameters (mode-line-format . none))
 ;;    ))
-
-(use-package shackle
-  :disabled t
-  ;; :config
-  ;; (setq shackle-rules
-  ;;  '(;;    ("\\`\\*Agenda .*?\\*\\'" :regexp t :popup t :align t :size 0.3)
-  ;;    ))
-  ;; (shackle-mode 1)
-  )
 
 ;; Window layout undo/redo
 (winner-mode 1)
@@ -1344,42 +1326,6 @@ window that already exists in that direction. It will split otherwise."
     "et" #'forge-edit-topic-title)
 )
 
-;; (use-package diff-hl
-;;   :hook (find-file . diff-hl-mode)
-;;   :hook (dired-mode . diff-hl-dired-mode)
-;;   :hook (vc-dir-mode . diff-hl-dir-mode)
-;;   :hook (diff-hl-mode . diff-hl-flydiff-mode)
-;;   :hook (diff-hl-mode . +fix-diff-hl-faces)
-;;   :hook (magit-pre-refresh . diff-hl-magit-pre-refresh)
-;;   :hook (magit-post-refresh . diff-hl-magit-post-refresh)
-;;   :general
-;;   (+leader-def
-;;     "gs" '(diff-hl-stage-current-hunk :wk "stage hunk")
-;;     "gh" '(diff-hl-diff-goto-hunk :wk "diff hunk")
-;;     "g]" '(diff-hl-next-hunk :wk "next hunk")
-;;     "g[" '(diff-hl-previous-hunk :wk "previous hunk")
-;;     "gr" '(diff-hl-revert-hunk :wk "revert hunk"))
-;;   :custom
-;;   (diff-hl-draw-borders nil)
-;;   :preface
-;;   (defun +fix-diff-hl-faces ()
-;;     (set-face-background 'diff-hl-insert nil)
-;;     (set-face-background 'diff-hl-delete nil)
-;;     (set-face-background 'diff-hl-change nil))
-;;   :init
-;;   (defun +vc-gutter-type-at-pos-fn (type _pos)
-;;     (if (eq type 'delete)
-;;         'diff-hl-bmp-delete
-;;       'diff-hl-bmp-modified))
-;;   (advice-add 'diff-hl-fringe-bmp-from-pos  :override #'+vc-gutter-type-at-pos-fn)
-;;   (advice-add 'diff-hl-fringe-bmp-from-type :override #'+vc-gutter-type-at-pos-fn)
-;;   (defun +vc-gutter-define-thin-bitmaps ()
-;;     (define-fringe-bitmap 'diff-hl-bmp-modified [224] nil nil '(center repeated))
-;;     (define-fringe-bitmap 'diff-hl-bmp-delete [240 224 192 128] nil nil 'top)
-;;     )
-;;   (advice-add 'diff-hl-define-bitmaps :override #'+vc-gutter-define-thin-bitmaps)
-;;   )
-
 (use-package smerge-mode
   :elpaca nil
   :commands +smerge-hydra/body
@@ -1512,7 +1458,6 @@ window that already exists in that direction. It will split otherwise."
   (lsp-modeline-diagnostics-enable nil)
   (lsp-insert-final-newline nil)
   (lsp-signature-auto-activate nil)
-  ;; (lsp-idle-delay 0.8)
   :config
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
 
@@ -1617,7 +1562,7 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode . apheleia-mode))
 
 (use-package gotest
-  :after go-ts-mode
+  ;; :after go-ts-mode
   :general
   (+local-leader-def
     :keymaps 'go-ts-mode-map
@@ -1685,7 +1630,6 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package web-mode
   :demand t
-
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1867,11 +1811,9 @@ window that already exists in that direction. It will split otherwise."
                        (:exclude ".dir-locals.el" "*-tests.el")))
 
   :config
-  ;; For `eat-eshell-mode'.
-  (add-hook 'eshell-load-hook #'eat-eshell-mode)
-  ;; For `eat-eshell-visual-command-mode'.
-  (add-hook 'eshell-load-hook #'eat-eshell-visual-command-mode)
-  )
+  :hook
+  (eshell-load . eat-eshell-mode)
+  (eshell-load . eat-eshell-visual-command-mode))
 
 (use-package eshell
   :elpaca nil
@@ -1930,7 +1872,6 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package eshell-z
-  :after eshell
   :hook (eshell-mode . (lambda () (require 'eshell-z))))
 
 ;; Term
@@ -2236,44 +2177,12 @@ window that already exists in that direction. It will split otherwise."
     (add-to-list 'consult-buffer-sources '+consult--source-compilation 'append))
   )
 
-(use-package fancy-compilation
-  :disabled t
-  :commands (fancy-compilation-mode)
-  :init
-  (with-eval-after-load 'compile
-    (fancy-compilation-mode)))
 
 (use-package shell-command-x
+  :defer .5
   :config
   ;; (setq shell-command-switch "-ic")
   (shell-command-x-mode 1))
-
-;; (use-package xterm-color
-;;   :config
-;;   (setq comint-output-filter-functions
-;;         (remove 'ansi-color-process-output comint-output-filter-functions))
-
-;;   (add-hook 'shell-mode-hook
-;;             (lambda ()
-;;               ;; Disable font-locking in this buffer to improve performance
-;;               (font-lock-mode -1)
-;;               ;; Prevent font-locking from being re-enabled in this buffer
-;;               (make-local-variable 'font-lock-function)
-;;               (setq font-lock-function (lambda (_) nil))
-;;               (add-hook 'comint-preoutput-filter-functions 'xterm-color-filter nil t)))
-
-;;   (setq compilation-environment '("TERM=xterm-256color"))
-
-;;   (defun my/advice-compilation-filter (f proc string)
-;;     (funcall f proc (xterm-color-filter string)))
-
-;;   (advice-add 'compilation-filter :around #'my/advice-compilation-filter)
-;;   ;; Also set TERM accordingly (xterm-256color) in the shell itself.
-;;   )
-
-;; (use-package bash-completion
-;;   :config
-;;   (bash-completion-setup))
 
 (use-package envrc
   :defer 1
@@ -2284,145 +2193,6 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def
     "oD" #'docker))
-
-(use-package helm-make
-  :defer t)
-(use-package run-command
-  :custom
-  (run-command-default-runner 'run-command-runner-vterm)
-  :config
-  (require 'subr-x)
-  (require 'map)
-  (require 'seq)
-
-  (defun run-command-recipe-package-json ()
-    "Provide commands to run script from `package.json'.
-Automatically detects package manager based on lockfile: npm, yarn, and pnpm."
-    (when-let* ((project-dir
-                 (locate-dominating-file default-directory "package.json"))
-                (project-info
-                 (with-temp-buffer
-                   (insert-file-contents
-                    (concat project-dir "package.json"))
-                   (json-parse-buffer)))
-                (package-manager
-                 (cond
-                  ((file-exists-p
-                    (concat project-dir "pnpm-lock.yaml"))
-                   "pnpm")
-                  ((file-exists-p
-                    (concat project-dir "yarn.lock"))
-                   "yarn")
-                  (t
-                   "npm")))
-                (scripts (map-keys (map-elt project-info "scripts"))))
-      (seq-map
-       (lambda (script)
-         (list
-          :command-name script
-          :command-line (concat package-manager " run " script)
-          ;; :runner 'run-command-runner-vterm
-          :display script
-          :working-dir project-dir))
-       scripts)))
-
-  (defun run-command-recipe-make ()
-    "Provide commands to run Makefile targets.
-Requires `helm-make' (https://github.com/abo-abo/helm-make) to
-read Makefile targets, but does not require `helm' and can be
-used with any of the selectors supported by `run-command'."
-
-    (when (require 'helm-make nil t)
-      (when-let* ((project-dir
-                   (locate-dominating-file default-directory "Makefile"))
-                  (makefile (concat project-dir "Makefile"))
-                  (targets (helm--make-cached-targets makefile)))
-        (seq-map
-         (lambda (target)
-           (list
-            :command-name target
-            :command-line (concat "make " target)
-            :display target
-            :working-dir project-dir))
-         targets))))
-
-  (defun run-command-recipe-cargo ()
-    "Provide commands for a Rust project managed with `cargo'."
-    (when-let* ((project-dir
-                 (locate-dominating-file default-directory "Cargo.toml")))
-      `((:command-name
-         "test:watch"
-         :command-line "cargo watch --watch src --watch Cargo.toml --clear -x test"
-         :display "test:watch"
-         :working-dir ,project-dir)
-        (:command-name
-         "build"
-         :command-line "cargo build"
-         :display "build"
-         :working-dir ,project-dir)
-        (:command-name
-         "build:watch"
-         :command-line "cargo watch --watch src --watch Cargo.toml --clear -x build"
-         :display "build:watch"
-         :working-dir ,project-dir)
-        (:command-name
-         "run"
-         :command-line "cargo run"
-         :display "run"
-         :working-dir ,project-dir)
-        (:command-name
-         "run:watch"
-         :command-line "cargo watch --watch src --watch Cargo.toml --clear -x run"
-         :display "run:watch"
-         :working-dir ,project-dir)
-        (:command-name
-         "lint"
-         :command-line "cargo clippy"
-         :display "lint"
-         :working-dir ,project-dir))))
-
-  (defun run-command-recipe-pyproject ()
-    "Provide commands to run tasks from a poetry `pyproject.toml' file.
-
-See https://pypi.org/project/taskipy/."
-    (when-let* ((project-dir
-                 (locate-dominating-file default-directory "pyproject.toml"))
-                (scripts
-                 (run-command-recipe-pyproject--get-scripts
-                  (concat project-dir "pyproject.toml")))
-                (script-runner "poetry"))
-      (seq-map
-       (lambda (script)
-         (list
-          :command-name script
-          :command-line (concat script-runner " run task " script)
-          :display script
-          :working-dir project-dir))
-       scripts)))
-
-  (defun run-command-recipe-pyproject--get-scripts (pyproject-file)
-    "Get names of scripts defined in `PYPROJECT-FILE'."
-    (with-temp-buffer
-      (insert-file-contents pyproject-file)
-      (when (re-search-forward "^\\[tool\\.taskipy\\.tasks\\]$" nil t)
-        (let ((scripts '())
-              (block-end
-               (save-excursion
-                 (or (and (re-search-forward "^\\[.*\\]$" nil t) (point))
-                     (point-max)))))
-          (while (re-search-forward "^\\([a-zA-Z_-]+\\)\s*=\s*\\(.+\\)$"
-                                    block-end
-                                    t)
-            (push (match-string-no-properties 1) scripts))
-          scripts))))
-
-  (setq run-command-recipes '(run-command-recipe-make
-                              run-command-recipe-cargo
-                              run-command-recipe-pyproject
-                              run-command-recipe-package-json))
-  :general
-  (+leader-def
-    "pz" #'run-command))
 
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")
