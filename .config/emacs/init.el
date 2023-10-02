@@ -94,8 +94,10 @@
 (elpaca-wait)
 
 (use-package exec-path-from-shell
-  :hook
-  (elpaca-after-init . exec-path-from-shell-initialize))
+  :custom
+  (exec-path-from-shell-arguments '("-l"))
+  :config
+  (exec-path-from-shell-initialize))
 
 (use-package general
   :elpaca nil
@@ -119,11 +121,9 @@
     "u"   '(universal-argument :wk "C-u")
     "!"   #'shell-command
     "|"   #'shell-command-on-region
-    ;; "RET" #'bookmark-jump
 
     "b"   '(nil :wk "buffer")
     "bb"  '(switch-to-buffer :wk "Switch buffer")
-    ;; "bB"  #'switch-to-buffer
     "bd"  '(kill-this-buffer :wk "Kill this buffer")
     "bD"  '(kill-buffer :wk "Kill buffer")
     "bi"  #'ibuffer
@@ -275,12 +275,8 @@
 ;; Show recursion depth in minibuffer (see `enable-recursive-minibuffers')
 (minibuffer-depth-indicate-mode 1)
 
-(setq
- ;; Enable recursive calls to minibuffer
- enable-recursive-minibuffers t
- ;; Use completion in the minibuffer instead of definitions buffer; already use vertico, needed?
- ;; xref-show-definitions-function #'xref-show-definitions-completing-read)
- )
+;; Enable recursive calls to minibuffer
+(setq enable-recursive-minibuffers t)
 
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
@@ -440,12 +436,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
               'dired-single-buffer-mouse)
   (define-key dired-mode-map [remap dired-up-directory]
-              'dired-single-up-directory)
-  ;; if dired's already loaded, then the keymap will be bound
-  ;; (if (boundp 'dired-mode-map)
-  ;;     (+dired-init)
-  ;;   (add-hook 'dired-load-hook '+dired-init))
-  )
+              'dired-single-up-directory))
 
 (use-package project
   :elpaca nil
@@ -504,9 +495,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq require-final-newline t)
 
 ;; Wrap long lines
-(add-hook 'prog-mode-hook #'visual-line-mode)
-(add-hook 'conf-mode-hook #'visual-line-mode)
-(add-hook 'text-mode-hook #'visual-line-mode)
+(global-visual-line-mode 1)
 
 ;; Display long lines
 (setq truncate-lines nil)
@@ -542,32 +531,40 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :defer .1
+  :defer .5
   :custom
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
   (evil-want-keybinding nil)
   (evil-want-C-u-scroll t)
   (evil-want-fine-undo t)
-  (evil-want-Y-yank-to-eol t)
   (evil-split-window-below t)
   (evil-vsplit-window-right t)
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-respect-visual-line-mode t)
   (evil-symbol-word-search t)
+  :preface
+  (defun +evil-yank-to-eol ()
+    (interactive)
+    (evil-yank 0)
+    (evil-end-of-line))
   :general
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
   (:states 'motion
     ";" 'evil-ex)
+  (:states '(normal visual)
+    "$" 'evil-end-of-line)
   :config
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
   (setq evil-visual-state-cursor '(hollow))
-  (evil-mode 1)
+  (customize-set-variable 'evil-want-Y-yank-to-eol t) ;; :custom doesn't work
+
   (evil-set-undo-system 'undo-redo)
   (evil-select-search-module 'evil-search-module 'evil-search)
-  )
+  (evil-mode 1)
+)
 
 (use-package evil-collection
   :after evil
@@ -611,22 +608,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (avy-background t))
 
-;; undo
-;; (use-package undo-fu
-;;   :after evil
-;;   :init
-;;   (setq undo-limit 10000000
-;;         undo-strong-limit 50000000
-;;         undo-outer-limit 150000000)
-;;   :config
-;;   (evil-set-undo-system 'undo-redo))
-
-;; (use-package undo-fu-session
-;;   :after undo-fu
-;;   :custom
-;;   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
-;;   :config
-;;   (undo-fu-session-global-mode 1))
 (use-package vundo
   :elpaca (:host github :repo "casouri/vundo")
   :commands vundo
@@ -634,6 +615,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (setq vundo-glyph-alist vundo-unicode-symbols))
 
 (use-package lispyville
+  :disabled t
   :config
   (lispyville-set-key-theme '(operators
                               c-w
@@ -944,12 +926,11 @@ of the tab bar."
 (use-package orderless
   :demand t
   :custom
-  (orderless-matching-styles '(orderless-literal orderless-regexp orderless-flex))
-  (completion-styles '(orderless basic))
+  ;; (orderless-matching-styles '(orderless-literal orderless-regexp))
+  (completion-styles '(orderless))
   (completion-category-defaults nil)
-  (completion-category-overrides nil)
   (completion-category-overrides
-   '((file (styles . (basic partial-completion)))
+   '((file (styles . (partial-completion)))
      ))
   :config
   (defun +orderless-dispatch-flex-first (_pattern index _total)
@@ -980,26 +961,33 @@ of the tab bar."
 (setq tab-always-indent nil)
 (use-package cape)
 (use-package corfu
-  :defer 1
   :elpaca (:host github :repo "minad/corfu"
                  :files (:defaults "extensions/*"))
   :hook
   ((eshell-mode comint-mode) . (lambda ()
-                                 (setq-local corfu-auto nil)
-                                 (corfu-mode 1)))
+                                 (setq-local corfu-auto nil
+                                             corfu-preselect 'prompt
+                                             corfu-preview-current t
+                                             corfu-quit-no-match t
+                                             corfu-quit-at-boundary t)
+  ))
+  (window-setup . global-corfu-mode)
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.15)
+  (corfu-auto-delay 0.1)
   (corfu-min-width 25)
-  ;; (corfu-quit-no-match t)
   (corfu-preview-current nil)
-  (corfu-on-exact-match nil)
   (corfu-preselect 'first)
+  (corfu-on-exact-match nil)
   :config
-  (global-corfu-mode 1)
   (add-to-list 'savehist-additional-variables 'corfu-history)
   (corfu-history-mode 1)
+  (general-define-key
+    :keymaps 'corfu-map
+    :predicate '(bound-and-true-p eshell-mode)
+    [backtab] #'corfu-previous
+    [tab] #'corfu-next)
 
   (defun corfu-enable-in-minibuffer ()
     (when (where-is-internal #'completion-at-point (list (current-local-map)))
@@ -1159,7 +1147,7 @@ targets."
   (vertico-mode)
   :general
   (+leader-def
-    "." '(vertico-repeat :wk "resume last search"))
+    "." '(vertico-repeat :wk "Resume last search"))
   )
 
 (use-package vertico-directory
@@ -1455,7 +1443,6 @@ window that already exists in that direction. It will split otherwise."
   (lsp-headerline-breadcrumb-enable nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-text-document-color nil)
-  (lsp-modeline-diagnostics-enable nil)
   (lsp-insert-final-newline nil)
   (lsp-signature-auto-activate nil)
   :config
@@ -1490,15 +1477,16 @@ window that already exists in that direction. It will split otherwise."
     "o" '(lsp-organize-imports :wk "Organize imports")
     "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
     "r" '(lsp-rename :wk "Rename")
-    "R" '(lsp-workspace-restart :wk "restart workspace"))
+    "R" '(lsp-workspace-restart :wk "Restart workspace"))
   )
 
 (use-package consult-lsp
-  :after consult lsp-mode
+  :after lsp-mode
   :general
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
-    "cj" '(consult-lsp-symbols :wk "Workspace symbols")))
+    "cj" '(consult-lsp-symbols :wk "Workspace symbols")
+    "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
 
 (use-package editorconfig
   :general
@@ -1511,7 +1499,7 @@ window that already exists in that direction. It will split otherwise."
   :commands apheleia-mode
   :general
   (+leader-def
-    "cf" #'apheleia-format-buffer)
+    "cf" '(apheleia-format-buffer :wk "Format buffer"))
   :config
   (setf (alist-get 'erb-formatter apheleia-formatters)
         '("erb-format" "--print-width=140" filepath))
@@ -1526,18 +1514,17 @@ window that already exists in that direction. It will split otherwise."
         (funcall fn checker property)))
   (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
   :custom
+  (flycheck-idle-change-delay 0.9)
   (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
-  (flycheck-check-syntax-automatically '(save mode-enabled))
-  :general
-  (+leader-def
-    "cx" '(flycheck-list-errors :wk "list errors"))
+  (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   :hook
-  (prog-mode . flycheck-mode)
-)
+  (prog-mode . flycheck-mode))
 
 (use-package flycheck-golangci-lint
+  :init
+  (setq flycheck-golangci-lint-fast t)
   :hook
   (go-ts-mode . (lambda ()
                   (flycheck-add-mode 'golangci-lint 'go-ts-mode)
@@ -1562,7 +1549,6 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode . apheleia-mode))
 
 (use-package gotest
-  ;; :after go-ts-mode
   :general
   (+local-leader-def
     :keymaps 'go-ts-mode-map
@@ -1693,10 +1679,6 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package rspec-mode
   :mode ("/\\.rspec\\'" . text-mode)
-  ;; :init
-  ;; (setq rspec-use-spring-when-possible nil)
-  ;; (when (modulep! :editor evil)
-  ;;   (add-hook 'rspec-mode-hook #'evil-normalize-keymaps))
   :general
   (+local-leader-def
     :keymaps '(rspec-mode-map)
@@ -1801,6 +1783,7 @@ window that already exists in that direction. It will split otherwise."
                (cons "/.dockerignore\\'" 'gitignore-mode)))
 
 (use-package eat
+  :commands eat
   :elpaca (eat :type git
                :host codeberg
                :repo "akib/emacs-eat"
@@ -1810,10 +1793,11 @@ window that already exists in that direction. It will split otherwise."
                        ("integration" "integration/*")
                        (:exclude ".dir-locals.el" "*-tests.el")))
 
-  :config
   :hook
   (eshell-load . eat-eshell-mode)
   (eshell-load . eat-eshell-visual-command-mode))
+
+;; (use-package pcmpl-args)
 
 (use-package eshell
   :elpaca nil
@@ -1851,6 +1835,7 @@ window that already exists in that direction. It will split otherwise."
     (eshell 'N)
     (popper-mode 1)
   )
+
   (setq eshell-banner-message ""
         eshell-scroll-to-bottom-on-input 'all
         eshell-scroll-to-bottom-on-output 'all
@@ -1862,11 +1847,13 @@ window that already exists in that direction. It will split otherwise."
         eshell-error-if-no-glob t)
 
   (add-hook 'eshell-mode-hook
-             (defun +eshell-remove-fringes-h ()
+             (defun +eshell-setup ()
+               ;; remove fringe
                (set-window-fringes nil 0 0)
-               (set-window-margins nil 1 nil)))
-  (add-hook 'eshell-mode-hook
-             (defun +eshell-enable-text-wrapping-h ()
+               (set-window-margins nil 1 nil)
+               ;; scrolling
+               (setq hscroll-margin 0)
+               ;; Text wrapping
                (visual-line-mode +1)
                (set-display-table-slot standard-display-table 0 ?\ )))
   )
@@ -1941,15 +1928,12 @@ window that already exists in that direction. It will split otherwise."
   (org-pretty-entities t)
   (org-ellipsis "…")
   (org-fold-core-style 'overlays)
-
   (org-src-fontify-natively t)
   (org-src-window-setup 'current-window)
   (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
   (org-edit-src-turn-on-auto-save t)
-
   :config
-  ;; (add-hook 'org-capture-before-finalize-hook 'org-set-tags-command)
 
   (dolist (face '((org-level-1 . 1.2)
                   (org-level-2 . 1.1)
@@ -1994,10 +1978,8 @@ window that already exists in that direction. It will split otherwise."
     "er"  'eval-region
     "l" #'org-insert-link)
   :hook
-  (org-mode . visual-line-mode)
   (org-mode . org-indent-mode)
-  (org-mode . variable-pitch-mode)
-  )
+  (org-mode . variable-pitch-mode))
 
 (use-package evil-org
   :after (org evil)
@@ -2008,8 +1990,6 @@ window that already exists in that direction. It will split otherwise."
             "M-O" 'evil-org-org-insert-subheading-below)
   :config
   (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
-  (evil-define-key 'motion 'evil-org-mode
-    (kbd "$") 'evil-end-of-line)
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
@@ -2039,21 +2019,21 @@ window that already exists in that direction. It will split otherwise."
   (org-agenda-confirm-kill nil)
   (org-agenda-window-setup 'only-window)
   (org-agenda-restore-windows-after-quit t)
-  (org-agenda-custom-commands
-   '(("g" "Groceries" todo ""
-      ((org-agenda-files
-        `(,(expand-file-name "groceries.org" org-directory)))))))
+  ;; (org-agenda-custom-commands
+  ;;  '(("g" "Groceries" todo ""
+  ;;     ((org-agenda-files
+  ;;       `(,(expand-file-name "groceries.org" org-directory)))))))
   (org-capture-templates
    `(("i" "Inbox" entry (file "inbox.org")
       "* %?")
      ("t" "Tasks" entry (file "tasks.org")
       "* TODO %?")
-     ("g" "Groceries" entry (file+olp "groceries.org" "Groceries")
-      "* [ ] %?")
+     ;; ("g" "Groceries" entry (file+olp "groceries.org" "Groceries")
+     ;;  "* [ ] %?")
      ))
   :general
-  (+leader-def
-    "ng"  '((lambda () (interactive) (org-agenda nil "g")) :wk "Groceries"))
+  ;; (+leader-def
+  ;;   "ng"  '((lambda () (interactive) (org-agenda nil "g")) :wk "Groceries"))
   (:keymaps 'org-agenda-mode-map
             "q" 'org-agenda-exit)
   :hook
@@ -2092,8 +2072,8 @@ window that already exists in that direction. It will split otherwise."
                  :todo "NEXT")
           (:name "Todo"
                  :todo "TODO")
-          (:name "Groceries"
-                 :file-path ,(expand-file-name "groceries.org" org-directory))
+          ;; (:name "Groceries"
+          ;;        :file-path ,(expand-file-name "groceries.org" org-directory))
           ))
   (setq org-super-agenda-header-map (make-sparse-keymap))
   (org-super-agenda-mode 1))
@@ -2109,7 +2089,6 @@ window that already exists in that direction. It will split otherwise."
 (setq help-window-select t)
 (use-package helpful
   :hook
-  (helpful-mode . visual-line-mode)
   (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
   :bind
   ([remap describe-symbol]   . helpful-symbol)
@@ -2155,7 +2134,6 @@ window that already exists in that direction. It will split otherwise."
   ;; Scroll compilation buffer
   (compilation-scroll-output 'first-error)
   :config
-  (add-hook 'compilation-mode-hook 'visual-line-mode)
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
   ;; (autoload 'comint-truncate-buffer "comint" nil t)
   ;; (add-hook 'compilation-filter-hook #'comint-truncate-buffer)
@@ -2219,7 +2197,7 @@ window that already exists in that direction. It will split otherwise."
         verb-json-use-mode 'json-ts-mode)
   :general
   (+leader-def
-  :keymaps 'org-mode-map
-  "v" '(:ignore t :wk "verb")
-  "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
-  "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
+   :keymaps 'org-mode-map
+   "v" '(:ignore t :wk "verb")
+   "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
+   "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
