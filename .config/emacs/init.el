@@ -21,6 +21,8 @@
 ;; Inhibits fontification while receiving input
 (setq redisplay-skip-fontification-on-input t)
 
+(setq pgtk-wait-for-event-timeout 0.001)
+
 (setq inhibit-x-resources t)
 
 ;; Slightly faster re-display
@@ -444,17 +446,27 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
              project-switch-to-buffer
              project-switch-project
              project-switch-project-open-file)
+  :init
+  ;; (defun project-find-go-module (dir)
+  ;;   (when-let ((root (locate-dominating-file dir "go.mod")))
+  ;;     (cons 'go-module root)))
+
+  ;; (cl-defmethod project-root ((project (head go-module)))
+  ;;   (cdr project))
+
+  ;; (add-hook 'project-find-functions #'project-find-go-module)
   :config
+  (setq project-vc-extra-root-markers '("go.mod"))
   ;; (setq project-switch-commands 'project-dired)
   (project-forget-zombie-projects) ;; really need to this to make tabspaces works
+
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
     ))
 
-;; It's actually annoying
+(setq eldoc-echo-area-prefer-doc-buffer t)
 (setq eldoc-echo-area-use-multiline-p nil)
-(global-eldoc-mode -1)
 
 (defun bury-or-kill ()
   (if (eq (current-buffer) (get-buffer "*scratch*"))
@@ -561,7 +573,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (setq evil-visual-state-cursor '(hollow))
   (customize-set-variable 'evil-want-Y-yank-to-eol t) ;; :custom doesn't work
 
-  (evil-set-undo-system 'undo-redo)
+  (evil-set-undo-system 'undo-fu)
   (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-mode 1)
 )
@@ -608,11 +620,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (avy-background t))
 
-(use-package vundo
-  :elpaca (:host github :repo "casouri/vundo")
-  :commands vundo
+(use-package undo-fu
+  :custom
+  (undo-limit 400000)
+  (undo-strong-limit 3000000)
+  (undo-outer-limit 48000000))
+
+(use-package undo-fu-session
   :config
-  (setq vundo-glyph-alist vundo-unicode-symbols))
+  (global-undo-fu-session-mode)
+  :custom
+  (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 
 (use-package lispyville
   :disabled t
@@ -711,6 +729,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
   (doom-modeline-vcs-max-length 20)
+  (doom-modeline-env-version nil)
   :init
   (defun doom-modeline-conditional-buffer-encoding ()
     "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
@@ -876,6 +895,7 @@ of the tab bar."
       vterm-mode
       "\\*rake-compilation\\*"
       "\\*rspec-compilation\\*"
+      "\\*Flymake "
       "\\*Flycheck errors\\*"
       "\\*Org Select\\*"
       help-mode
@@ -890,6 +910,7 @@ of the tab bar."
       "\\*Capture\\*"
       "^CAPTURE-"
       "\\*xref\\*"
+      "\\*eldoc\\*"
       ))
   :config
   (popper-mode +1)
@@ -1431,22 +1452,65 @@ window that already exists in that direction. It will split otherwise."
      "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
   )
 
+(use-package eglot
+  :disabled t
+  :elpaca nil
+  :commands eglot eglot-ensure
+  :custom
+  (eglot-sync-connect 1)
+  (eglot-connect-timeout 10)
+  (eglot-autoshutdown t)
+  (eglot-send-changes-idle-time 0.5)
+  (eglot-events-buffer-size 0)
+  (eglot-ignored-server-capabilities '(:hoverProvider :documentHighlightProvider))
+  :init
+  (defvar +eglot--help-buffer nil)
+  (defun +eglot-describe-at-point ()
+    (interactive)
+    "Request documentation for the thing at point."
+    (eglot--dbind ((Hover) contents range)
+                  (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
+                                   (eglot--TextDocumentPositionParams))
+                  (let ((blurb (and (not (seq-empty-p contents))
+                                    (eglot--hover-info contents range)))
+                        (hint (thing-at-point 'symbol)))
+                    (if blurb
+                        (with-current-buffer
+                            (or (and (buffer-live-p +eglot--help-buffer)
+                                     +eglot--help-buffer)
+                                (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
+                          (with-help-window (current-buffer)
+                            (rename-buffer (format "*eglot-help for %s*" hint))
+                            (with-current-buffer standard-output (insert blurb))
+                            (setq-local nobreak-char-display nil)))
+                      (display-local-help))))
+    'deferred)
+  :hook
+  (eglot-managed-mode . (lambda () (general-define-key
+                                    :states '(normal)
+                                    :keymaps 'local
+                                    "K" '+eglot-describe-at-point))))
+
 (use-package lsp-mode
   :commands (lsp lsp-deferred lsp-install-server)
   :preface
   (setq lsp-use-plists t)
+  :config
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
+  (lsp-register-custom-settings
+   '(("gopls.completeUnimported" t t)
+     ("gopls.staticcheck" t t)))
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
   (lsp-keep-workspace-alive nil)
-  (lsp-eldoc-enable-hover nil)
   (lsp-headerline-breadcrumb-enable nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-text-document-color nil)
   (lsp-insert-final-newline nil)
+  (lsp-semantic-tokens-enable nil)
   (lsp-signature-auto-activate nil)
-  :config
-  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
+  (lsp-signature-render-documentation nil)
 
   :init
   (defun +update-completions-list ()
@@ -1456,14 +1520,19 @@ window that already exists in that direction. It will split otherwise."
                   (list (cape-super-capf
                          'non-greedy-lsp
                          #'yasnippet-capf
-                         )))
-      ))
+                         )))))
   :hook
-  (lsp-managed-mode . evil-normalize-keymaps)
+  ;; (lsp-managed-mode . evil-normalize-keymaps)
   (lsp-managed-mode . (lambda () (general-define-key
-                                   :states '(normal)
-                                   :keymaps 'local
-                                   "K" 'lsp-describe-thing-at-point)))
+                                  :states '(normal)
+                                  :keymaps 'local
+                                  "K" 'lsp-describe-thing-at-point)))
+  (lsp-managed-mode . (lambda ()
+                         ;; (setq eldoc-documentation-functions
+                         ;;   '(flymake-eldoc-function
+                         ;;     t
+                         ;;     lsp-eldoc-function))
+                         (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)))
   (lsp-completion-mode . +update-completions-list)
   :general
   (+leader-def
@@ -1506,33 +1575,28 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter)))
 
+;; (use-package flymake
+;;   :elpaca nil
+;;   :init
+;;   (setq flymake-no-changes-timeout 1)
+;;   (setq elisp-flymake-byte-compile-load-path load-path)
+;;   :hook ((prog-mode . flymake-mode)))
+
 (use-package flycheck
-  :preface
-  (defvar-local flycheck-local-checkers nil)
-  (defun +flycheck-checker-get (fn checker property)
-    (or (alist-get property (alist-get checker flycheck-local-checkers))
-        (funcall fn checker property)))
-  (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
+  ;; :preface
+  ;; (defvar-local flycheck-local-checkers nil)
+  ;; (defun +flycheck-checker-get (fn checker property)
+  ;;   (or (alist-get property (alist-get checker flycheck-local-checkers))
+  ;;       (funcall fn checker property)))
+  ;; (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
   :custom
-  (flycheck-idle-change-delay 0.9)
+  (flycheck-idle-change-delay 0.6)
   (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   :hook
   (prog-mode . flycheck-mode))
-
-(use-package flycheck-golangci-lint
-  :init
-  (setq flycheck-golangci-lint-fast t)
-  :hook
-  (go-ts-mode . (lambda ()
-                  (flycheck-add-mode 'golangci-lint 'go-ts-mode)
-                  (flycheck-golangci-lint-setup)))
-  (lsp-managed-mode . (lambda ()
-                (when (derived-mode-p 'go-ts-mode)
-                  (setq flycheck-local-checkers '((lsp . ((next-checkers . (golangci-lint)))))))))
-  )
 
 (use-package go-ts-mode
   :elpaca nil
@@ -1545,8 +1609,9 @@ window that already exists in that direction. It will split otherwise."
     (add-hook 'before-save-hook 'lsp-organize-imports t t))
   :hook
   (go-ts-mode . +go-mode-setup)
+  (go-ts-mode . apheleia-mode)
   (go-ts-mode . lsp-deferred)
-  (go-ts-mode . apheleia-mode))
+  )
 
 (use-package gotest
   :general
@@ -1797,7 +1862,10 @@ window that already exists in that direction. It will split otherwise."
   (eshell-load . eat-eshell-mode)
   (eshell-load . eat-eshell-visual-command-mode))
 
-;; (use-package pcmpl-args)
+(use-package shell
+  :elpaca nil
+  :hook
+  (shell-mode . evil-normal-state))
 
 (use-package eshell
   :elpaca nil
