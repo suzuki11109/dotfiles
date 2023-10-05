@@ -1252,6 +1252,13 @@ of the tab bar."
 
 )
 
+(use-package consult-dir
+  :after consult
+  :bind (("C-x C-d" . consult-dir)
+         :map minibuffer-local-completion-map
+         ("C-x C-d" . consult-dir)
+         ("C-x C-j" . consult-dir-jump-file)))
+
 (use-package embark
   :after vertico
   :commands (embark-act embark-dwim)
@@ -1701,10 +1708,10 @@ window that already exists in that direction. It will split otherwise."
                                   :keymaps 'local
                                   "K" 'lsp-describe-thing-at-point)))
   (lsp-managed-mode . (lambda ()
-                         ;; (setq eldoc-documentation-functions
-                         ;;   '(flymake-eldoc-function
-                         ;;     t
-                         ;;     lsp-eldoc-function))
+                         (setq eldoc-documentation-functions
+                           '(+flycheck-eldoc
+                             t
+                             lsp-eldoc-function))
                          (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)))
   (lsp-completion-mode . +update-completions-list)
   :general
@@ -1760,15 +1767,36 @@ window that already exists in that direction. It will split otherwise."
 ;;   :hook ((prog-mode . flymake-mode)))
 
 (use-package flycheck
-  ;; :preface
+  :preface
   ;; (defvar-local flycheck-local-checkers nil)
   ;; (defun +flycheck-checker-get (fn checker property)
   ;;   (or (alist-get property (alist-get checker flycheck-local-checkers))
   ;;       (funcall fn checker property)))
   ;; (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
+  (defun +flycheck-eldoc (callback &rest _ignored)
+    "Print flycheck messages at point by calling CALLBACK."
+    (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
+      (mapc
+       (lambda (err)
+         (funcall callback
+           (format "%s: %s"
+                   (let ((level (flycheck-error-level err)))
+                     (pcase level
+                       ('info (propertize "I" 'face 'flycheck-error-list-info))
+                       ('error (propertize "E" 'face 'flycheck-error-list-error))
+                       ('warning (propertize "W" 'face 'flycheck-error-list-warning))
+                       (_ level)))
+                   (flycheck-error-message err))
+           :thing (or (flycheck-error-id err)
+                      (flycheck-error-group err))
+           :face 'font-lock-doc-face))
+       flycheck-errors)))
+
   :custom
+  (flycheck-display-errors-function nil)
+  (flycheck-help-echo-function nil)
   (flycheck-idle-change-delay 0.6)
-  (flycheck-display-errors-delay 0.25)
+  ;; (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
@@ -2214,6 +2242,8 @@ window that already exists in that direction. It will split otherwise."
   (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
   (org-edit-src-turn-on-auto-save t)
+  (org-src-preserve-indentation t)
+  (org-confirm-babel-evaluate nil)
   :config
 
   (dolist (face '((org-level-1 . 1.2)
@@ -2239,12 +2269,19 @@ window that already exists in that direction. It will split otherwise."
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-column nil :background nil)
   (set-face-attribute 'org-column-title nil :background nil)
-
   (require 'org-tempo)
-  (add-to-list 'org-structure-template-alist '("sh" . "src sh"))
+  (org-babel-do-load-languages
+    'org-babel-load-languages
+    '((emacs-lisp . t)
+      (shell . t)
+      (js . t)
+      (verb . t)))
+  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+  (add-to-list 'org-structure-template-alist '("js" . "src js"))
+  (add-to-list 'org-structure-template-alist '("py" . "src python"))
+  (add-to-list 'org-structure-template-alist '("rb" . "src ruby"))
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  (add-to-list 'org-structure-template-alist '("go" . "src go"))
-  (add-to-list 'org-structure-template-alist '("json" . "src json"))
+  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
 
   (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
 
