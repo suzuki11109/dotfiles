@@ -450,15 +450,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
              project-switch-to-buffer
              project-switch-project
              project-switch-project-open-file)
-  :init
-  ;; (defun project-find-go-module (dir)
-  ;;   (when-let ((root (locate-dominating-file dir "go.mod")))
-  ;;     (cons 'go-module root)))
-
-  ;; (cl-defmethod project-root ((project (head go-module)))
-  ;;   (cdr project))
-
-  ;; (add-hook 'project-find-functions #'project-find-go-module)
   :config
   (setq project-vc-extra-root-markers '("go.mod"))
   ;; (setq project-switch-commands 'project-dired)
@@ -716,7 +707,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (display-line-numbers-type 'relative)
   (display-line-numbers-widen t)
-  :config
+  :init
   (dolist (mode '(org-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
 
@@ -905,9 +896,8 @@ of the tab bar."
       "\\*xref\\*"
       "\\*eldoc\\*"
       ))
-  :hook
-  (window-setup . popper-mode)
-  (window-setup . popper-echo-mode))
+  (popper-mode 1)
+  (popper-echo-mode 1))
 
 (use-package transient
   :elpaca nil
@@ -925,16 +915,19 @@ of the tab bar."
   (nerd-icons-font-family "JetBrainsMono Nerd Font")
   (nerd-icons-scale-factor 1.0))
 
-(use-package doom-themes
-  :config
-  (setq doom-themes-enable-bold t
-        doom-themes-enable-italic t)
-  (load-theme 'doom-vibrant t)
-  (doom-themes-org-config))
+;; (use-package doom-themes
+;;   :config
+;;   (setq doom-themes-enable-bold t
+;;         doom-themes-enable-italic nil)
+;;   (load-theme 'doom-vibrant t)
+;;   (doom-themes-org-config))
+
+(use-package catppuccin-theme
+  :init
+  (load-theme 'catppuccin t))
 
 (use-package hl-todo
-  :defer 1
-  :config
+  :init
   (global-hl-todo-mode 1))
 
 (use-package orderless
@@ -946,14 +939,13 @@ of the tab bar."
   (completion-category-overrides
    '((file (styles . (partial-completion)))
      ))
-  :config
+  :init
   (defun +orderless-dispatch-flex-first (_pattern index _total)
     (and (eq index 0) 'orderless-flex))
 
   (defun +lsp-mode-setup-completion ()
     (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
           '(orderless))
-
     (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local))
   :hook
   (lsp-completion-mode . +lsp-mode-setup-completion))
@@ -2213,11 +2205,11 @@ window that already exists in that direction. It will split otherwise."
   (compilation-ask-about-save nil)  ; save all buffers on `compile'
   ;; Scroll compilation buffer
   (compilation-scroll-output 'first-error)
-  :config
+  :init
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
   ;; (autoload 'comint-truncate-buffer "comint" nil t)
   ;; (add-hook 'compilation-filter-hook #'comint-truncate-buffer)
-
+  :config
   (with-eval-after-load 'consult
     (defvar  +consult--source-compilation
       (list :name     "Compilation buffers"
@@ -2242,9 +2234,9 @@ window that already exists in that direction. It will split otherwise."
   (shell-command-x-mode 1))
 
 (use-package envrc
-  :defer 1
-  :config
-  (envrc-global-mode))
+  ;; :defer 1
+  :init
+  (envrc-global-mode 1))
 
 (use-package docker
   :general
