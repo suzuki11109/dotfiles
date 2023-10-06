@@ -31,7 +31,7 @@
               bidi-paragraph-direction 'left-to-right)
 
 ;; Profile emacs startup
-(add-hook 'elpaca-after-init-hook
+(add-hook 'emacs-startup-hook
           (lambda ()
             (message "Emacs loaded in %s with %d garbage collections."
                     (format "%.2f seconds"
@@ -346,7 +346,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
             (set-auto-mode))))))
 
 ;; Better handling for files with so long lines
-(global-so-long-mode 1)
+(use-package so-long
+  :defer 1
+  :elpaca nil
+  :config
+  (global-so-long-mode 1))
 
 ;; Saving multiple files saves only in sub-directories of current project
 (setq save-some-buffers-default-predicate #'save-some-buffers-root)
@@ -579,7 +583,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 )
 
 (use-package evil-collection
-  :after evil
+  :after evil magit
   :custom
   (evil-collection-key-blacklist '("C-y"))
   :config
@@ -741,7 +745,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
   (add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
   :hook
-  (elpaca-after-init . doom-modeline-mode))
+  (window-setup . doom-modeline-mode))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -843,16 +847,6 @@ of the tab bar."
 ;; Resize window combinations proportionally
 (setq window-combination-resize t)
 
-;; (add-to-list
-;;  'display-buffer-alist
-;;  '("\\*Agenda Commands\\*"
-;;    (display-buffer-reuse-window display-buffer-in-direction)
-;;    (direction . bottom)
-;;    (dedicated . t)
-;;    ;; (window-height . 0.3)
-;;    (window-parameters (mode-line-format . none))
-;;    ))
-
 ;; Window layout undo/redo
 (winner-mode 1)
 
@@ -864,7 +858,6 @@ of the tab bar."
   :commands windresize)
 
 (use-package popper
-  :demand t
   :general
   ("C-\\" 'popper-toggle-latest)
   ("C-`"  'popper-cycle)
@@ -912,9 +905,9 @@ of the tab bar."
       "\\*xref\\*"
       "\\*eldoc\\*"
       ))
-  :config
-  (popper-mode +1)
-  (popper-echo-mode +1))
+  :hook
+  (window-setup . popper-mode)
+  (window-setup . popper-echo-mode))
 
 (use-package transient
   :elpaca nil
@@ -1064,7 +1057,6 @@ of the tab bar."
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package consult
-  :after vertico
   :bind
   ([remap bookmark-jump]                 . consult-bookmark)
   ([remap evil-show-marks]               . consult-mark)
@@ -1093,8 +1085,6 @@ of the tab bar."
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
-  :config
-
 )
 
 (use-package embark
@@ -1159,18 +1149,18 @@ targets."
   (marginalia-mode))
 
 (use-package vertico
-  :defer .5
   :elpaca (:host github :repo "minad/vertico"
                  :files (:defaults "extensions/*"))
   :init
   (setq vertico-resize nil
         vertico-count 14)
-  :config
-  (vertico-mode)
+  :hook
+  (window-setup . vertico-mode)
+  ;; :config
+  ;; (vertico-mode)
   :general
   (+leader-def
-    "." '(vertico-repeat :wk "Resume last search"))
-  )
+    "." '(vertico-repeat :wk "Resume last search")))
 
 (use-package vertico-directory
   :elpaca nil
@@ -1194,7 +1184,7 @@ targets."
   (global-git-commit-mode 1))
 
 (use-package magit
-  :demand t
+  :defer .2
   :general
   (+leader-def :infix "g"
     "b" #'magit-branch
@@ -1315,8 +1305,8 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package forge
-  :demand t
   :after magit
+  :demand t
   :general
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
@@ -1391,6 +1381,15 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package treesit
   :elpaca nil
+  ;; :demand t
+  ;; :hook
+  ;; (go-ts-mode . (lambda ()
+  ;;                 (setq treesit-font-lock-feature-list
+  ;;                       `((comment definition)
+  ;;                         (keyword string type)
+  ;;                         (constant escape-sequence label number)
+  ;;                         (bracket delimiter error operator variable)))
+  ;;                 (treesit-font-lock-recompute-features)))
   :init
   (setq treesit-font-lock-level 4)
   (setq treesit-language-source-alist
@@ -1444,15 +1443,15 @@ window that already exists in that direction. It will split otherwise."
                  :files (:defaults "queries" "treesit-queries"))
   :config
   (general-define-key
-     :keymaps 'evil-outer-text-objects-map
-     "f" (evil-textobj-tree-sitter-get-textobj "function.outer")
-     "a" (evil-textobj-tree-sitter-get-textobj "parameter.outer")
-     "c" (evil-textobj-tree-sitter-get-textobj "class.outer"))
+   :keymaps 'evil-outer-text-objects-map
+   "f" (evil-textobj-tree-sitter-get-textobj "function.outer")
+   "a" (evil-textobj-tree-sitter-get-textobj "parameter.outer")
+   "c" (evil-textobj-tree-sitter-get-textobj "class.outer"))
   (general-define-key
-     :keymaps 'evil-inner-text-objects-map
-     "f" (evil-textobj-tree-sitter-get-textobj "function.inner")
-     "a" (evil-textobj-tree-sitter-get-textobj "parameter.inner")
-     "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
+   :keymaps 'evil-inner-text-objects-map
+   "f" (evil-textobj-tree-sitter-get-textobj "function.inner")
+   "a" (evil-textobj-tree-sitter-get-textobj "parameter.inner")
+   "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
   )
 
 (use-package eglot
@@ -1578,20 +1577,8 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter)))
 
-;; (use-package flymake
-;;   :elpaca nil
-;;   :init
-;;   (setq flymake-no-changes-timeout 1)
-;;   (setq elisp-flymake-byte-compile-load-path load-path)
-;;   :hook ((prog-mode . flymake-mode)))
-
 (use-package flycheck
   :preface
-  ;; (defvar-local flycheck-local-checkers nil)
-  ;; (defun +flycheck-checker-get (fn checker property)
-  ;;   (or (alist-get property (alist-get checker flycheck-local-checkers))
-  ;;       (funcall fn checker property)))
-  ;; (advice-add 'flycheck-checker-get :around '+flycheck-checker-get)
   (defun +flycheck-eldoc (callback &rest _ignored)
     "Print flycheck messages at point by calling CALLBACK."
     (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
@@ -1615,7 +1602,6 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-display-errors-function nil)
   (flycheck-help-echo-function nil)
   (flycheck-idle-change-delay 0.6)
-  ;; (flycheck-display-errors-delay 0.25)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
@@ -1696,8 +1682,8 @@ window that already exists in that direction. It will split otherwise."
   (css-ts-mode . apheleia-mode))
 
 (use-package typescript-ts-mode
-  :elpaca nil
   :demand t
+  :elpaca nil
   :hook
   ((tsx-ts-mode typescript-ts-mode) . apheleia-mode)
   ((tsx-ts-mode typescript-ts-mode) . lsp-deferred)
@@ -1842,18 +1828,13 @@ window that already exists in that direction. It will split otherwise."
   (markdown-fontify-code-blocks-natively t)
   (markdown-gfm-additional-languages '("sh")))
 
-;; others
 (use-package yaml-ts-mode
   :elpaca nil
-  :mode "\\.ya?ml\\'"
-  :hook
-  (yaml-ts-mode . lsp-deferred))
+  :mode "\\.ya?ml\\'")
 
 (use-package json-ts-mode
   :elpaca nil
-  :mode "\\.prettierrc\\'"
-  :hook
-  (json-ts-mode . lsp-deferred))
+  :mode "\\.prettierrc\\'")
 
 (use-package dockerfile-mode
   :mode "\\Dockerfile\\'"
@@ -1866,7 +1847,6 @@ window that already exists in that direction. It will split otherwise."
   :mode "\\.tf\\'")
 
 (use-package git-modes
-  :defer t
   :init
   (add-to-list 'auto-mode-alist
                (cons "/.dockerignore\\'" 'gitignore-mode)))
@@ -2028,7 +2008,6 @@ window that already exists in that direction. It will split otherwise."
   (org-src-preserve-indentation t)
   (org-confirm-babel-evaluate nil)
   :config
-
   (dolist (face '((org-level-1 . 1.2)
                   (org-level-2 . 1.1)
                   (org-level-3 . 1.05)
@@ -2256,9 +2235,8 @@ window that already exists in that direction. It will split otherwise."
     (add-to-list 'consult-buffer-sources '+consult--source-compilation 'append))
   )
 
-
 (use-package shell-command-x
-  :defer .5
+  :defer 1
   :config
   ;; (setq shell-command-switch "-ic")
   (shell-command-x-mode 1))
@@ -2282,15 +2260,14 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "sk" 'devdocs-lookup))
 
-(use-package chatgpt-shell
-  :disabled t
-  :general
-  (+leader-def
-    "og" #'chatgpt-shell)
-  :config
-  (setq chatgpt-shell-openai-key
-        (lambda ()
-          (auth-source-pick-first-password :host "api.openai.com"))))
+;; (use-package chatgpt-shell
+;;   :general
+;;   (+leader-def
+;;     "og" #'chatgpt-shell)
+;;   :config
+;;   (setq chatgpt-shell-openai-key
+;;         (lambda ()
+;;           (auth-source-pick-first-password :host "api.openai.com"))))
 
 (use-package verb
   :init
