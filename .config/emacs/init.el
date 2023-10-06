@@ -1064,6 +1064,7 @@ of the tab bar."
   (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package consult
+  :after vertico
   :bind
   ([remap bookmark-jump]                 . consult-bookmark)
   ([remap evil-show-marks]               . consult-mark)
@@ -1095,13 +1096,6 @@ of the tab bar."
   :config
 
 )
-
-(use-package consult-dir
-  :after consult
-  :bind (("C-x C-d" . consult-dir)
-         :map minibuffer-local-completion-map
-         ("C-x C-d" . consult-dir)
-         ("C-x C-j" . consult-dir-jump-file)))
 
 (use-package embark
   :after vertico
@@ -1195,10 +1189,12 @@ targets."
   (git-commit-summary-max-length 72)
   (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
   :config
-  (evil-set-initial-state 'git-commit-mode 'insert)
+  (with-eval-after-load 'evil
+    (evil-set-initial-state 'git-commit-mode 'insert))
   (global-git-commit-mode 1))
 
 (use-package magit
+  :demand t
   :general
   (+leader-def :infix "g"
     "b" #'magit-branch
@@ -1319,9 +1315,9 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package forge
+  :demand t
   :after magit
-  :config
-  (evil-collection-forge-setup)
+  :general
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
     "q" #'kill-current-buffer)
@@ -1362,7 +1358,7 @@ window that already exists in that direction. It will split otherwise."
   │  ^_k_ ↑^     [_u_] upper      [_=_] upper/lower   [_r_] resolve
   │  ^_j_ ↓^     [_l_] lower      [_>_] base/lower    [_R_] remove
   │  ^_G_^       [_a_] all        [_H_] hightlight    [_n_] next in project
-  │              [_RET_] current  [_E_] ediff
+  │          [_RET_] current  [_E_] ediff
   │                                                   [_q_] quit
   ╰─────────────────────────────────────────────────────╯
 "
@@ -1557,7 +1553,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package consult-lsp
-  :after lsp-mode
+  :after (lsp-mode consult)
   :general
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
@@ -2306,3 +2302,6 @@ window that already exists in that direction. It will split otherwise."
    "v" '(:ignore t :wk "verb")
    "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
    "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
+
+(use-package impostman
+  :commands (impostman-import-file impostman-import-string))

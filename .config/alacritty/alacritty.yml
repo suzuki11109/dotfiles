@@ -10,7 +10,8 @@
 # to the user's home directory starting with `~/`.
 import:
   # - ~/.config/alacritty/catppuccin/catppuccin-latte.yml
-  - ~/.config/alacritty/catppuccin/catppuccin-mocha.yml
+  # - ~/.config/alacritty/catppuccin/catppuccin-mocha.yml
+  - ~/.config/alacritty/doom_vibrant.yaml
   # - ~/.config/alacritty/onedark_dark.yml
   # - ~/.config/alacritty/onedark.yml
 
@@ -70,7 +71,7 @@ window:
   #
   # Window opacity as a floating point number from `0.0` to `1.0`.
   # The value `0.0` is completely transparent and `1.0` is opaque.
-  opacity: 0.94
+  opacity: 0.92
 
   # Startup Mode (changes require restart)
   #
