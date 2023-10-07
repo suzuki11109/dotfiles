@@ -61,9 +61,6 @@ vim.o.shiftwidth = 2
 -- vim.bo.softtabstop = 2
 vim.o.smartindent = true
 
--- Preview incremental substitute
-vim.o.inccommand = true
-
 -- Make more sense spliting
 vim.o.splitbelow = true -- Put new windows below current
 vim.o.splitright = true -- Put new windows right of current
