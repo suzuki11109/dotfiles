@@ -130,7 +130,6 @@
     "bD"  '(kill-buffer :wk "Kill buffer")
     "bi"  #'ibuffer
     "bo"  '(switch-to-buffer-other-window :wk "Switch buffer other window")
-    ;; "bu"  #'+sudo-save-buffer
     "bs"  '(save-buffer :wk "Save file")
     "bS"  '(save-some-buffers :wk "Save buffers")
     "br"  '(revert-buffer :wk "Revert buffer")
@@ -298,6 +297,7 @@
 ;; Auto load files changed on disk
 (use-package autorevert
   :elpaca nil
+  :defer 1
   :custom
   (global-auto-revert-non-file-buffers t)
   (auto-revert-interval 3)
@@ -508,7 +508,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq truncate-lines nil)
 
 ;; Remember cursor position in files
-(save-place-mode 1)
+(use-package saveplace
+  :elpaca nil
+  :hook
+  (window-setup . save-place-mode))
+
 
   ;;; Why use anything but UTF-8?
 (prefer-coding-system 'utf-8)
@@ -550,11 +554,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-respect-visual-line-mode t)
   (evil-symbol-word-search t)
-  :preface
-  (defun +evil-yank-to-eol ()
-    (interactive)
-    (evil-yank 0)
-    (evil-end-of-line))
   :general
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
@@ -628,7 +627,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 
 (use-package lispyville
-  :disabled t
   :config
   (lispyville-set-key-theme '(operators
                               c-w
@@ -694,6 +692,15 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   ("M--" 'default-text-scale-decrease)
   ("M-=" 'default-text-scale-increase))
 
+(use-package paren
+  :elpaca nil
+  :hook (window-setup . show-paren-mode)
+  :init
+  (setq show-paren-delay 0.1
+        show-paren-highlight-openparen t
+        show-paren-when-point-inside-paren t
+        show-paren-when-point-in-periphery t))
+
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
 ;; Remove visual indicators from non selected windows
@@ -736,7 +743,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
   (add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
   :hook
-  (window-setup . doom-modeline-mode))
+  (elpaca-after-init . doom-modeline-mode))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -927,14 +934,13 @@ of the tab bar."
   (load-theme 'catppuccin t))
 
 (use-package hl-todo
-  :init
-  (global-hl-todo-mode 1))
+  :hook
+  ((prog-mode text-mode conf-mode) . hl-todo-mode))
 
 (use-package orderless
   :demand t
   :custom
-  ;; (orderless-matching-styles '(orderless-literal orderless-regexp))
-  (completion-styles '(orderless))
+  (completion-styles '(orderless basic))
   (completion-category-defaults nil)
   (completion-category-overrides
    '((file (styles . (partial-completion)))
@@ -1544,7 +1550,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package consult-lsp
-  :after (lsp-mode consult)
+  :after (lsp-mode)
   :general
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
@@ -1682,7 +1688,13 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package web-mode
-  :demand t
+  ;; :mode "\\.[px]?html?\\'"
+  :mode "\\.erb\\'"
+  :mode "\\.[lh]?eex\\'"
+  :mode "\\.as[cp]x\\'"
+  :mode "\\.svelte\\'"
+  :mode "\\.jinja2?\\'"
+  :mode "\\.vue\\'"
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1692,11 +1704,14 @@ window that already exists in that direction. It will split otherwise."
   (web-mode-attr-indent-offset 2)
   (web-mode-attr-value-indent-offset 2)
   (web-mode-auto-close-style 1)
-  :config
+  :init
   (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
   (define-derived-mode erb-mode web-mode
     "HTML[erb]")
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
+  :config
+  (add-to-list 'web-mode-engines-alist '("elixir" . "\\.eex\\'"))
+  (add-to-list 'web-mode-engines-alist '("phoenix" . "\\.[lh]eex\\'"))
   :hook
   (web-mode . apheleia-mode))
 
@@ -1918,7 +1933,7 @@ window that already exists in that direction. It will split otherwise."
                ;; scrolling
                (setq hscroll-margin 0)
                ;; Text wrapping
-               (visual-line-mode +1)
+               ;; (visual-line-mode +1)
                (set-display-table-slot standard-display-table 0 ?\ )))
   )
 
@@ -2234,9 +2249,8 @@ window that already exists in that direction. It will split otherwise."
   (shell-command-x-mode 1))
 
 (use-package envrc
-  ;; :defer 1
-  :init
-  (envrc-global-mode 1))
+  :hook
+  (window-setup . envrc-global-mode))
 
 (use-package docker
   :general
