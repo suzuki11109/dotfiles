@@ -299,6 +299,7 @@
   :elpaca nil
   :defer 1
   :custom
+  (auto-revert-verbose nil)
   (global-auto-revert-non-file-buffers t)
   (auto-revert-interval 3)
   :config
@@ -510,8 +511,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Remember cursor position in files
 (use-package saveplace
   :elpaca nil
-  :hook
-  (window-setup . save-place-mode))
+  :defer .5
+  :config
+  (save-place-mode 1))
 
 
   ;;; Why use anything but UTF-8?
@@ -694,12 +696,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package paren
   :elpaca nil
-  :hook (window-setup . show-paren-mode)
   :init
   (setq show-paren-delay 0.1
         show-paren-highlight-openparen t
         show-paren-when-point-inside-paren t
-        show-paren-when-point-in-periphery t))
+        show-paren-when-point-in-periphery t)
+  (show-paren-mode))
 
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
@@ -923,7 +925,7 @@ of the tab bar."
   (nerd-icons-scale-factor 1.0))
 
 ;; (use-package doom-themes
-;;   :config
+;;   :init
 ;;   (setq doom-themes-enable-bold t
 ;;         doom-themes-enable-italic nil)
 ;;   (load-theme 'doom-vibrant t)
@@ -983,7 +985,7 @@ of the tab bar."
                                              corfu-quit-no-match t
                                              corfu-quit-at-boundary t)
   ))
-  (window-setup . global-corfu-mode)
+  (elpaca-after-init . global-corfu-mode)
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1147,15 +1149,14 @@ targets."
   (marginalia-mode))
 
 (use-package vertico
+  :defer .5
   :elpaca (:host github :repo "minad/vertico"
                  :files (:defaults "extensions/*"))
   :init
   (setq vertico-resize nil
         vertico-count 14)
-  :hook
-  (window-setup . vertico-mode)
-  ;; :config
-  ;; (vertico-mode)
+  :config
+  (vertico-mode 1)
   :general
   (+leader-def
     "." '(vertico-repeat :wk "Resume last search")))
@@ -1305,6 +1306,8 @@ window that already exists in that direction. It will split otherwise."
 (use-package forge
   :after magit
   :demand t
+  :custom
+  (forge-add-default-bindings nil)
   :general
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
@@ -2249,8 +2252,9 @@ window that already exists in that direction. It will split otherwise."
   (shell-command-x-mode 1))
 
 (use-package envrc
-  :hook
-  (window-setup . envrc-global-mode))
+  :defer .5
+  :config
+  (envrc-global-mode 1))
 
 (use-package docker
   :general
