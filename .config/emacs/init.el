@@ -95,10 +95,15 @@
 
 (elpaca-wait)
 
+(use-package on
+  :elpaca (:host github :repo "ajgrf/on.el"))
+
 (use-package exec-path-from-shell
   :custom
   (exec-path-from-shell-arguments '("-l"))
   :config
+  (dolist (var '("KUBECONFIG"))
+    (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
 
 (use-package general
@@ -202,7 +207,6 @@
     "nm" #'org-tags-view
     "nt" #'org-todo-list
 
-
     "o"   '(nil   :wk "app/open")
     "oa"  #'org-agenda
     "of"  #'make-frame
@@ -237,14 +241,13 @@
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package which-key
-  :defer 1
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 5)
   (which-key-add-column-padding 1)
-  :config
-  (which-key-mode 1))
+  :hook
+  (on-first-input . which-key-mode))
 
 (setq
  ;; Fluid scrolling
@@ -297,7 +300,6 @@
 ;; Auto load files changed on disk
 (use-package autorevert
   :elpaca nil
-  :defer 1
   :custom
   (auto-revert-verbose nil)
   (global-auto-revert-non-file-buffers t)
@@ -348,10 +350,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Better handling for files with so long lines
 (use-package so-long
-  :defer 1
   :elpaca nil
-  :config
-  (global-so-long-mode 1))
+  :hook
+  (on-first-file . global-so-long-mode))
 
 ;; Saving multiple files saves only in sub-directories of current project
 (setq save-some-buffers-default-predicate #'save-some-buffers-root)
@@ -370,11 +371,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :elpaca nil
   :init
   (setq
-   ;; Increase the maximum number of saved items
    recentf-max-saved-items 100
-   ;; Ignore case when searching recentf files
    recentf-case-fold-search t
-   ;; Exclude some files from being remembered by recentf
    recentf-exclude
    `(,(rx (* any)
           (or
@@ -388,8 +386,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
      ,(rx "/"
           (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
           (* any))))
-  :config
-  (recentf-mode 1))
+  :hook
+  (on-first-file . recentf-mode))
 
 (use-package dired
   :elpaca nil
@@ -511,10 +509,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Remember cursor position in files
 (use-package saveplace
   :elpaca nil
-  :defer .5
-  :config
-  (save-place-mode 1))
-
+  :hook
+  (on-first-file . save-place-mode))
 
   ;;; Why use anything but UTF-8?
 (prefer-coding-system 'utf-8)
@@ -522,26 +518,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (set-default-coding-systems 'utf-8)
 (set-selection-coding-system 'utf-8)
 
-(use-package elec-pair
-  :elpaca nil
-  :hook
-  ((prog-mode text-mode conf-mode) . electric-pair-mode)
-  :hook
-  (org-mode . (lambda ()
-                (setq-local electric-pair-inhibit-predicate
-                            `(lambda (c)
-                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-  :preface
-  (defun +add-pairs (pairs)
-    (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
-    (setq-local electric-pair-text-pairs electric-pair-pairs)))
-
 ;; Clipboard
-(setq
- ;; Filter duplicate entries in kill ring
- kill-do-not-save-duplicates t
- ;; Save existing clipboard text into the kill ring before replacing it.
- save-interprogram-paste-before-kill t)
+(setq kill-do-not-save-duplicates t
+      ;; Save existing clipboard text into the kill ring before replacing it.
+      save-interprogram-paste-before-kill t)
 
 (use-package evil
   :defer .5
@@ -575,12 +555,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 )
 
 (use-package evil-collection
-  :after evil magit
+  :after evil magit forge
   :custom
   (evil-collection-key-blacklist '("C-y"))
   :config
-  (evil-collection-init)
-)
+  (evil-collection-init))
 
 (use-package evil-nerd-commenter
   :after evil
@@ -616,6 +595,49 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (avy-background t))
 
+(use-package smartparens
+  :config
+  (require 'smartparens-config)
+  (defun +indent-between-pair (&rest _ignored)
+    (newline)
+    (indent-according-to-mode)
+    (forward-line -1)
+    (indent-according-to-mode))
+  (sp-local-pair 'prog-mode "{" nil :post-handlers '((+indent-between-pair "RET")))
+  (sp-local-pair 'prog-mode "[" nil :post-handlers '((+indent-between-pair "RET")))
+  (sp-local-pair 'prog-mode "(" nil :post-handlers '((+indent-between-pair "RET")))
+
+  (setq sp-highlight-pair-overlay nil
+        sp-highlight-wrap-overlay nil
+        sp-highlight-wrap-tag-overlay nil)
+  (setq sp-max-prefix-length 25)
+  (setq sp-max-pair-length 4)
+
+  (with-eval-after-load 'evil
+    (setq sp-show-pair-from-inside t)
+    (setq sp-cancel-autoskip-on-backward-movement nil)
+    (setq sp-pair-overlay-keymap (make-sparse-keymap)))
+  :hook
+  ((prog-mode text-mode config-mode) . smartparens-mode))
+
+(use-package paren
+  :elpaca nil
+  :init
+  (setq show-paren-delay 0.1
+        show-paren-highlight-openparen t
+        show-paren-when-point-inside-paren t
+        show-paren-when-point-in-periphery t)
+  (show-paren-mode))
+
+(use-package evil-cleverparens
+  :after evil
+  :custom
+  (evil-cleverparens-use-s-and-S nil)
+  (evil-cleverparens-use-regular-insert t)
+  (evil-cleverparens-move-skip-delimiters nil)
+  :hook
+  (emacs-lisp-mode . evil-cleverparens-mode))
+
 (use-package undo-fu
   :custom
   (undo-limit 400000)
@@ -628,80 +650,21 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 
-(use-package lispyville
-  :config
-  (lispyville-set-key-theme '(operators
-                              c-w
-                              commentary
-                              (atom-motions t)
-                              (additional-insert normal insert)
-                              additional-wrap
-                              slurp/barf-cp
-                              (escape insert)))
-
-  ;; configure textobjects here due to conflicts with evil-textobj
-  (defvar +lispville-inner-text-objects-map (make-sparse-keymap))
-  (defvar +lispville-outer-text-objects-map (make-sparse-keymap))
-
-  (evil-define-key '(visual operator) 'lispyville-mode
-    "i" +lispville-inner-text-objects-map
-    "a" +lispville-outer-text-objects-map)
-
-  (general-define-key
-   :keymaps '+lispville-outer-text-objects-map
-   "f" #'lispyville-a-function
-   "a" #'lispyville-a-atom
-   "l" #'lispyville-a-list
-   "x" #'lispyville-a-sexp
-   "g" #'lispyville-a-string)
-
-  (general-define-key
-   :keymaps '+lispville-inner-text-objects-map
-   "f" #'lispyville-inner-function
-   "a" #'lispyville-inner-atom
-   "l" #'lispyville-inner-list
-   "x" #'lispyville-inner-sexp
-   "g" #'lispyville-inner-string)
-
-  (general-define-key
-   :states '(normal visual)
-   :keymaps 'lispyville-mode-map
-   ")" 'lispyville-next-closing
-   "(" 'lispyville-previous-opening
-   "{" 'lispyville-next-opening
-   "}" 'lispyville-previous-closing)
-
-  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode))
-
 ;; Always prompt in minibuffer
 (setq use-dialog-box nil)
 ;; Set default fonts
 (set-face-attribute 'default nil :font "monospace" :height 110)
 (set-face-attribute 'variable-pitch nil :family "PT Serif" :height 1.1)
-(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 110)
+(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
 ;; Set thai font
 (set-fontset-font t 'thai "SF Thonburi")
 (set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
 
-;; Set line height
-(setq-default line-spacing 2)
-
 (use-package default-text-scale
-  :custom
-  (text-scale-mode-step 1.0625)
   :commands (default-text-scale-increase default-text-scale-decrease)
   :general
   ("M--" 'default-text-scale-decrease)
   ("M-=" 'default-text-scale-increase))
-
-(use-package paren
-  :elpaca nil
-  :init
-  (setq show-paren-delay 0.1
-        show-paren-highlight-openparen t
-        show-paren-when-point-inside-paren t
-        show-paren-when-point-in-periphery t)
-  (show-paren-mode))
 
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
@@ -724,7 +687,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (size-indication-mode 1)
 (line-number-mode 1)
 (column-number-mode 1)
-(setq mode-line-percent-position nil)
 
 (use-package doom-modeline
   :custom
@@ -734,6 +696,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-modal nil)
   (doom-modeline-vcs-max-length 20)
   (doom-modeline-env-version nil)
+  (doom-modeline-percent-position nil)
   :init
   (defun doom-modeline-conditional-buffer-encoding ()
     "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
@@ -936,12 +899,15 @@ of the tab bar."
   (load-theme 'catppuccin t))
 
 (use-package hl-todo
+  :custom
+  (hl-todo-highlight-punctuation ":")
   :hook
   ((prog-mode text-mode conf-mode) . hl-todo-mode))
 
 (use-package orderless
   :demand t
   :custom
+  (completion-ignore-case t)
   (completion-styles '(orderless basic))
   (completion-category-defaults nil)
   (completion-category-overrides
@@ -995,8 +961,8 @@ of the tab bar."
   (corfu-preselect 'first)
   (corfu-on-exact-match nil)
   :config
-  (add-to-list 'savehist-additional-variables 'corfu-history)
   (corfu-history-mode 1)
+  (add-to-list 'savehist-additional-variables 'corfu-history)
   (general-define-key
     :keymaps 'corfu-map
     :predicate '(bound-and-true-p eshell-mode)
@@ -1088,7 +1054,6 @@ of the tab bar."
 )
 
 (use-package embark
-  :after vertico
   :commands (embark-act embark-dwim)
   :config
   (defun embark-which-key-indicator ()
@@ -1149,7 +1114,7 @@ targets."
   (marginalia-mode))
 
 (use-package vertico
-  :defer .5
+  :hook (on-first-input . vertico-mode)
   :elpaca (:host github :repo "minad/vertico"
                  :files (:defaults "extensions/*"))
   :init
@@ -1183,7 +1148,7 @@ targets."
   (global-git-commit-mode 1))
 
 (use-package magit
-  :defer .2
+  :defer .5
   :general
   (+leader-def :infix "g"
     "b" #'magit-branch
@@ -1202,6 +1167,8 @@ targets."
   (magit-save-repository-buffers nil)
   (magit-revision-insert-related-refs nil)
   (magit-bury-buffer-function #'magit-mode-quit-window)
+  :init
+  (setq magit-auto-revert-mode nil)
   :config
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
@@ -1382,26 +1349,28 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package treesit
   :elpaca nil
-  ;; :demand t
+  :demand t
   ;; :hook
-  ;; (go-ts-mode . (lambda ()
-  ;;                 (setq treesit-font-lock-feature-list
-  ;;                       `((comment definition)
-  ;;                         (keyword string type)
-  ;;                         (constant escape-sequence label number)
-  ;;                         (bracket delimiter error operator variable)))
-  ;;                 (treesit-font-lock-recompute-features)))
+  ;; (tsx-ts-mode . (lambda ()
+  ;;                  (setq treesit-font-lock-feature-list
+  ;;                        `((comment declaration)
+  ;;                          (keyword string escape-sequence)
+  ;;                          (constant expression identifier jsx number pattern property property_identifier jsx_element jsx_opening_element jsx_attribute jsx_closing_element jsx_expression jsx_text)
+  ;;                          (function bracket delimiter)))
+  ;;                  (treesit-font-lock-recompute-features)))
   :init
   (setq treesit-font-lock-level 4)
   (setq treesit-language-source-alist
         '((bash "https://github.com/tree-sitter/tree-sitter-bash")
           (c "https://github.com/tree-sitter/tree-sitter-c")
           (css "https://github.com/tree-sitter/tree-sitter-css")
+          (csharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
           (go "https://github.com/tree-sitter/tree-sitter-go")
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
           (html "https://github.com/tree-sitter/tree-sitter-html")
+          (java "https://github.com/tree-sitter/tree-sitter-java")
           (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
@@ -1564,8 +1533,7 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def
     "fc" #'editorconfig-find-current-editorconfig)
-  :hook
-  ((prog-mode text-mode conf-mode) . editorconfig-mode))
+  :hook (on-first-buffer . editorconfig-mode))
 
 (use-package apheleia
   :commands apheleia-mode
@@ -1846,12 +1814,12 @@ window that already exists in that direction. It will split otherwise."
   :elpaca nil
   :mode "\\.prettierrc\\'")
 
-(use-package dockerfile-mode
-  :mode "\\Dockerfile\\'"
-  :general
-  (+local-leader-def
-    :keymaps '(dockerfile-mode)
-    "bb" #'dockerfile-build-buffer))
+;; (use-package dockerfile-mode
+;;   :mode "\\Dockerfile\\'"
+;;   :general
+;;   (+local-leader-def
+;;     :keymaps '(dockerfile-mode)
+;;     "bb" #'dockerfile-build-buffer))
 
 (use-package terraform-mode
   :mode "\\.tf\\'")
@@ -1943,7 +1911,6 @@ window that already exists in that direction. It will split otherwise."
 (use-package eshell-z
   :hook (eshell-mode . (lambda () (require 'eshell-z))))
 
-;; Term
 (use-package vterm
   :general
   (+leader-def
@@ -2223,11 +2190,10 @@ window that already exists in that direction. It will split otherwise."
   (compilation-ask-about-save nil)  ; save all buffers on `compile'
   ;; Scroll compilation buffer
   (compilation-scroll-output 'first-error)
-  :init
-  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+  :config
   ;; (autoload 'comint-truncate-buffer "comint" nil t)
   ;; (add-hook 'compilation-filter-hook #'comint-truncate-buffer)
-  :config
+  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
   (with-eval-after-load 'consult
     (defvar  +consult--source-compilation
       (list :name     "Compilation buffers"
@@ -2246,20 +2212,29 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package shell-command-x
-  :defer 1
-  :config
+  :init
   ;; (setq shell-command-switch "-ic")
-  (shell-command-x-mode 1))
+  :hook
+  (on-first-input . shell-command-x-mode))
 
 (use-package envrc
-  :defer .5
-  :config
-  (envrc-global-mode 1))
+  :hook (on-first-file . envrc-global-mode))
 
 (use-package docker
   :general
   (+leader-def
-    "oD" #'docker))
+    "od" #'docker))
+
+(use-package kubel
+  :commands kubel
+  :general
+  (+leader-def
+    "ok" #'kubel)
+  :config
+  (kubel-vterm-setup))
+
+(use-package kubel-evil
+  :after kubel)
 
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")
