@@ -161,8 +161,8 @@
   :elpaca (:host github :repo "ajgrf/on.el"))
 
 (use-package exec-path-from-shell
-  :custom
-  (exec-path-from-shell-arguments '("-l"))
+  ;; :custom
+  ;; (exec-path-from-shell-arguments '("-l"))
   :config
   (dolist (var '("KUBECONFIG"))
     (add-to-list 'exec-path-from-shell-variables var))
@@ -1614,6 +1614,7 @@ targets."
   (lsp-semantic-tokens-enable nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
+  (lsp-clients-typescript-prefer-use-project-ts-server t)
 
   :init
   (defun +update-completions-list ()
