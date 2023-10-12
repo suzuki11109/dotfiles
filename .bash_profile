@@ -8,6 +8,7 @@ export EDITOR="nvim"
 export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$PATH:$HOME/.local/bin
 export PATH=$PATH:$HOME/go/bin
+export KUBECONFIG=$HOME/.kube/config
 
 command -v direnv > /dev/null && eval "$(direnv hook bash)"
 

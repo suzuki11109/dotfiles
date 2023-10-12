@@ -31,7 +31,7 @@
               bidi-paragraph-direction 'left-to-right)
 
 ;; Profile emacs startup
-(add-hook 'emacs-startup-hook
+(add-hook 'elpaca-after-init-hook
           (lambda ()
             (message "Emacs loaded in %s with %d garbage collections."
                     (format "%.2f seconds"
@@ -127,6 +127,7 @@
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
     "!"   #'shell-command
+    "&"   #'async-shell-command
     "|"   #'shell-command-on-region
 
     "b"   '(nil :wk "buffer")
@@ -366,7 +367,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; suppress large file opening confirmation
 (setq large-file-warning-threshold nil)
 
-;; recent files
 (use-package recentf
   :elpaca nil
   :init
@@ -386,8 +386,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
      ,(rx "/"
           (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
           (* any))))
-  :hook
-  (on-first-file . recentf-mode))
+  (recentf-mode 1))
 
 (use-package dired
   :elpaca nil
@@ -451,7 +450,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
              project-switch-project-open-file)
   :config
   (setq project-vc-extra-root-markers '("go.mod"))
-  ;; (setq project-switch-commands 'project-dired)
   (project-forget-zombie-projects) ;; really need to this to make tabspaces works
 
   :general
@@ -534,12 +532,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-split-window-below t)
   (evil-vsplit-window-right t)
   (evil-ex-interactive-search-highlight 'selected-window)
-  (evil-respect-visual-line-mode t)
+  ;; (evil-respect-visual-line-mode t)
   (evil-symbol-word-search t)
   :general
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
   (:states 'motion
+    "j" 'evil-next-visual-line
+    "k" 'evil-previous-visual-line
     ";" 'evil-ex)
   (:states '(normal visual)
     "$" 'evil-end-of-line)
@@ -595,31 +595,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (avy-background t))
 
-(use-package smartparens
-  :config
-  (require 'smartparens-config)
-  (defun +indent-between-pair (&rest _ignored)
-    (newline)
-    (indent-according-to-mode)
-    (forward-line -1)
-    (indent-according-to-mode))
-  (sp-local-pair 'prog-mode "{" nil :post-handlers '((+indent-between-pair "RET")))
-  (sp-local-pair 'prog-mode "[" nil :post-handlers '((+indent-between-pair "RET")))
-  (sp-local-pair 'prog-mode "(" nil :post-handlers '((+indent-between-pair "RET")))
-
-  (setq sp-highlight-pair-overlay nil
-        sp-highlight-wrap-overlay nil
-        sp-highlight-wrap-tag-overlay nil)
-  (setq sp-max-prefix-length 25)
-  (setq sp-max-pair-length 4)
-
-  (with-eval-after-load 'evil
-    (setq sp-show-pair-from-inside t)
-    (setq sp-cancel-autoskip-on-backward-movement nil)
-    (setq sp-pair-overlay-keymap (make-sparse-keymap)))
-  :hook
-  ((prog-mode text-mode config-mode) . smartparens-mode))
-
 (use-package paren
   :elpaca nil
   :init
@@ -629,14 +604,65 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
         show-paren-when-point-in-periphery t)
   (show-paren-mode))
 
-(use-package evil-cleverparens
-  :after evil
-  :custom
-  (evil-cleverparens-use-s-and-S nil)
-  (evil-cleverparens-use-regular-insert t)
-  (evil-cleverparens-move-skip-delimiters nil)
+(use-package elec-pair
+  :elpaca nil
   :hook
-  (emacs-lisp-mode . evil-cleverparens-mode))
+  ((prog-mode text-mode conf-mode) . electric-pair-mode)
+  :hook
+  (org-mode . (lambda ()
+                (setq-local electric-pair-inhibit-predicate
+                            `(lambda (c)
+                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  :preface
+  (defun +add-pairs (pairs)
+    (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
+    (setq-local electric-pair-text-pairs electric-pair-pairs)))
+
+(use-package lispyville
+  :config
+  (setq lispy-safe-paste nil)
+  (lispyville-set-key-theme '(operators
+                              c-w
+                              commentary
+                              (atom-motions t)
+                              (additional-insert normal insert)
+                              additional-wrap
+                              slurp/barf-cp
+                              (escape insert)))
+
+  ;; configure textobjects here due to conflicts with evil-textobj
+  (defvar +lispville-inner-text-objects-map (make-sparse-keymap))
+  (defvar +lispville-outer-text-objects-map (make-sparse-keymap))
+
+  (evil-define-key '(visual operator) 'lispyville-mode
+    "i" +lispville-inner-text-objects-map
+    "a" +lispville-outer-text-objects-map)
+
+  (general-define-key
+   :keymaps '+lispville-outer-text-objects-map
+   "f" #'lispyville-a-function
+   "a" #'lispyville-a-atom
+   "l" #'lispyville-a-list
+   "x" #'lispyville-a-sexp
+   "g" #'lispyville-a-string)
+
+  (general-define-key
+   :keymaps '+lispville-inner-text-objects-map
+   "f" #'lispyville-inner-function
+   "a" #'lispyville-inner-atom
+   "l" #'lispyville-inner-list
+   "x" #'lispyville-inner-sexp
+   "g" #'lispyville-inner-string)
+
+  (general-define-key
+   :states '(normal visual)
+   :keymaps 'lispyville-mode-map
+   ")" 'lispyville-next-closing
+   "(" 'lispyville-previous-opening
+   "{" 'lispyville-next-opening
+   "}" 'lispyville-previous-closing)
+
+  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode))
 
 (use-package undo-fu
   :custom
@@ -810,6 +836,9 @@ of the tab bar."
 ;; Resize window combinations proportionally
 (setq window-combination-resize t)
 
+(setq split-height-threshold nil)
+(setq split-width-threshold 0)
+
 ;; Window layout undo/redo
 (winner-mode 1)
 
@@ -857,16 +886,12 @@ of the tab bar."
       help-mode
       lsp-help-mode
       helpful-mode
-      docker-container-mode
-      docker-network-mode
-      docker-volume-mode
-      docker-image-mode
-      docker-context-mode
       "\\*Org Select\\*"
       "\\*Capture\\*"
       "^CAPTURE-"
       "\\*xref\\*"
       "\\*eldoc\\*"
+      "\\magit-process:"
       ))
   (popper-mode 1)
   (popper-echo-mode 1))
@@ -1162,88 +1187,21 @@ targets."
     "U" #'magit-unstage-file
     "L" #'magit-log-buffer-file)
   :custom
+  (transient-default-level 5)
   (magit-diff-refine-hunk t)
-  (magit-revision-show-gravatars t)
   (magit-save-repository-buffers nil)
+  (magit-revision-show-gravatars t)
   (magit-revision-insert-related-refs nil)
   (magit-bury-buffer-function #'magit-mode-quit-window)
   :init
   (setq magit-auto-revert-mode nil)
+
   :config
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
-  (defun +magit-display-buffer-fn (buffer)
-    "Same as `magit-display-buffer-traditional', except...
-
-- If opened from a commit window, it will open below it.
-- Magit process windows are always opened in small windows below the current.
-- Everything else will reuse the same window."
-    (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
-      (display-buffer
-       buffer (cond
-               ((and (eq buffer-mode 'magit-status-mode)
-                     (get-buffer-window buffer))
-                '(display-buffer-reuse-window))
-               ;; Any magit buffers opened from a commit window should open below
-               ;; it. Also open magit process windows below.
-               ((or (bound-and-true-p git-commit-mode)
-                    (eq buffer-mode 'magit-process-mode))
-                (let ((size (if (eq buffer-mode 'magit-process-mode)
-                                0.35
-                              0.7)))
-                  `(display-buffer-below-selected
-                    . ((window-height . ,(truncate (* (window-height) size)))))))
-
-               ;; Everything else should reuse the current window.
-               ((or (not (derived-mode-p 'magit-mode))
-                    (not (memq (with-current-buffer buffer major-mode)
-                               '(magit-process-mode
-                                 magit-revision-mode
-                                 magit-diff-mode
-                                 magit-stash-mode
-                                 magit-status-mode))))
-                '(display-buffer-same-window))
-
-               ('(+magit--display-buffer-in-direction))))))
-
-  (defvar +magit-open-windows-in-direction 'right
-    "What direction to open new windows from the status buffer.
-For example, diffs and log buffers. Accepts `left', `right', `up', and `down'.")
-
-  (defun +magit--display-buffer-in-direction (buffer alist)
-    "`display-buffer-alist' handler that opens BUFFER in a direction.
-
-This differs from `display-buffer-in-direction' in one way: it will try to use a
-window that already exists in that direction. It will split otherwise."
-    (let ((direction (or (alist-get 'direction alist)
-                         +magit-open-windows-in-direction))
-          (origin-window (selected-window)))
-      (if-let (window (window-in-direction direction))
-          (unless magit-display-buffer-noselect
-            (select-window window))
-        (if-let (window (and (not (one-window-p))
-                             (window-in-direction
-                              (pcase direction
-                                (`right 'left)
-                                (`left 'right)
-                                ((or `up `above) 'down)
-                                ((or `down `below) 'up)))))
-            (unless magit-display-buffer-noselect
-              (select-window window))
-          (let ((window (split-window nil nil direction)))
-            (when (and (not magit-display-buffer-noselect)
-                       (memq direction '(right down below)))
-              (select-window window))
-            (display-buffer-record-window 'reuse window buffer)
-            (set-window-buffer window buffer)
-            (set-window-parameter window 'quit-restore (list 'window 'window origin-window buffer))
-            (set-window-prev-buffers window nil))))
-      (unless magit-display-buffer-noselect
-        (switch-to-buffer buffer t t)
-        (selected-window))))
-
-  (setq magit-display-buffer-function #'+magit-display-buffer-fn)
+  (setq magit-display-buffer-function 'magit-display-buffer-fullframe-status-v1)
+  (setq magit-bury-buffer-function 'magit-restore-window-configuration)
 
   ;; for dotfiles
   (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
@@ -1584,7 +1542,7 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode-indent-offset 4)
   :init
   (defun +go-mode-setup ()
-    (+add-pairs '((?` . ?`)))
+    ;; (+add-pairs '((?` . ?`)))
     (add-hook 'before-save-hook 'lsp-organize-imports t t))
   :hook
   (go-ts-mode . +go-mode-setup)
@@ -1829,6 +1787,11 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'auto-mode-alist
                (cons "/.dockerignore\\'" 'gitignore-mode)))
 
+(use-package csv-mode
+  :mode "\\.csv\\'"
+  :hook
+  (csv-mode . csv-align-mode))
+
 (use-package eat
   :commands eat
   :elpaca (eat :type git
@@ -1928,13 +1891,6 @@ window that already exists in that direction. It will split otherwise."
   (vterm-tramp-shells '(("docker" "/bin/sh")))
   (vterm-timer-delay 0.01)
   :config
-  ;; Hide vterm install window
-  (add-to-list
-   'display-buffer-alist
-   `(" \\*Install vterm\\*"
-     (display-buffer-no-window)
-     (allow-no-window . t)))
-
   (with-eval-after-load 'consult
     (defvar  +consult--source-term
       (list :name     "Terminal buffers"
@@ -2138,6 +2094,20 @@ window that already exists in that direction. It will split otherwise."
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
 
+(setq ediff-diff-options "-w" ; turn off whitespace checking
+      ediff-split-window-function #'split-window-horizontally
+      ediff-window-setup-function #'ediff-setup-windows-plain)
+
+(defvar +ediff-saved-wconf nil)
+(add-hook 'ediff-before-setup-hook
+          (lambda ()
+            (setq +ediff-saved-wconf (current-window-configuration))))
+(defun +ediff-restore-wconf-h ()
+  (when (window-configuration-p +ediff-saved-wconf)
+    (set-window-configuration +ediff-saved-wconf)))
+(add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
+(add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h)
+
 (use-package deadgrep
   :general
   (+leader-def
@@ -2221,6 +2191,13 @@ window that already exists in that direction. It will split otherwise."
   :hook (on-first-file . envrc-global-mode))
 
 (use-package docker
+  :init
+  (setq docker-show-messages nil)
+  (add-to-list
+    'display-buffer-alist
+     `("\\*docker-"
+       (display-buffer-same-window)
+      ))
   :general
   (+leader-def
     "od" #'docker))
