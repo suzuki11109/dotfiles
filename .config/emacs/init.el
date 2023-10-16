@@ -273,9 +273,8 @@
   :elpaca nil
   :custom
   (savehist-save-minibuffer-history t)
-  (savehist-additional-variables '(kill-ring register-alist))
-  :config
-  (savehist-mode 1))
+  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
+  :hook (on-first-input . savehist-mode))
 
 ;; Show recursion depth in minibuffer (see `enable-recursive-minibuffers')
 (minibuffer-depth-indicate-mode 1)
@@ -295,8 +294,16 @@
  ;; Disable making backup files
  make-backup-files nil)
 
-(setq auto-save-file-name-transforms
-      `((".*" "~/.config/emacs/auto-save/" t)))
+;; But turn on auto-save, so we have a fallback in case of crashes or lost data.
+(setq auto-save-default t
+      auto-save-include-big-deletions t
+      auto-save-list-file-prefix "~/.config/emacs/auto-save/"
+      tramp-auto-save-directory  "~/.config/emacs/tramp-auto-save/"
+      auto-save-file-name-transforms
+      (list (list "\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
+                  ;; Prefix tramp autosaves to prevent conflicts with local ones
+                  (concat auto-save-list-file-prefix "tramp-\\2") t)
+            (list ".*" auto-save-list-file-prefix t)))
 
 ;; Auto load files changed on disk
 (use-package autorevert
@@ -498,11 +505,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Always add final newline
 (setq require-final-newline t)
 
+(setq-default truncate-lines t)
+(setq truncate-partial-width-windows nil)
+
 ;; Wrap long lines
 (global-visual-line-mode 1)
-
-;; Display long lines
-(setq truncate-lines nil)
 
 ;; Remember cursor position in files
 (use-package saveplace
@@ -723,16 +730,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-vcs-max-length 20)
   (doom-modeline-env-version nil)
   (doom-modeline-percent-position nil)
-  :init
-  (defun doom-modeline-conditional-buffer-encoding ()
-    "We expect the encoding to be LF UTF-8, so only show the modeline when this is not the case"
-    (setq-local doom-modeline-buffer-encoding
-                (unless (and (memq (plist-get (coding-system-plist buffer-file-coding-system) :category)
-                                   '(coding-category-undecided coding-category-utf-8))
-                             (not (memq (coding-system-eol-type buffer-file-coding-system) '(1 2))))
-                  t)))
-
-  (add-hook 'after-change-major-mode-hook #'doom-modeline-conditional-buffer-encoding)
+  (doom-modeline-buffer-encoding 'nondefault)
   :hook
   (elpaca-after-init . doom-modeline-mode))
 
@@ -836,18 +834,21 @@ of the tab bar."
 ;; Resize window combinations proportionally
 (setq window-combination-resize t)
 
-(setq split-height-threshold nil)
-(setq split-width-threshold 0)
+(use-package ace-window
+  :init
+  (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
+  (setq aw-scope 'frame
+        aw-background t))
 
 ;; Window layout undo/redo
 (winner-mode 1)
 
-(use-package windresize
-  :init
-  (setq windresize-default-increment 5)
-  :general
-  ("S-C-<return>" 'windresize)
-  :commands windresize)
+;; (use-package windresize
+;;   :init
+;;   (setq windresize-default-increment 5)
+;;   :general
+;;   ("S-C-<return>" 'windresize)
+;;   :commands windresize)
 
 (use-package popper
   :general
@@ -950,11 +951,18 @@ of the tab bar."
   (lsp-completion-mode . +lsp-mode-setup-completion))
 
 (use-package yasnippet
-  :hook
-  (prog-mode . yas-minor-mode))
+  :after corfu
+  :init
+  (setq yas-verbosity 2)
+  :config
+  (yas-global-mode +1)
+  (define-key yas-minor-mode-map [(tab)]        nil)
+  (define-key yas-minor-mode-map (kbd "TAB")    nil)
+  (define-key yas-minor-mode-map (kbd "<tab>")  nil))
 
-(use-package yasnippet-snippets
+(use-package doom-snippets
   :after yasnippet
+  :elpaca (:host github :repo "suzuki11109/snippets" :files ("*.el" "*"))
   :config
   (yas-reload-all))
 
@@ -976,7 +984,7 @@ of the tab bar."
                                              corfu-quit-no-match t
                                              corfu-quit-at-boundary t)
   ))
-  (elpaca-after-init . global-corfu-mode)
+  (on-first-input . global-corfu-mode)
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -987,7 +995,11 @@ of the tab bar."
   (corfu-on-exact-match nil)
   :config
   (corfu-history-mode 1)
-  (add-to-list 'savehist-additional-variables 'corfu-history)
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'corfu-history))
+  (general-define-key
+    :keymaps 'corfu-map
+    [tab] #'corfu-complete)
   (general-define-key
     :keymaps 'corfu-map
     :predicate '(bound-and-true-p eshell-mode)
@@ -1071,12 +1083,12 @@ of the tab bar."
     "hI"  #'consult-info)
   :bind
   (:map minibuffer-local-map
-    ("M-r" . consult-history))
+        ("M-r" . consult-history))
   :custom
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
-)
+  )
 
 (use-package embark
   :commands (embark-act embark-dwim)
@@ -1119,12 +1131,23 @@ targets."
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator)
 
+  (eval-when-compile
+    (defmacro +embark-ace-action (fn)
+      `(defun ,(intern (concat "+embark-ace-" (symbol-name fn))) ()
+         (interactive)
+         (with-demoted-errors "%s"
+           (let ((aw-dispatch-always t))
+             (aw-switch-to-window (aw-select nil))
+             (call-interactively (symbol-function ',fn)))))))
+
+  (general-define-key
+    :keymaps 'embark-file-map
+    "o" (+embark-ace-action find-file)
+    :keymaps 'embark-general-map
+    "D" #'xref-find-definitions-other-window)
   :bind
   ("C-." . embark-dwim)
-  ("C-;" . embark-act)
-  (:map embark-general-map
-    ("D" . xref-find-definitions-other-window))
-  )
+  ("C-;" . embark-act))
 
 (use-package embark-consult
   :hook
@@ -1139,26 +1162,20 @@ targets."
   (marginalia-mode))
 
 (use-package vertico
-  :hook (on-first-input . vertico-mode)
   :elpaca (:host github :repo "minad/vertico"
                  :files (:defaults "extensions/*"))
   :init
   (setq vertico-resize nil
-        vertico-count 14)
-  :config
-  (vertico-mode 1)
-  :general
-  (+leader-def
-    "." '(vertico-repeat :wk "Resume last search")))
-
-(use-package vertico-directory
-  :elpaca nil
-  :after vertico
+        vertico-count 15)
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
+  :general
+  (+leader-def
+    "." '(vertico-repeat :wk "Resume last search"))
   :hook
+  (on-first-input . vertico-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   (minibuffer-setup . vertico-repeat-save))
 
@@ -1168,9 +1185,14 @@ targets."
   (git-commit-summary-max-length 72)
   (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
   :config
-  (with-eval-after-load 'evil
-    (evil-set-initial-state 'git-commit-mode 'insert))
-  (global-git-commit-mode 1))
+  (global-git-commit-mode 1)
+  ;; (evil-set-initial-state 'git-commit-mode 'insert)
+  (add-hook 'git-commit-setup-hook
+    (lambda ()
+      (when (and (bound-and-true-p evil-mode)
+                 (not (evil-emacs-state-p))
+                 (bobp) (eolp))
+        (evil-insert-state)))))
 
 (use-package magit
   :defer .5
@@ -1200,8 +1222,78 @@ targets."
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
-  (setq magit-display-buffer-function 'magit-display-buffer-fullframe-status-v1)
-  (setq magit-bury-buffer-function 'magit-restore-window-configuration)
+  ;; layout
+  (defun +magit-display-buffer-fn (buffer)
+    "Same as `magit-display-buffer-traditional', except...
+
+- If opened from a commit window, it will open below it.
+- Magit process windows are always opened in small windows below the current.
+- Everything else will reuse the same window."
+    (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
+      (display-buffer
+       buffer (cond
+               ((and (eq buffer-mode 'magit-status-mode)
+                     (get-buffer-window buffer))
+                '(display-buffer-reuse-window))
+               ;; Any magit buffers opened from a commit window should open below
+               ;; it. Also open magit process windows below.
+               ((or (bound-and-true-p git-commit-mode)
+                    (eq buffer-mode 'magit-process-mode))
+                (let ((size (if (eq buffer-mode 'magit-process-mode)
+                                0.35
+                              0.7)))
+                  `(display-buffer-below-selected
+                    . ((window-height . ,(truncate (* (window-height) size)))))))
+
+               ;; Everything else should reuse the current window.
+               ((or (not (derived-mode-p 'magit-mode))
+                    (not (memq (with-current-buffer buffer major-mode)
+                               '(magit-process-mode
+                                 magit-revision-mode
+                                 magit-diff-mode
+                                 magit-stash-mode
+                                 magit-status-mode))))
+                '(display-buffer-same-window))
+
+               ('(+magit--display-buffer-in-direction))))))
+
+  (defvar +magit-open-windows-in-direction 'right)
+
+  (defun +magit--display-buffer-in-direction (buffer alist)
+    "`display-buffer-alist' handler that opens BUFFER in a direction.
+
+This differs from `display-buffer-in-direction' in one way: it will try to use a
+window that already exists in that direction. It will split otherwise."
+    (let ((direction (or (alist-get 'direction alist)
+                         +magit-open-windows-in-direction))
+          (origin-window (selected-window)))
+      (if-let (window (window-in-direction direction))
+          (unless magit-display-buffer-noselect
+            (select-window window))
+        (if-let (window (and (not (one-window-p))
+                             (window-in-direction
+                              (pcase direction
+                                (`right 'left)
+                                (`left 'right)
+                                ((or `up `above) 'down)
+                                ((or `down `below) 'up)))))
+            (unless magit-display-buffer-noselect
+              (select-window window))
+          (let ((window (split-window nil nil direction)))
+            (when (and (not magit-display-buffer-noselect)
+                       (memq direction '(right down below)))
+              (select-window window))
+            (display-buffer-record-window 'reuse window buffer)
+            (set-window-buffer window buffer)
+            (set-window-parameter window 'quit-restore (list 'window 'window origin-window buffer))
+            (set-window-prev-buffers window nil))))
+      (unless magit-display-buffer-noselect
+        (switch-to-buffer buffer t t)
+        (selected-window))))
+
+  (setq transient-display-buffer-action '(display-buffer-below-selected)
+        magit-display-buffer-function #'+magit-display-buffer-fn
+        magit-bury-buffer-function #'magit-mode-quit-window)
 
   ;; for dotfiles
   (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
@@ -2119,11 +2211,11 @@ targets."
   :hook
   (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
   :bind
-  ([remap describe-symbol]   . helpful-symbol)
-  ([remap describe-key]      . helpful-key)
-  ([remap describe-function] . helpful-callable)
-  ([remap describe-variable] . helpful-variable)
   ([remap describe-command]  . helpful-command)
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-key]      . helpful-key)
+  ([remap describe-symbol]   . helpful-symbol)
+  ([remap describe-variable] . helpful-variable)
   :preface
   (defun +helpful-switch-to-buffer (buffer-or-name)
     "Switch to helpful BUFFER-OR-NAME.
@@ -2194,6 +2286,7 @@ targets."
 (use-package docker
   :init
   (setq docker-show-messages nil)
+  (setq docker-image-run-arguments '("-i" "-t" "--rm"))
   (add-to-list
     'display-buffer-alist
      `("\\*docker-"
@@ -2245,3 +2338,31 @@ targets."
 
 (use-package impostman
   :commands (impostman-import-file impostman-import-string))
+
+(use-package elfeed
+  :commands elfeed
+  :general
+  (+leader-def
+    "or" #'elfeed)
+  :init
+  (setq elfeed-feeds
+        '("https://codeopinion.com/feed"
+          "https://juacompe.medium.com/feed"
+          "https://bitfieldconsulting.com/golang?format=rss"
+          "https://go.dev/blog/feed.atom"
+          "https://particular.net/feed.xml"
+          "https://www.ardanlabs.com/blog/index.xml"
+          "https://www.somkiat.cc/feed"
+          "https://weerasak.dev/feed.xml"
+          "https://engineering.grab.com/feed.xml"
+          )))
+
+(use-package makefile-executor
+  :general
+  (+local-leader-def
+    :keymaps 'makefile-executor-mode
+    "x" 'makefile-executor-execute-target
+    "l" 'makefile-executor-execute-last
+  )
+  :hook
+  (makefile-mode . makefile-executor-mode))
