@@ -457,8 +457,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
              project-switch-project-open-file)
   :config
   (setq project-vc-extra-root-markers '("go.mod"))
+  (setq project-switch-commands 'project-find-file)
   (project-forget-zombie-projects) ;; really need to this to make tabspaces works
-
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
@@ -687,7 +687,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq use-dialog-box nil)
 ;; Set default fonts
 (set-face-attribute 'default nil :font "monospace" :height 110)
-(set-face-attribute 'variable-pitch nil :family "PT Serif" :height 1.1)
+(set-face-attribute 'variable-pitch nil :family "Noto Serif" :height 1.1)
 (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
 ;; Set thai font
 (set-fontset-font t 'thai "SF Thonburi")
@@ -956,9 +956,13 @@ of the tab bar."
   (setq yas-verbosity 2)
   :config
   (yas-global-mode +1)
-  (define-key yas-minor-mode-map [(tab)]        nil)
-  (define-key yas-minor-mode-map (kbd "TAB")    nil)
-  (define-key yas-minor-mode-map (kbd "<tab>")  nil))
+  (define-key yas-minor-mode-map [(tab)] nil)
+  (define-key yas-minor-mode-map (kbd "TAB") nil)
+  ;; (define-key yas-minor-mode-map (kbd "<tab>")  nil)
+  (define-key yas-keymap [(tab)] nil)
+  (define-key yas-keymap (kbd "TAB") nil)
+  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
+  )
 
 (use-package doom-snippets
   :after yasnippet
@@ -1143,6 +1147,8 @@ targets."
   (general-define-key
     :keymaps 'embark-file-map
     "o" (+embark-ace-action find-file)
+    :keymaps 'embark-buffer-map
+    "o" (+embark-ace-action switch-to-buffer)
     :keymaps 'embark-general-map
     "D" #'xref-find-definitions-other-window)
   :bind
@@ -1414,7 +1420,6 @@ window that already exists in that direction. It will split otherwise."
         '((bash "https://github.com/tree-sitter/tree-sitter-bash")
           (c "https://github.com/tree-sitter/tree-sitter-c")
           (css "https://github.com/tree-sitter/tree-sitter-css")
-          (csharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
           (go "https://github.com/tree-sitter/tree-sitter-go")
