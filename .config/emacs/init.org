@@ -522,6 +522,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
             ("\\.md\\'" ,cmd))))
 )
 
+(use-package dired-aux
+  :elpaca nil
+  :after dired
+  :config
+  (setq dired-create-destination-dirs 'ask
+        dired-vc-rename-file t))
+
 ;; dired fontlock
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
@@ -1134,15 +1141,17 @@ of the tab bar."
 (use-package corfu
   :elpaca (:host github :repo "minad/corfu"
                  :files (:defaults "extensions/*"))
+  :init
+  (defun corfu-enable-in-minibuffer ()
+    (when (where-is-internal #'completion-at-point (list (current-local-map)))
+      (setq-local corfu-auto nil)
+      (corfu-mode 1)))
   :hook
-  ((eshell-mode comint-mode) . (lambda ()
-                                 (setq-local corfu-auto nil
-                                             corfu-preselect 'prompt
-                                             corfu-preview-current t
-                                             corfu-quit-no-match t
-                                             corfu-quit-at-boundary t)
-  ))
   (on-first-input . global-corfu-mode)
+  (minibuffer-setup-hook . corfu-enable-in-minibuffer)
+  ((eshell-mode comint-mode vterm-mode) . (lambda ()
+                                            (setq-local corfu-auto nil)
+                                            (corfu-mode 1)))
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1151,24 +1160,20 @@ of the tab bar."
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match nil)
+  (corfu-cycle t)
   :config
-  (corfu-history-mode 1)
   (with-eval-after-load 'savehist
     (add-to-list 'savehist-additional-variables 'corfu-history))
+  (corfu-history-mode 1)
+
   (general-define-key
     :keymaps 'corfu-map
     [tab] #'corfu-complete)
-  (general-define-key
-    :keymaps 'corfu-map
-    :predicate '(bound-and-true-p eshell-mode)
-    [backtab] #'corfu-previous
-    [tab] #'corfu-next)
-
-  (defun corfu-enable-in-minibuffer ()
-    (when (where-is-internal #'completion-at-point (list (current-local-map)))
-      (setq-local corfu-auto nil)
-      (corfu-mode 1)))
-  (add-hook 'minibuffer-setup-hook #'corfu-enable-in-minibuffer)
+  ;; (general-define-key
+  ;;   :keymaps 'corfu-map
+  ;;   :predicate '(bound-and-true-p eshell-mode)
+  ;;   [backtab] #'corfu-previous
+  ;;   [tab] #'corfu-next)
   )
 
 (use-package kind-icon
@@ -1249,6 +1254,12 @@ of the tab bar."
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
   )
+
+(use-package consult-dir
+  :bind (("C-x C-d" . consult-dir)
+         :map minibuffer-local-completion-map
+         ("C-x C-d" . consult-dir)
+         ("C-x C-j" . consult-dir-jump-file)))
 
 (use-package embark
   :commands (embark-act embark-dwim)
@@ -1496,23 +1507,7 @@ window that already exists in that direction. It will split otherwise."
   :general
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
-    "q" #'kill-current-buffer)
-  (+local-leader-def
-    :keymaps 'forge-topic-mode-map
-    "c"  #'forge-create-post
-    "e"  '(:ignore t :which-key "edit")
-    "ea" #'forge-edit-topic-assignees
-    "ed" #'forge-edit-topic-draft
-    "ek" #'forge-delete-comment
-    "el" #'forge-edit-topic-labels
-    "em" #'forge-edit-topic-marks
-    "eM" #'forge-merge
-    "en" #'forge-edit-topic-note
-    "ep" #'forge-edit-post
-    "er" #'forge-edit-topic-review-requests
-    "es" #'forge-edit-topic-state
-    "et" #'forge-edit-topic-title)
-)
+    "q" #'kill-current-buffer))
 #+end_src
 ** Merge
 #+begin_src emacs-lisp
@@ -2110,7 +2105,6 @@ window that already exists in that direction. It will split otherwise."
 #+end_src
 ** Eshell
 #+begin_src emacs-lisp
-
 (use-package shell
   :elpaca nil
   :hook
@@ -2126,8 +2120,11 @@ window that already exists in that direction. It will split otherwise."
            :keymaps 'eshell-mode-map
            "<return>" #'evil-insert-resume)
   (:states '(insert)
-   :keymaps 'eshell-mode-map
-   "C-y" #'yank)
+           :keymaps 'eshell-mode-map
+           "C-y" #'yank)
+  (:states '(normal visual insert)
+           :keymaps 'eshell-mode-map
+           "C-t" #'+interactive-cd)
   :preface
   (defface +eshell-prompt-pwd '((t (:inherit font-lock-constant-face)))
     "TODO"
@@ -2144,14 +2141,20 @@ window that already exists in that direction. It will split otherwise."
                           'face '+eshell-prompt-pwd))
             (propertize " λ" 'face (if (zerop eshell-last-command-status) 'success 'error))
             " "))
+  (defun +interactive-cd (dir)
+    "Prompt for a directory and cd to it."
+    (interactive "Dcd ")
+    (let ((inhibit-read-only t))
+      (insert (concat "cd " dir)))
+    (pcase major-mode
+      ('shell-mode (comint-send-input))
+      ;; ('vterm-mode (vterm-send-string))
+      ('eshell-mode (eshell-send-input))))
   :init
   (defun eshell-new ()
     "Open a new instance of eshell."
     (interactive)
-    (popper-mode 0) ;; temporarily disable popper
-    (eshell 'N)
-    (popper-mode 1)
-  )
+    (eshell 'N))
 
   (setq eshell-banner-message ""
         eshell-scroll-to-bottom-on-input 'all
@@ -2164,19 +2167,19 @@ window that already exists in that direction. It will split otherwise."
         eshell-error-if-no-glob t)
 
   (add-hook 'eshell-mode-hook
-             (defun +eshell-setup ()
-               ;; remove fringe
-               (set-window-fringes nil 0 0)
-               (set-window-margins nil 1 nil)
-               ;; scrolling
-               (setq hscroll-margin 0)
-               ;; Text wrapping
-               ;; (visual-line-mode +1)
-               (set-display-table-slot standard-display-table 0 ?\ )))
+            (defun +eshell-setup ()
+              ;; remove fringe
+              (set-window-fringes nil 0 0)
+              (set-window-margins nil 1 nil)
+              ;; scrolling
+              (setq hscroll-margin 0)
+              ;; Text wrapping
+              ;; (visual-line-mode +1)
+              (set-display-table-slot standard-display-table 0 ?\ )))
   )
 
-(use-package eshell-z
-  :hook (eshell-mode . (lambda () (require 'eshell-z))))
+;; (use-package eshell-z
+;;   :hook (eshell-mode . (lambda () (require 'eshell-z))))
 
 #+end_src
 ** Vterm
