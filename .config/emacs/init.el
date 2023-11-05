@@ -1,44 +1,8 @@
-;; Some constants
-(defconst IS-MAC      (eq system-type 'darwin))
-(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+;; Prevent package.el from loading packages
+(setq package-enable-at-startup nil)
 
-;; Native compilation settings
-(when (featurep 'native-compile)
-  (setq
-   ;; Silence compiler warnings as they can be pretty disruptive.
-   native-comp-async-report-warnings-errors nil
-   ;; Make native compilation happens asynchronously
-   native-comp-jit-compilation t))
-
-;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode)
-
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(when (file-exists-p custom-file) ; Don’t forget to load it, we still need it
-  (load custom-file))
-
-;; Inhibits fontification while receiving input
-(setq redisplay-skip-fontification-on-input t)
-
-(setq pgtk-wait-for-event-timeout 0.001)
-
-(setq inhibit-x-resources t)
-
-;; Slightly faster re-display
-(setq bidi-inhibit-bpa t)
-(setq-default bidi-display-reordering 'left-to-right
-              bidi-paragraph-direction 'left-to-right)
-
-;; Profile emacs startup
-(add-hook 'elpaca-after-init-hook
-          (lambda ()
-            (message "Emacs loaded in %s with %d garbage collections."
-                    (format "%.2f seconds"
-                             (float-time (time-subtract (current-time) before-init-time)))
-                     gcs-done)))
-
-(defvar elpaca-installer-version 0.5)
+;; Boostraping
+(defvar elpaca-installer-version 0.6)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
 (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
@@ -95,16 +59,20 @@
 
 (elpaca-wait)
 
+;; Profile emacs startup
+(add-hook 'elpaca-after-init-hook
+          (lambda ()
+            (message "Emacs loaded in %s with %d garbage collections."
+                    (format "%.2f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
+
 (use-package on
   :elpaca (:host github :repo "ajgrf/on.el"))
 
-(use-package exec-path-from-shell
-  ;; :custom
-  ;; (exec-path-from-shell-arguments '("-l"))
-  :config
-  (dolist (var '("KUBECONFIG"))
-    (add-to-list 'exec-path-from-shell-variables var))
-  (exec-path-from-shell-initialize))
+;; Some constants
+(defconst IS-MAC      (eq system-type 'darwin))
+(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 
 (use-package general
   :elpaca nil
@@ -126,9 +94,8 @@
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
-    "!"   #'shell-command
-    "&"   #'async-shell-command
-    "|"   #'shell-command-on-region
+    "!"   #'async-shell-command
+    "|"   #'async-shell-command-region
 
     "b"   '(nil :wk "buffer")
     "bb"  '(switch-to-buffer :wk "Switch buffer")
@@ -250,37 +217,44 @@
   :hook
   (on-first-input . which-key-mode))
 
-(setq
- ;; Fluid scrolling
- pixel-scroll-precision-use-momentum t
- ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues see:
- ;; emacs.stackexchange.com/a/28746
- auto-window-vscroll nil
- ;; Fast scrolling
- fast-but-imprecise-scrolling t
- ;; Keep the point in the same position while scrolling
- scroll-preserve-screen-position t
- ;; Do not move cursor to the center when scrolling
- scroll-conservatively 101
- ;; Scroll at a margin of one line
- scroll-margin 3)
+;; Confirm before quitting
+(setq confirm-kill-emacs #'y-or-n-p)
 
-;; Scroll pixel by pixel, in Emacs29+ there is a more pricise mode way to scroll
-(pixel-scroll-precision-mode 1)
+;; No beep or blink
+(setq ring-bell-function #'ignore
+      visible-bell nil)
 
-;; Enable saving minibuffer history
-(use-package savehist
+;; Don't store duplicated entries
+(setq history-delete-duplicates t)
+
+;; Native compilation settings
+(when (featurep 'native-compile)
+  (setq
+   ;; Silence compiler warnings as they can be pretty disruptive.
+   native-comp-async-report-warnings-errors nil
+   ;; Make native compilation happens asynchronously
+   native-comp-jit-compilation t))
+
+(use-package recentf
   :elpaca nil
-  :custom
-  (savehist-save-minibuffer-history t)
-  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
-  :hook (on-first-input . savehist-mode))
-
-;; Show recursion depth in minibuffer (see `enable-recursive-minibuffers')
-(minibuffer-depth-indicate-mode 1)
-
-;; Enable recursive calls to minibuffer
-(setq enable-recursive-minibuffers t)
+  :init
+  (setq
+   recentf-max-saved-items 100
+   recentf-case-fold-search t
+   recentf-exclude
+   `(,(rx (* any)
+          (or
+           "elfeed-db"
+           "eln-cache"
+           "/cache/"
+           ".maildir/"
+           ".cache/")
+          (* any)
+          (? (or "html" "pdf" "tex" "epub")))
+     ,(rx "/"
+          (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
+          (* any))))
+  (recentf-mode 1))
 
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
@@ -374,26 +348,15 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; suppress large file opening confirmation
 (setq large-file-warning-threshold nil)
 
-(use-package recentf
-  :elpaca nil
-  :init
-  (setq
-   recentf-max-saved-items 100
-   recentf-case-fold-search t
-   recentf-exclude
-   `(,(rx (* any)
-          (or
-           "elfeed-db"
-           "eln-cache"
-           "/cache/"
-           ".maildir/"
-           ".cache/")
-          (* any)
-          (? (or "html" "pdf" "tex" "epub")))
-     ,(rx "/"
-          (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
-          (* any))))
-  (recentf-mode 1))
+(defun bury-or-kill ()
+  (if (eq (current-buffer) (get-buffer "*scratch*"))
+      (progn (bury-buffer)
+             nil) t))
+(add-hook 'kill-buffer-query-functions #'bury-or-kill)
+
+(use-package persistent-scratch
+  :config
+  (persistent-scratch-setup-default))
 
 (use-package dired
   :elpaca nil
@@ -442,10 +405,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (setq dired-create-destination-dirs 'ask
         dired-vc-rename-file t))
 
-;; dired fontlock
+;; Dired fontlock
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
+;; Keep single dired buffer
 (use-package dired-single
   :after dired
   :config
@@ -469,229 +433,55 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
+    "p!" #'project-async-shell-command
     ))
 
-(setq eldoc-echo-area-prefer-doc-buffer t)
+;; (setq eldoc-echo-area-prefer-doc-buffer t)
 (setq eldoc-echo-area-use-multiline-p nil)
 
-(defun bury-or-kill ()
-  (if (eq (current-buffer) (get-buffer "*scratch*"))
-      (progn (bury-buffer)
-             nil) t))
-(add-hook 'kill-buffer-query-functions #'bury-or-kill)
-
-(use-package persistent-scratch
-  :config
-  (persistent-scratch-setup-default))
-
-(setq
- ;; Silent mode
- ring-bell-function #'ignore
- ;; Set to non-nil to flash!
- visible-bell nil)
-
-(setq
- ;; Use y or n instead of yes or no
- use-short-answers t
- ;; Confirm before quitting
- confirm-kill-emacs #'y-or-n-p)
-
-;; Always prompt in minibuffer (no GUI)
-(setq use-dialog-box nil)
-
-;; Use only spaces
-(setq-default indent-tabs-mode nil)
-;; Tab width 8 is too long
-(setq-default tab-width 4)
-
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
-;; Use single space between sentences
-(setq sentence-end-double-space nil)
-;; Don't store duplicated entries
-(setq history-delete-duplicates t)
-;; Always add final newline
-(setq require-final-newline t)
-
-(setq-default truncate-lines t)
-(setq truncate-partial-width-windows nil)
-
-;; Wrap long lines
-(global-visual-line-mode 1)
-
-;; Remember cursor position in files
-(use-package saveplace
-  :elpaca nil
+(setq help-window-select t)
+(use-package helpful
   :hook
-  (on-first-file . save-place-mode))
+  (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
+  :bind
+  ([remap describe-command]  . helpful-command)
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-key]      . helpful-key)
+  ([remap describe-symbol]   . helpful-symbol)
+  ([remap describe-variable] . helpful-variable)
+  :preface
+  (defun +helpful-switch-to-buffer (buffer-or-name)
+    "Switch to helpful BUFFER-OR-NAME.
 
-  ;;; Why use anything but UTF-8?
-(prefer-coding-system 'utf-8)
-(set-charset-priority 'unicode)
-(set-default-coding-systems 'utf-8)
-(set-selection-coding-system 'utf-8)
-
-;; Clipboard
-(setq kill-do-not-save-duplicates t
-      ;; Save existing clipboard text into the kill ring before replacing it.
-      save-interprogram-paste-before-kill t)
-
-(use-package evil
-  :defer .5
+  The logic is simple, if we are currently in the helpful buffer,
+  reuse it's window, otherwise create new one."
+    (if (eq major-mode 'helpful-mode)
+        (switch-to-buffer buffer-or-name)
+      (pop-to-buffer buffer-or-name)))
   :custom
-  (evil-v$-excludes-newline t)
-  (evil-mode-line-format nil)
-  (evil-want-keybinding nil)
-  (evil-want-C-u-scroll t)
-  (evil-want-fine-undo t)
-  (evil-split-window-below t)
-  (evil-vsplit-window-right t)
-  (evil-ex-interactive-search-highlight 'selected-window)
-  ;; (evil-respect-visual-line-mode t)
-  (evil-symbol-word-search t)
+  (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
+  (helpful-max-buffers 1)
+  :config
+  (define-key helpful-mode-map [remap quit-window]
+              'kill-buffer-and-window)
+  (define-key help-mode-map [remap quit-window]
+              'kill-buffer-and-window)
   :general
   (+leader-def
-    "w" '(:keymap evil-window-map :wk "window"))
-  (:states 'motion
-    "j" 'evil-next-visual-line
-    "k" 'evil-previous-visual-line
-    ";" 'evil-ex)
-  (:states '(normal visual)
-    "$" 'evil-end-of-line)
-  :config
-  (modify-syntax-entry ?_ "w")
-  (defalias 'forward-evil-word 'forward-evil-symbol)
-  (setq evil-visual-state-cursor '(hollow))
-  (customize-set-variable 'evil-want-Y-yank-to-eol t) ;; :custom doesn't work
+    :infix "h"
+    "a" #'describe-face
+    "c" #'helpful-macro
+    "f" #'helpful-callable
+    "F" #'helpful-function
+    "k" #'helpful-key
+    "o" #'helpful-symbol
+    "v" #'helpful-variable
+    "x" #'helpful-command))
 
-  (evil-set-undo-system 'undo-fu)
-  (evil-select-search-module 'evil-search-module 'evil-search)
-  (evil-mode 1)
-)
-
-(use-package evil-collection
-  :after evil magit forge
-  :custom
-  (evil-collection-key-blacklist '("C-y"))
-  :config
-  (evil-collection-init))
-
-(use-package evil-nerd-commenter
-  :after evil
-  :commands evilnc-comment-operator
-  :general
-  (:states '(normal visual)
-    "gc" #'evilnc-comment-operator))
-
-(use-package evil-escape
-  :hook (evil-mode . evil-escape-mode)
+(use-package catppuccin-theme
   :init
-  (setq evil-escape-excluded-states '(normal visual multiedit emacs motion)
-        evil-escape-excluded-major-modes '(eshell-mode vterm-mode)
-        evil-escape-delay 0.25
-        evil-escape-key-sequence "kj"))
+  (load-theme 'catppuccin t))
 
-(use-package evil-surround
-  :hook (evil-mode . global-evil-surround-mode))
-
-(use-package evil-goggles
-  :after evil
-  :config
-  (setq evil-goggles-enable-delete nil)
-  (setq evil-goggles-enable-change nil)
-  (setq evil-goggles-enable-nerd-commenter nil)
-  (evil-goggles-mode 1))
-
-(use-package avy
-  :commands evil-avy-goto-char-2
-  :general
-  (:states '(normal)
-    "s" #'evil-avy-goto-char-2)
-  :custom
-  (avy-background t))
-
-(use-package paren
-  :elpaca nil
-  :init
-  (setq show-paren-delay 0.1
-        show-paren-highlight-openparen t
-        show-paren-when-point-inside-paren t
-        show-paren-when-point-in-periphery t)
-  (show-paren-mode))
-
-(use-package elec-pair
-  :elpaca nil
-  :hook
-  ((prog-mode text-mode conf-mode) . electric-pair-mode)
-  :hook
-  (org-mode . (lambda ()
-                (setq-local electric-pair-inhibit-predicate
-                            `(lambda (c)
-                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
-  :preface
-  (defun +add-pairs (pairs)
-    (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
-    (setq-local electric-pair-text-pairs electric-pair-pairs)))
-
-(use-package lispyville
-  :config
-  (setq lispy-safe-paste nil)
-  (lispyville-set-key-theme '(operators
-                              c-w
-                              commentary
-                              (atom-motions t)
-                              (additional-insert normal insert)
-                              additional-wrap
-                              slurp/barf-cp
-                              (escape insert)))
-
-  ;; configure textobjects here due to conflicts with evil-textobj
-  (defvar +lispville-inner-text-objects-map (make-sparse-keymap))
-  (defvar +lispville-outer-text-objects-map (make-sparse-keymap))
-
-  (evil-define-key '(visual operator) 'lispyville-mode
-    "i" +lispville-inner-text-objects-map
-    "a" +lispville-outer-text-objects-map)
-
-  (general-define-key
-   :keymaps '+lispville-outer-text-objects-map
-   "f" #'lispyville-a-function
-   "a" #'lispyville-a-atom
-   "l" #'lispyville-a-list
-   "x" #'lispyville-a-sexp
-   "g" #'lispyville-a-string)
-
-  (general-define-key
-   :keymaps '+lispville-inner-text-objects-map
-   "f" #'lispyville-inner-function
-   "a" #'lispyville-inner-atom
-   "l" #'lispyville-inner-list
-   "x" #'lispyville-inner-sexp
-   "g" #'lispyville-inner-string)
-
-  (general-define-key
-   :states '(normal visual)
-   :keymaps 'lispyville-mode-map
-   ")" 'lispyville-next-closing
-   "(" 'lispyville-previous-opening
-   "{" 'lispyville-next-opening
-   "}" 'lispyville-previous-closing)
-
-  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode))
-
-(use-package undo-fu
-  :custom
-  (undo-limit 400000)
-  (undo-strong-limit 3000000)
-  (undo-outer-limit 48000000))
-
-(use-package undo-fu-session
-  :config
-  (global-undo-fu-session-mode)
-  :custom
-  (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
-
-;; Always prompt in minibuffer
-(setq use-dialog-box nil)
 ;; Set default fonts
 (set-face-attribute 'default nil :font "monospace" :height 110)
 (set-face-attribute 'variable-pitch nil :family "Noto Serif" :height 1.1)
@@ -700,11 +490,20 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (set-fontset-font t 'thai "SF Thonburi")
 (set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
 
+;; Font scaling
 (use-package default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
   :general
   ("M--" 'default-text-scale-decrease)
   ("M-=" 'default-text-scale-increase))
+
+;; Font icons
+(use-package nerd-icons
+  :general
+  (+leader-def
+    "in" '(nerd-icons-insert :wk "Nerd icons"))
+  :custom
+  (nerd-icons-scale-factor 1.0))
 
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
@@ -712,6 +511,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq-default cursor-in-non-selected-windows nil)
 ;; No blinking cursor
 (blink-cursor-mode -1)
+;; Remember cursor position in files
+(use-package saveplace
+  :elpaca nil
+  :hook
+  (on-first-file . save-place-mode))
 
 (use-package display-line-numbers
   :elpaca nil
@@ -722,6 +526,78 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :init
   (dolist (mode '(org-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
+
+;; Frame title
+(setq frame-title-format
+      (list
+       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+       '(:eval
+         (let ((project (project-current)))
+           (when project
+             (format " — %s" (project-name project)))))))
+
+;; Resize a frame by pixel
+(setq frame-resize-pixelwise t)
+
+ ;; Always prompt in minibuffer (no GUI)
+(setq use-dialog-box nil)
+(when (bound-and-true-p tooltip-mode)
+  (tooltip-mode -1))
+
+;; New frame initial buffer
+(defun +set-frame-scratch-buffer (frame)
+  (with-selected-frame frame
+    (switch-to-buffer "*scratch*")))
+(add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
+
+;; Do not resize windows pixelwise, this can cause crashes in some cases
+;; when resizing too many windows at once or rapidly.
+(setq window-resize-pixelwise nil)
+
+;; Window layout undo/redo
+(winner-mode 1)
+
+(setq
+ hscroll-step 1
+ ;; Fast scrolling
+ fast-but-imprecise-scrolling t
+ ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues see:
+ ;; emacs.stackexchange.com/a/28746
+ auto-window-vscroll nil
+ ;; Keep the point in the same position while scrolling
+ scroll-preserve-screen-position t
+ ;; Do not move cursor to the center when scrolling
+ scroll-conservatively 101 ;; TODO: try 10
+ ;; Scroll at a margin of one line
+ scroll-margin 3)
+
+;; Fluid scrolling
+(setq pixel-scroll-precision-use-momentum t)
+(pixel-scroll-precision-mode 1)
+
+;; Show current key-sequence in minibuffer
+(setq echo-keystrokes 0.02)
+
+;; Show recursion depth in minibuffer
+(minibuffer-depth-indicate-mode 1)
+
+;; Enable recursive calls to minibuffer
+(setq enable-recursive-minibuffers t)
+
+;; Use y or n instead of yes or no
+(setq use-short-answers t)
+
+;; Try to keep the cursor out of the read-only portions of the minibuffer.
+(setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
+(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+;; Enable saving minibuffer history
+(use-package savehist
+  :elpaca nil
+  :custom
+  (savehist-save-minibuffer-history t)
+  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
+  :hook (on-first-input . savehist-mode))
 
 ;; Show line, columns number in modeline
 (size-indication-mode 1)
@@ -749,22 +625,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package evil-anzu
   :after (evil anzu))
-
-;; Resize a frame by pixel
-(setq frame-resize-pixelwise t)
-;; Frame title
-(setq frame-title-format
-      (list
-       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
-       '(:eval
-         (let ((project (project-current)))
-           (when project
-             (format " — %s" (project-name project)))))))
-
-(defun +set-frame-scratch-buffer (frame)
-  (with-selected-frame frame
-    (switch-to-buffer "*scratch*")))
-(add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
 
 (use-package tab-bar
   :elpaca nil
@@ -838,40 +698,27 @@ of the tab bar."
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
 
-;; Resize window combinations proportionally
-(setq window-combination-resize t)
-
 (use-package ace-window
   :init
   (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
   (setq aw-scope 'frame
         aw-background t))
 
-;; Window layout undo/redo
-(winner-mode 1)
-
-;; (use-package windresize
-;;   :init
-;;   (setq windresize-default-increment 5)
-;;   :general
-;;   ("S-C-<return>" 'windresize)
-;;   :commands windresize)
-
 (use-package popper
   :general
-  ("C-\\" 'popper-toggle-latest)
-  ("C-`"  'popper-cycle)
+  ("C-`" 'popper-toggle-latest)
+  ("C-\\"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
-  (:keymaps 'vterm-mode-map
-      "C-\\" 'popper-toggle-latest)
   :init
-  (setq popper-window-height 0.33)
+  (setq popper-window-height 0.35)
   (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
     '("\\*Messages\\*"
       "\\*Warnings\\*"
       "Output\\*$"
       "\\*Async Shell Command\\*$"
+      "\\*shelldon:"
+      shelldon-mode
       compilation-mode
       "\\*Go Test\\*$"
       "\\*eshell\\*"
@@ -881,11 +728,9 @@ of the tab bar."
       shell-mode
       "\\*term\\*"
       term-mode
-      "\\*vterm\\*"
-      "\\*vterminal\\*"
-      "-vterm\\*$"
-      "\\* docker vterm:"
-      vterm-mode
+      "-eat\\*$"
+      "\\*eat\\*"
+      eat-mode
       "\\*rake-compilation\\*"
       "\\*rspec-compilation\\*"
       "\\*Flymake "
@@ -912,24 +757,15 @@ of the tab bar."
   (keymap-set transient-map "<escape>" 'transient-quit-one)
   (keymap-set transient-map "q" 'transient-quit-one))
 
-(use-package nerd-icons
-  :general
-  (+leader-def
-    "in" '(nerd-icons-insert :wk "Nerd icons"))
-  :custom
-  (nerd-icons-font-family "JetBrainsMono Nerd Font")
-  (nerd-icons-scale-factor 1.0))
-
-;; (use-package doom-themes
-;;   :init
-;;   (setq doom-themes-enable-bold t
-;;         doom-themes-enable-italic nil)
-;;   (load-theme 'doom-vibrant t)
-;;   (doom-themes-org-config))
-
-(use-package catppuccin-theme
+(use-package paren
+  :elpaca nil
+  :hook
+  (on-first-buffer . show-paren-mode)
   :init
-  (load-theme 'catppuccin t))
+  (setq show-paren-delay 0.1
+        show-paren-highlight-openparen t
+        show-paren-when-point-inside-paren t
+        show-paren-when-point-in-periphery t))
 
 (use-package hl-todo
   :custom
@@ -956,117 +792,6 @@ of the tab bar."
     (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local))
   :hook
   (lsp-completion-mode . +lsp-mode-setup-completion))
-
-(use-package yasnippet
-  :after corfu
-  :init
-  (setq yas-verbosity 2)
-  :config
-  (yas-global-mode +1)
-  (define-key yas-minor-mode-map [(tab)] nil)
-  (define-key yas-minor-mode-map (kbd "TAB") nil)
-  ;; (define-key yas-minor-mode-map (kbd "<tab>")  nil)
-  (define-key yas-keymap [(tab)] nil)
-  (define-key yas-keymap (kbd "TAB") nil)
-  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
-  )
-
-(use-package doom-snippets
-  :after yasnippet
-  :elpaca (:host github :repo "suzuki11109/snippets" :files ("*.el" "*"))
-  :config
-  (yas-reload-all))
-
-(use-package yasnippet-capf
-  :after (yasnippet cape)
-  :elpaca (:host github :repo "elken/yasnippet-capf"))
-
-;; Hitting TAB behavior
-(setq tab-always-indent nil)
-(use-package cape)
-(use-package corfu
-  :elpaca (:host github :repo "minad/corfu"
-                 :files (:defaults "extensions/*"))
-  :init
-  (defun corfu-enable-in-minibuffer ()
-    (when (where-is-internal #'completion-at-point (list (current-local-map)))
-      (setq-local corfu-auto nil)
-      (corfu-mode 1)))
-  :hook
-  (on-first-input . global-corfu-mode)
-  (minibuffer-setup-hook . corfu-enable-in-minibuffer)
-  ((eshell-mode comint-mode vterm-mode) . (lambda ()
-                                            (setq-local corfu-auto nil)
-                                            (corfu-mode 1)))
-  :custom
-  (corfu-auto t)
-  (corfu-auto-prefix 2)
-  (corfu-auto-delay 0.1)
-  (corfu-min-width 25)
-  (corfu-preview-current nil)
-  (corfu-preselect 'first)
-  (corfu-on-exact-match nil)
-  (corfu-cycle t)
-  :config
-  (with-eval-after-load 'savehist
-    (add-to-list 'savehist-additional-variables 'corfu-history))
-  (corfu-history-mode 1)
-
-  (general-define-key
-    :keymaps 'corfu-map
-    [tab] #'corfu-complete)
-  ;; (general-define-key
-  ;;   :keymaps 'corfu-map
-  ;;   :predicate '(bound-and-true-p eshell-mode)
-  ;;   [backtab] #'corfu-previous
-  ;;   [tab] #'corfu-next)
-  )
-
-(use-package kind-icon
-  :after (corfu nerd-icons)
-  :custom
-  (kind-icon-default-face 'corfu-default)
-  (kind-icon-use-icons nil)
-  (kind-icon-mapping
-      `(
-        (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
-        (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
-        (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
-        (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
-        (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
-        (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
-        (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
-        (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-        (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-        (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
-        (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
-        (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
-        (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
-        (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
-        (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
-        (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
-        (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
-        (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
-        (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-        (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-        (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
-        (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
-        (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
-        (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
-        (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
-        (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
-        (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
-        (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
-        (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
-        (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
-        (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-        (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-        (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
-        (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
-        (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
-        (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
-  :config
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package consult
   :bind
@@ -1097,6 +822,15 @@ of the tab bar."
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
+  :init
+  (setq completion-in-region-function
+        (lambda (&rest args)
+          (apply (if vertico-mode
+                     #'consult-completion-in-region
+                   #'completion--in-region)
+                 args)))
+  :config
+  (add-to-list 'consult-buffer-filter "\\`\\*compilation\\*\\'")
   )
 
 (use-package consult-dir
@@ -1156,12 +890,14 @@ targets."
              (call-interactively (symbol-function ',fn)))))))
 
   (general-define-key
-    :keymaps 'embark-file-map
-    "o" (+embark-ace-action find-file)
-    :keymaps 'embark-buffer-map
-    "o" (+embark-ace-action switch-to-buffer)
-    :keymaps 'embark-general-map
-    "D" #'xref-find-definitions-other-window)
+   :keymaps 'embark-file-map
+   "o" (+embark-ace-action find-file))
+  (general-define-key
+   :keymaps 'embark-buffer-map
+   "o" (+embark-ace-action switch-to-buffer))
+  (general-define-key
+   :keymaps 'embark-general-map
+   "D" #'xref-find-definitions-other-window)
   :bind
   ("C-." . embark-dwim)
   ("C-;" . embark-act))
@@ -1183,7 +919,7 @@ targets."
                  :files (:defaults "extensions/*"))
   :init
   (setq vertico-resize nil
-        vertico-count 15)
+        vertico-count 14)
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
@@ -1195,6 +931,275 @@ targets."
   (on-first-input . vertico-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   (minibuffer-setup . vertico-repeat-save))
+
+;; Why use anything but UTF-8?
+(prefer-coding-system 'utf-8)
+(set-charset-priority 'unicode)
+(set-default-coding-systems 'utf-8)
+(set-selection-coding-system 'utf-8)
+
+;; Use only spaces
+(setq-default indent-tabs-mode nil)
+;; Tab width 8 is too long
+(setq-default tab-width 4)
+;; Delete trailing whitespaces on save
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+;; Use single space between sentences
+(setq sentence-end-double-space nil)
+;; Always add final newline
+(setq require-final-newline t)
+
+;; lines
+(setq-default truncate-lines t)
+(setq truncate-partial-width-windows nil)
+;; Wrap long lines
+(global-visual-line-mode 1)
+
+(setq kill-do-not-save-duplicates t
+      ;; Save existing clipboard text into the kill ring before replacing it.
+      save-interprogram-paste-before-kill t)
+
+(use-package evil
+  :defer .5
+  :custom
+  (evil-v$-excludes-newline t)
+  (evil-mode-line-format nil)
+  (evil-want-keybinding nil)
+  (evil-want-C-u-scroll t)
+  (evil-want-fine-undo t)
+  (evil-split-window-below t)
+  (evil-vsplit-window-right t)
+  (evil-ex-interactive-search-highlight 'selected-window)
+  (evil-symbol-word-search t)
+  :general
+  (+leader-def
+    "w" '(:keymap evil-window-map :wk "window"))
+  (:states 'motion
+    "j" 'evil-next-visual-line
+    "k" 'evil-previous-visual-line
+    ";" 'evil-ex)
+  (:states '(normal visual)
+    "$" 'evil-end-of-line)
+  :config
+  (modify-syntax-entry ?_ "w")
+  (defalias 'forward-evil-word 'forward-evil-symbol)
+  (setq evil-visual-state-cursor '(hollow))
+  (customize-set-variable 'evil-want-Y-yank-to-eol t) ;; :custom doesn't work
+
+  (evil-set-undo-system 'undo-fu)
+  (evil-select-search-module 'evil-search-module 'evil-search)
+  (evil-mode 1)
+)
+
+(use-package evil-collection
+  :after evil magit forge
+  :custom
+  (evil-collection-key-blacklist '("C-y"))
+  :config
+  (evil-collection-init))
+
+(use-package evil-nerd-commenter
+  :after evil
+  :commands evilnc-comment-operator
+  :general
+  (:states '(normal visual)
+    "gc" #'evilnc-comment-operator))
+
+(use-package evil-escape
+  :hook (evil-mode . evil-escape-mode)
+  :init
+  (setq evil-escape-excluded-states '(normal visual multiedit emacs motion)
+        evil-escape-excluded-major-modes '(eshell-mode shell-mode eat-mode)
+        evil-escape-delay 0.25
+        evil-escape-key-sequence "kj"))
+
+(use-package evil-surround
+  :hook (evil-mode . global-evil-surround-mode))
+
+(use-package evil-goggles
+  :after evil
+  :config
+  (setq evil-goggles-enable-delete nil)
+  (setq evil-goggles-enable-change nil)
+  (setq evil-goggles-enable-nerd-commenter nil)
+  (evil-goggles-mode 1))
+
+(use-package avy
+  :commands evil-avy-goto-char-2
+  :general
+  (:states '(normal)
+    "s" #'evil-avy-goto-char-2)
+  :custom
+  (avy-background t))
+
+(use-package elec-pair
+  :elpaca nil
+  :custom
+  (electric-pair-skip-whitespace nil)
+  :hook
+  ((prog-mode text-mode conf-mode) . electric-pair-mode)
+  (org-mode . (lambda ()
+                (setq-local electric-pair-inhibit-predicate
+                            `(lambda (c)
+                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  :preface
+  (defun +add-pairs (pairs)
+    (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
+    (setq-local electric-pair-text-pairs electric-pair-pairs)))
+
+(use-package lispyville
+  :config
+  (setq lispy-safe-paste nil)
+  (lispyville-set-key-theme '(operators
+                              c-w
+                              commentary
+                              (atom-motions t)
+                              (additional-insert normal insert)
+                              additional-wrap
+                              slurp/barf-cp
+                              (escape insert)))
+
+  ;; configure textobjects here due to conflicts with evil-textobj
+  (defvar +lispville-inner-text-objects-map (make-sparse-keymap))
+  (defvar +lispville-outer-text-objects-map (make-sparse-keymap))
+
+  (evil-define-key '(visual operator) 'lispyville-mode
+    "i" +lispville-inner-text-objects-map
+    "a" +lispville-outer-text-objects-map)
+
+  (general-define-key
+   :keymaps '+lispville-outer-text-objects-map
+   "f" #'lispyville-a-function
+   "a" #'lispyville-a-atom
+   "l" #'lispyville-a-list
+   "x" #'lispyville-a-sexp
+   "g" #'lispyville-a-string)
+
+  (general-define-key
+   :keymaps '+lispville-inner-text-objects-map
+   "f" #'lispyville-inner-function
+   "a" #'lispyville-inner-atom
+   "l" #'lispyville-inner-list
+   "x" #'lispyville-inner-sexp
+   "g" #'lispyville-inner-string)
+
+  (general-define-key
+   :states '(normal visual)
+   :keymaps 'lispyville-mode-map
+   ")" 'lispyville-next-closing
+   "(" 'lispyville-previous-opening
+   "{" 'lispyville-next-opening
+   "}" 'lispyville-previous-closing)
+
+  :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode))
+
+(use-package undo-fu
+  :custom
+  (undo-limit 400000)
+  (undo-strong-limit 3000000)
+  (undo-outer-limit 48000000))
+
+(use-package undo-fu-session
+  :config
+  (global-undo-fu-session-mode)
+  :custom
+  (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
+
+(use-package yasnippet
+  :after corfu
+  :init
+  (setq yas-verbosity 2)
+  :config
+  (yas-global-mode +1)
+  (define-key yas-minor-mode-map [(tab)] nil)
+  (define-key yas-minor-mode-map (kbd "TAB") nil)
+  (define-key yas-keymap [(tab)] nil)
+  (define-key yas-keymap (kbd "TAB") nil)
+  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand)))
+
+(use-package doom-snippets
+  :after yasnippet
+  :elpaca (:host github :repo "suzuki11109/snippets" :files ("*.el" "*"))
+  :config
+  (yas-reload-all))
+
+(use-package yasnippet-capf
+  :after (yasnippet cape)
+  :elpaca (:host github :repo "elken/yasnippet-capf"))
+
+;; Hitting TAB behavior
+(setq tab-always-indent nil)
+
+(use-package cape)
+(use-package corfu
+  :elpaca (:host github :repo "minad/corfu"
+                 :files (:defaults "extensions/*"))
+  :hook
+  ((prog-mode text-mode conf-mode) . corfu-mode)
+  :custom
+  (corfu-auto t)
+  (corfu-auto-prefix 2)
+  (corfu-auto-delay 0.1)
+  (corfu-min-width 25)
+  (corfu-preview-current nil)
+  (corfu-preselect 'first)
+  (corfu-on-exact-match nil)
+  (corfu-cycle t)
+  :config
+  (with-eval-after-load 'savehist
+    (add-to-list 'savehist-additional-variables 'corfu-history))
+  (corfu-history-mode 1)
+
+  (general-define-key
+   :keymaps 'corfu-map
+   [tab] #'corfu-complete)
+  )
+
+(use-package kind-icon
+  :after (corfu nerd-icons)
+  :custom
+  (kind-icon-default-face 'corfu-default)
+  (kind-icon-use-icons nil)
+  (kind-icon-mapping
+   `(
+     (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
+     (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
+     (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
+     (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
+     (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
+     (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
+     (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
+     (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
+     (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
+     (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
+     (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
+     (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
+     (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
+     (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
+     (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
+     (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
+     (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
+     (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
+     (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
+     (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
+     (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
+     (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
+     (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
+     (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
+     (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
+     (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
+     (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
+     (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
+     (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
+     (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
+     (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
+     (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
+     (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
+     (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
+     (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
+     (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
 
 (use-package git-commit
   :after magit
@@ -1445,6 +1450,7 @@ window that already exists in that direction. It will split otherwise."
           (javascript-mode . js-ts-mode)
           (js-mode . js-ts-mode)
           (js-jsx-mode . js-ts-mode)
+          (yaml-mode . yaml-ts-mode)
           ))
 
   (defun +treesit-install-all-languages ()
@@ -1534,7 +1540,7 @@ window that already exists in that direction. It will split otherwise."
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-clients-typescript-prefer-use-project-ts-server t)
-
+  (lsp-modeline-code-action-fallback-icon "󰌶")
   :init
   (defun +update-completions-list ()
     (progn
@@ -1545,7 +1551,6 @@ window that already exists in that direction. It will split otherwise."
                          #'yasnippet-capf
                          )))))
   :hook
-  ;; (lsp-managed-mode . evil-normalize-keymaps)
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
                                   :keymaps 'local
@@ -1592,10 +1597,11 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "cf" '(apheleia-format-buffer :wk "Format buffer"))
   :config
-  (setf (alist-get 'erb-formatter apheleia-formatters)
-        '("erb-format" "--print-width=140" filepath))
+  ;; (setf (alist-get 'erb-formatter apheleia-formatters)
+  ;;       '("erb-format" "--print-width=140" filepath))
+  ;; (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
-  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter)))
+  )
 
 (use-package flycheck
   :preface
@@ -1619,6 +1625,7 @@ window that already exists in that direction. It will split otherwise."
        flycheck-errors)))
 
   :custom
+  (flycheck-checkers nil)
   (flycheck-display-errors-function nil)
   (flycheck-help-echo-function nil)
   (flycheck-idle-change-delay 0.6)
@@ -1710,13 +1717,8 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package web-mode
-  ;; :mode "\\.[px]?html?\\'"
-  :mode "\\.erb\\'"
-  :mode "\\.[lh]?eex\\'"
-  :mode "\\.as[cp]x\\'"
-  :mode "\\.svelte\\'"
-  :mode "\\.jinja2?\\'"
-  :mode "\\.vue\\'"
+  :defer .5
+  :demand t
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1729,7 +1731,7 @@ window that already exists in that direction. It will split otherwise."
   :init
   (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
   (define-derived-mode erb-mode web-mode
-    "HTML[erb]")
+    "Web[erb]")
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
   :config
   (add-to-list 'web-mode-engines-alist '("elixir" . "\\.eex\\'"))
@@ -1865,13 +1867,6 @@ window that already exists in that direction. It will split otherwise."
   :elpaca nil
   :mode "\\.prettierrc\\'")
 
-;; (use-package dockerfile-mode
-;;   :mode "\\Dockerfile\\'"
-;;   :general
-;;   (+local-leader-def
-;;     :keymaps '(dockerfile-mode)
-;;     "bb" #'dockerfile-build-buffer))
-
 (use-package terraform-mode
   :mode "\\.tf\\'")
 
@@ -1885,8 +1880,53 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (csv-mode . csv-align-mode))
 
+(setq ansi-color-for-comint-mode t)
+;; If a shell command never outputs anything, don't show it.
+(customize-set-variable 'async-shell-command-display-buffer nil)
+(customize-set-variable 'shell-command-prompt-show-cwd t)
+(add-hook 'shell-mode-hook #'evil-normal-state) ;; TODO: to evil state
+;; (add-hook 'shell-mode-hook #'ansi-color-for-comint-mode-on)
+
+;;;###autoload
+(defun async-shell-command-region (start end)
+  "Send region from START to END to async-shell-command and display the result."
+  (interactive "r")
+  (unless (region-active-p)
+    (user-error "No region"))
+  (let ((cmd (buffer-substring-no-properties start end))) ;; TODO: remove \n
+    (async-shell-command cmd)))
+
+(use-package compile
+  :elpaca nil
+  :custom
+  (compilation-always-kill t)
+  (compilation-ask-about-save nil)  ; save all buffers on `compile'
+  (compilation-scroll-output 'first-error)
+  :config
+  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
+
+(use-package shell-command-x
+  :hook
+  (on-first-input . shell-command-x-mode))
+
+(use-package bash-completion
+  :config
+  (setq bash-completion-use-separate-processes t)
+  (bash-completion-setup)
+
+  (defun eshell-bash-completion-capf-nonexclusive ()
+    (let ((compl (bash-completion-dynamic-complete-nocomint
+                  (save-excursion (eshell-bol) (point))
+                  (point) t)))
+      (when compl
+        (append compl '(:exclusive no)))))
+
+  (add-hook 'eshell-mode-hook
+            (lambda ()
+              (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
+  )
+
 (use-package eat
-  :commands eat
   :elpaca (eat :type git
                :host codeberg
                :repo "akib/emacs-eat"
@@ -1895,10 +1935,54 @@ window that already exists in that direction. It will split otherwise."
                        ("terminfo/65" "terminfo/65/*")
                        ("integration" "integration/*")
                        (:exclude ".dir-locals.el" "*-tests.el")))
+  :commands (eat project-eat)
+  :config
+  (defun project-eat ()
+    "Start Eat in the current project's root directory."
+    (interactive)
+    (defvar eat-buffer-name)
+    (let* ((default-directory (project-root (project-current t)))
+           (eat-buffer-name (project-prefixed-buffer-name "eat"))
+           (eat-buffer (get-buffer eat-buffer-name)))
+      (if (and eat-buffer (not current-prefix-arg))
+          (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
+        (eat))))
 
+  (add-hook 'eat-mode-hook
+            (defun +eat-setup ()
+              (evil-insert-state)
+              ;; (setq-local confirm-kill-processes nil)
+              (setq-local hscroll-margin 0)))
+  :custom
+  (eat-kill-buffer-on-exit t)
+  :general
+  (+leader-def
+    "ot" #'eat
+    "pt" #'project-eat)
+  (:states '(normal visual)
+           :keymaps 'eat-mode-map
+           "<return>" #'evil-insert-resume)
+  (:states '(insert)
+           :keymaps 'eat-mode-map
+           "C-y" #'eat-yank)
   :hook
   (eshell-load . eat-eshell-mode)
   (eshell-load . eat-eshell-visual-command-mode))
+
+(with-eval-after-load 'consult
+  (defvar  +consult--source-term
+    (list :name     "Terminal buffers"
+          :narrow   ?t
+          :category 'buffer
+          :face     'consult-buffer
+          :history  'buffer-name-history
+          :state    #'consult--buffer-state
+          :items (lambda () (consult--buffer-query
+                             :predicate #'tabspaces--local-buffer-p
+                             :mode '(shell-mode eshell-mode term-mode eat-mode)
+                             :sort 'visibility
+                             :as #'buffer-name))))
+  (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
 (use-package shell
   :elpaca nil
@@ -1943,7 +2027,6 @@ window that already exists in that direction. It will split otherwise."
       (insert (concat "cd " dir)))
     (pcase major-mode
       ('shell-mode (comint-send-input))
-      ;; ('vterm-mode (vterm-send-string))
       ('eshell-mode (eshell-send-input))))
   :init
   (defun eshell-new ()
@@ -1975,54 +2058,6 @@ window that already exists in that direction. It will split otherwise."
 
 ;; (use-package eshell-z
 ;;   :hook (eshell-mode . (lambda () (require 'eshell-z))))
-
-(use-package vterm
-  :general
-  (+leader-def
-    "ot" #'vterm)
-  (:states '(insert)
-   :keymaps 'vterm-mode-map
-   "C-y" #'vterm-yank)
-  (:states '(normal visual)
-           :keymaps 'vterm-mode-map
-           "<return>" #'evil-insert-resume)
-  :custom
-  (vterm-kill-buffer-on-exit t)
-  (vterm-max-scrollback 10000)
-  (vterm-always-compile-module t)
-  (vterm-tramp-shells '(("docker" "/bin/sh")))
-  (vterm-timer-delay 0.01)
-  :config
-  (with-eval-after-load 'consult
-    (defvar  +consult--source-term
-      (list :name     "Terminal buffers"
-            :narrow   ?t
-            :category 'buffer
-            :face     'consult-buffer
-            :history  'buffer-name-history
-            :state    #'consult--buffer-state
-            :items (lambda () (consult--buffer-query
-                               :predicate #'tabspaces--local-buffer-p
-                               :mode '(shell-mode eshell-mode vterm-mode)
-                               :sort 'visibility
-                               :as #'buffer-name))))
-    (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
-
-  (add-hook 'vterm-mode-hook
-            (lambda ()
-              (setq-local confirm-kill-processes nil)
-              (setq-local hscroll-margin 0)
-              (setq-local evil-insert-state-cursor 'box)
-              ))
-  )
-
-
-(use-package multi-vterm
-  :commands (multi-vterm multi-vterm-project)
-  :general
-  (+leader-def
-    "oT" #'multi-vterm
-    "pt" #'multi-vterm-project))
 
 (use-package org
   :elpaca nil
@@ -2215,79 +2250,13 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "sg" #'deadgrep))
 
-(setq help-window-select t)
-(use-package helpful
-  :hook
-  (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
-  :bind
-  ([remap describe-command]  . helpful-command)
-  ([remap describe-function] . helpful-callable)
-  ([remap describe-key]      . helpful-key)
-  ([remap describe-symbol]   . helpful-symbol)
-  ([remap describe-variable] . helpful-variable)
-  :preface
-  (defun +helpful-switch-to-buffer (buffer-or-name)
-    "Switch to helpful BUFFER-OR-NAME.
-
-  The logic is simple, if we are currently in the helpful buffer,
-  reuse it's window, otherwise create new one."
-    (if (eq major-mode 'helpful-mode)
-        (switch-to-buffer buffer-or-name)
-      (pop-to-buffer buffer-or-name)))
-  :custom
-  (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
-  (helpful-max-buffers 1)
+(use-package exec-path-from-shell
+  ;; :custom
+  ;; (exec-path-from-shell-arguments '("-l"))
   :config
-  (define-key helpful-mode-map [remap quit-window]
-              'kill-buffer-and-window)
-  (define-key help-mode-map [remap quit-window]
-              'kill-buffer-and-window)
-  :general
-  (+leader-def
-    :infix "h"
-    "a" #'describe-face
-    "c" #'helpful-macro
-    "f" #'helpful-callable
-    "F" #'helpful-function
-    "k" #'helpful-key
-    "o" #'helpful-symbol
-    "v" #'helpful-variable
-    "x" #'helpful-command))
-
-(use-package compile
-  :elpaca nil
-  :custom
-  ;; Always kill current compilation process before starting a new one
-  (compilation-always-kill t)
-  (compilation-ask-about-save nil)  ; save all buffers on `compile'
-  ;; Scroll compilation buffer
-  (compilation-scroll-output 'first-error)
-  :config
-  ;; (autoload 'comint-truncate-buffer "comint" nil t)
-  ;; (add-hook 'compilation-filter-hook #'comint-truncate-buffer)
-  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
-  (with-eval-after-load 'consult
-    (defvar  +consult--source-compilation
-      (list :name     "Compilation buffers"
-            :narrow   ?c
-            :category 'buffer
-            :face     'consult-buffer
-            :history  'buffer-name-history
-            :state    #'consult--buffer-state
-            :items (lambda () (consult--buffer-query
-                               :predicate #'tabspaces--local-buffer-p
-                               :mode '(compilation-mode)
-                               :sort 'visibility
-                               :as #'buffer-name))))
-
-    (add-to-list 'consult-buffer-sources '+consult--source-compilation 'append))
-  )
-
-(use-package shell-command-x
-  :init
-  ;; (setq shell-command-switch "-ic")
-  :hook
-  (on-first-input . shell-command-x-mode))
+  (dolist (var '("KUBECONFIG"))
+    (add-to-list 'exec-path-from-shell-variables var))
+  (exec-path-from-shell-initialize))
 
 (use-package envrc
   :hook (on-first-file . envrc-global-mode))
@@ -2309,9 +2278,7 @@ window that already exists in that direction. It will split otherwise."
   :commands kubel
   :general
   (+leader-def
-    "ok" #'kubel)
-  :config
-  (kubel-vterm-setup))
+    "ok" #'kubel))
 
 (use-package kubel-evil
   :after kubel)
@@ -2366,12 +2333,7 @@ window that already exists in that direction. It will split otherwise."
           "https://engineering.grab.com/feed.xml"
           )))
 
-(use-package makefile-executor
-  :general
-  (+local-leader-def
-    :keymaps 'makefile-executor-mode
-    "x" 'makefile-executor-execute-target
-    "l" 'makefile-executor-execute-last
-  )
-  :hook
-  (makefile-mode . makefile-executor-mode))
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file))

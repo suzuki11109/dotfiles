@@ -1,7 +1,3 @@
-if [ -f ~/bash-sensible/sensible.bash ]; then
-   source ~/bash-sensible/sensible.bash
-fi
-
 export GTK_IM_MODULE=fcitx
 export QT_IM_MODULE=fcitx
 export XMODIFIERS=@im=fcitx
@@ -12,7 +8,6 @@ export XDG_CONFIG_HOME=$HOME/.config
 export PATH=$PATH:$HOME/.local/bin
 export PATH=$PATH:$HOME/go/bin
 export KUBECONFIG=$HOME/.kube/config
-export KIND_EXPERIMENTAL_PROVIDER=podman
 
 alias vi="nvim"
 alias vim="nvim"
@@ -37,6 +32,12 @@ export SDKMAN_DIR="$HOME/.sdkman"
 
 [[ $- != *i* ]] && return
 
+if [ -f ~/bash-sensible/sensible.bash ]; then
+   source ~/bash-sensible/sensible.bash
+fi
+
 command -v direnv > /dev/null && eval "$(direnv hook bash)"
 
 command -v starship > /dev/null && eval "$(starship init bash)"
+
+[[ -s "$HOME/.bashrc.local" ]] && source "$HOME/.bashrc.local"
