@@ -51,9 +51,6 @@
 ;; Inhibit startup message in echo area
 (fset 'display-startup-echo-area-message #'ignore)
 
-;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode)
-
 ;; Maximize frame by default
 (push '(fullscreen . maximized) default-frame-alist)
 ;;; early-init.el ends here

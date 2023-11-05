@@ -217,6 +217,9 @@
   :hook
   (on-first-input . which-key-mode))
 
+;; Set initial buffer to fundamental-mode for faster load
+(setq initial-major-mode 'fundamental-mode)
+
 ;; Confirm before quitting
 (setq confirm-kill-emacs #'y-or-n-p)
 
@@ -567,7 +570,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  ;; Keep the point in the same position while scrolling
  scroll-preserve-screen-position t
  ;; Do not move cursor to the center when scrolling
- scroll-conservatively 101 ;; TODO: try 10
+ scroll-conservatively 10
  ;; Scroll at a margin of one line
  scroll-margin 3)
 
@@ -986,10 +989,12 @@ targets."
   (setq evil-visual-state-cursor '(hollow))
   (customize-set-variable 'evil-want-Y-yank-to-eol t) ;; :custom doesn't work
 
+  (evil-set-initial-state 'messages-buffer-mode 'normal)
+  (evil-set-initial-state 'shell-mode 'normal)
+
   (evil-set-undo-system 'undo-fu)
   (evil-select-search-module 'evil-search-module 'evil-search)
-  (evil-mode 1)
-)
+  (evil-mode 1))
 
 (use-package evil-collection
   :after evil magit forge
@@ -1208,7 +1213,6 @@ targets."
   (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
   :config
   (global-git-commit-mode 1)
-  ;; (evil-set-initial-state 'git-commit-mode 'insert)
   (add-hook 'git-commit-setup-hook
     (lambda ()
       (when (and (bound-and-true-p evil-mode)
@@ -1884,7 +1888,6 @@ window that already exists in that direction. It will split otherwise."
 ;; If a shell command never outputs anything, don't show it.
 (customize-set-variable 'async-shell-command-display-buffer nil)
 (customize-set-variable 'shell-command-prompt-show-cwd t)
-(add-hook 'shell-mode-hook #'evil-normal-state) ;; TODO: to evil state
 ;; (add-hook 'shell-mode-hook #'ansi-color-for-comint-mode-on)
 
 ;;;###autoload
@@ -1893,7 +1896,7 @@ window that already exists in that direction. It will split otherwise."
   (interactive "r")
   (unless (region-active-p)
     (user-error "No region"))
-  (let ((cmd (buffer-substring-no-properties start end))) ;; TODO: remove \n
+  (let ((cmd (string-trim (buffer-substring-no-properties start end))))
     (async-shell-command cmd)))
 
 (use-package compile
@@ -1948,11 +1951,7 @@ window that already exists in that direction. It will split otherwise."
           (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
         (eat))))
 
-  (add-hook 'eat-mode-hook
-            (defun +eat-setup ()
-              (evil-insert-state)
-              ;; (setq-local confirm-kill-processes nil)
-              (setq-local hscroll-margin 0)))
+  (evil-set-initial-state 'eat-mode 'insert)
   :custom
   (eat-kill-buffer-on-exit t)
   :general
