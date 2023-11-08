@@ -217,26 +217,12 @@
   :hook
   (on-first-input . which-key-mode))
 
-;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode)
-
 ;; Confirm before quitting
 (setq confirm-kill-emacs #'y-or-n-p)
 
 ;; No beep or blink
 (setq ring-bell-function #'ignore
       visible-bell nil)
-
-;; Don't store duplicated entries
-(setq history-delete-duplicates t)
-
-;; Native compilation settings
-(when (featurep 'native-compile)
-  (setq
-   ;; Silence compiler warnings as they can be pretty disruptive.
-   native-comp-async-report-warnings-errors nil
-   ;; Make native compilation happens asynchronously
-   native-comp-jit-compilation t))
 
 (use-package recentf
   :elpaca nil
@@ -367,16 +353,18 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :commands dired
   :custom
   (dired-listing-switches "-ahl")
-  (dired-auto-revert-buffer t)
-  (dired-dwim-target t)
+  (dired-kill-when-opening-new-dired-buffer t)
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
+  (dired-auto-revert-buffer t)
+  (dired-dwim-target t)
   (dired-create-destination-dirs 'ask))
 
 (use-package dired-x
   :elpaca nil
   :hook (dired-mode . dired-omit-mode)
   :config
+  (setq dired-clean-confirm-killing-deleted-buffers nil)
   (setq dired-omit-verbose nil
         dired-omit-files
         (concat dired-omit-files
@@ -386,7 +374,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                 "\\|^\\.ccls-cache\\'"
                 "\\|\\(?:\\.js\\)?\\.meta\\'"
                 "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
-  (setq dired-clean-confirm-killing-deleted-buffers nil)
   (when-let (cmd (cond (IS-MAC "open")
                        (IS-LINUX "xdg-open")))
     (setq dired-guess-shell-alist-user
@@ -404,24 +391,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package dired-aux
   :elpaca nil
   :after dired
-  :config
-  (setq dired-create-destination-dirs 'ask
-        dired-vc-rename-file t))
+  :custom
+  (dired-create-destination-dirs 'always)
+  (dired-do-revert-buffer t)
+  (dired-vc-rename-file t))
 
 ;; Dired fontlock
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
-
-;; Keep single dired buffer
-(use-package dired-single
-  :after dired
-  :config
-  (define-key dired-mode-map [remap dired-find-file]
-              'dired-single-buffer)
-  (define-key dired-mode-map [remap dired-mouse-find-file-other-window]
-              'dired-single-buffer-mouse)
-  (define-key dired-mode-map [remap dired-up-directory]
-              'dired-single-up-directory))
 
 (use-package project
   :elpaca nil
@@ -502,6 +479,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Font icons
 (use-package nerd-icons
+  :demand t
   :general
   (+leader-def
     "in" '(nerd-icons-insert :wk "Nerd icons"))
@@ -561,11 +539,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (winner-mode 1)
 
 (setq
- hscroll-step 1
  ;; Fast scrolling
  fast-but-imprecise-scrolling t
- ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues see:
- ;; emacs.stackexchange.com/a/28746
+ ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues
  auto-window-vscroll nil
  ;; Keep the point in the same position while scrolling
  scroll-preserve-screen-position t
@@ -573,6 +549,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  scroll-conservatively 10
  ;; Scroll at a margin of one line
  scroll-margin 3)
+
+;; Horizontal scrolling
+(setq hscroll-step 1)
 
 ;; Fluid scrolling
 (setq pixel-scroll-precision-use-momentum t)
@@ -597,6 +576,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Enable saving minibuffer history
 (use-package savehist
   :elpaca nil
+  :init
+  ;; Don't store duplicated entries
+  (setq history-delete-duplicates t)
   :custom
   (savehist-save-minibuffer-history t)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
@@ -628,6 +610,34 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package evil-anzu
   :after (evil anzu))
+
+(use-package dashboard
+  :init
+  (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
+  (setq dashboard-image-banner-max-height 300)
+  (setq dashboard-startup-banner "~/Downloads/pngaaa.com-6989263.png")
+  (setq dashboard-show-shortcuts nil)
+  (setq dashboard-center-content t)
+  (setq dashboard-display-icons-p t)
+  (setq dashboard-icon-type 'nerd-icons)
+  (setq dashboard-set-heading-icons t)
+  (setq dashboard-set-file-icons t)
+  (setq dashboard-set-footer nil)
+  (setq dashboard-set-init-info nil)
+  (setq dashboard-projects-backend 'project-el)
+  (setq dashboard-projects-switch-function 'tabspaces-open-or-create-project-and-workspace)
+  (setq dashboard-items '((recents . 3)
+                          (projects . 4)
+                          (agenda . 3)))
+  :config
+  (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
+  (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
+  (dashboard-setup-startup-hook))
+
+ (use-package link-hint
+  :bind
+  ("C-c l o" . link-hint-open-link)
+  ("C-c l c" . link-hint-copy-link))
 
 (use-package tab-bar
   :elpaca nil
@@ -672,6 +682,7 @@ of the tab bar."
   (tabspaces-default-tab "home")
   (tabspaces-include-buffers '("*scratch*" "*Messages*"))
   (tabspaces-keymap-prefix nil)
+  (tabspaces-initialize-project-with-todo nil)
   :general
   (+leader-def
     "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
@@ -702,10 +713,10 @@ of the tab bar."
   )
 
 (use-package ace-window
-  :init
-  (setq aw-keys '(?a ?s ?d ?f ?g ?h ?j ?k ?l))
-  (setq aw-scope 'frame
-        aw-background t))
+  :custom
+  (aw-scope 'frame)
+  (aw-dispatch-always t)
+  (aw-minibuffer-flag t))
 
 (use-package popper
   :general
@@ -720,8 +731,6 @@ of the tab bar."
       "\\*Warnings\\*"
       "Output\\*$"
       "\\*Async Shell Command\\*$"
-      "\\*shelldon:"
-      shelldon-mode
       compilation-mode
       "\\*Go Test\\*$"
       "\\*eshell\\*"
@@ -963,7 +972,7 @@ targets."
       save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :defer .5
+  :defer .2
   :custom
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
@@ -1221,7 +1230,7 @@ targets."
         (evil-insert-state)))))
 
 (use-package magit
-  :defer .5
+  :defer .3
   :general
   (+leader-def :infix "g"
     "b" #'magit-branch
@@ -1409,7 +1418,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package treesit
   :elpaca nil
-  :demand t
+  ;; :demand t
   ;; :hook
   ;; (tsx-ts-mode . (lambda ()
   ;;                  (setq treesit-font-lock-feature-list
@@ -1418,53 +1427,61 @@ window that already exists in that direction. It will split otherwise."
   ;;                          (constant expression identifier jsx number pattern property property_identifier jsx_element jsx_opening_element jsx_attribute jsx_closing_element jsx_expression jsx_text)
   ;;                          (function bracket delimiter)))
   ;;                  (treesit-font-lock-recompute-features)))
-  :init
-  (setq treesit-font-lock-level 4)
-  (setq treesit-language-source-alist
-        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-          (c "https://github.com/tree-sitter/tree-sitter-c")
-          (css "https://github.com/tree-sitter/tree-sitter-css")
-          (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-          (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
-          (go "https://github.com/tree-sitter/tree-sitter-go")
-          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-          (html "https://github.com/tree-sitter/tree-sitter-html")
-          (java "https://github.com/tree-sitter/tree-sitter-java")
-          (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
-          (json "https://github.com/tree-sitter/tree-sitter-json")
-          (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
-          (python "https://github.com/tree-sitter/tree-sitter-python")
-          (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
-          (rust "https://github.com/tree-sitter/tree-sitter-rust")
-          (toml "https://github.com/tree-sitter/tree-sitter-toml")
-          (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-          (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-          (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
+  ;; :init
+  ;; (setq treesit-font-lock-level 4)
+  ;; (setq treesit-language-source-alist
+  ;;       '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+  ;;         (c "https://github.com/tree-sitter/tree-sitter-c")
+  ;;         (css "https://github.com/tree-sitter/tree-sitter-css")
+  ;;         (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+  ;;         (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
+  ;;         (go "https://github.com/tree-sitter/tree-sitter-go")
+  ;;         (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+  ;;         (html "https://github.com/tree-sitter/tree-sitter-html")
+  ;;         (java "https://github.com/tree-sitter/tree-sitter-java")
+  ;;         (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
+  ;;         (json "https://github.com/tree-sitter/tree-sitter-json")
+  ;;         (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
+  ;;         (python "https://github.com/tree-sitter/tree-sitter-python")
+  ;;         (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
+  ;;         (rust "https://github.com/tree-sitter/tree-sitter-rust")
+  ;;         (toml "https://github.com/tree-sitter/tree-sitter-toml")
+  ;;         (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+  ;;         (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+  ;;         (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
 
-  ;; remap built-in modes to new ts-modes
-  (setq major-mode-remap-alist
-        '((html-mode . html-ts-mode)
-          (mhtml-mode . html-ts-mode)
-          (bash-mode . bash-ts-mode)
-          (js-json-mode . json-ts-mode)
-          (json-mode . json-ts-mode)
-          (css-mode . css-ts-mode)
-          (python-mode . python-ts-mode)
-          (ruby-mode . ruby-ts-mode)
-          (javascript-mode . js-ts-mode)
-          (js-mode . js-ts-mode)
-          (js-jsx-mode . js-ts-mode)
-          (yaml-mode . yaml-ts-mode)
-          ))
+  ;; ;; remap built-in modes to new ts-modes
+  ;; (setq major-mode-remap-alist
+  ;;       '((html-mode . html-ts-mode)
+  ;;         (mhtml-mode . html-ts-mode)
+  ;;         (bash-mode . bash-ts-mode)
+  ;;         (js-json-mode . json-ts-mode)
+  ;;         (json-mode . json-ts-mode)
+  ;;         (css-mode . css-ts-mode)
+  ;;         (python-mode . python-ts-mode)
+  ;;         (ruby-mode . ruby-ts-mode)
+  ;;         (javascript-mode . js-ts-mode)
+  ;;         (js-mode . js-ts-mode)
+  ;;         (js-jsx-mode . js-ts-mode)
+  ;;         (yaml-mode . yaml-ts-mode)
+  ;;         ))
 
-  (defun +treesit-install-all-languages ()
-    "Install all languages specified by `treesit-language-source-alist'."
-    (interactive)
-    (let ((languages (mapcar 'car treesit-language-source-alist)))
-      (dolist (lang languages)
-        (treesit-install-language-grammar lang)
-        (message "`%s' parser was installed." lang)
-        (sit-for 0.75)))))
+  ;; (defun +treesit-install-all-languages ()
+  ;;   "Install all languages specified by `treesit-language-source-alist'."
+  ;;   (interactive)
+  ;;   (let ((languages (mapcar 'car treesit-language-source-alist)))
+  ;;     (dolist (lang languages)
+  ;;       (treesit-install-language-grammar lang)
+  ;;       (message "`%s' parser was installed." lang)
+  ;;       (sit-for 0.75))))
+)
+
+(use-package treesit-auto
+  ;; :demand t
+  :config
+  (setq treesit-auto-install 'prompt)
+  (global-treesit-auto-mode))
+
 
 (use-package evil-textobj-tree-sitter
   :after (evil)
@@ -1902,6 +1919,7 @@ window that already exists in that direction. It will split otherwise."
 (use-package compile
   :elpaca nil
   :custom
+  (compile-command "make ")
   (compilation-always-kill t)
   (compilation-ask-about-save nil)  ; save all buffers on `compile'
   (compilation-scroll-output 'first-error)
@@ -2063,18 +2081,16 @@ window that already exists in that direction. It will split otherwise."
   :init
   (setq org-directory "~/Dropbox/org/")
   :custom
-  (org-adapt-indentation t)
-  (org-cycle-separator-lines 2)
+  (org-ellipsis " ▾")
   (org-hide-emphasis-markers t)
   (org-pretty-entities t)
-  (org-ellipsis "…")
+  (org-cycle-separator-lines 2)
   (org-fold-core-style 'overlays)
+  (imenu-auto-rescan t)
   (org-src-fontify-natively t)
   (org-src-window-setup 'current-window)
   (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
-  (org-edit-src-turn-on-auto-save t)
-  (org-src-preserve-indentation t)
   (org-confirm-babel-evaluate nil)
   :config
   (dolist (face '((org-level-1 . 1.2)
@@ -2100,22 +2116,8 @@ window that already exists in that direction. It will split otherwise."
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-column nil :background nil)
   (set-face-attribute 'org-column-title nil :background nil)
-  (require 'org-tempo)
-  (org-babel-do-load-languages
-    'org-babel-load-languages
-    '((emacs-lisp . t)
-      (shell . t)
-      (js . t)
-      (verb . t)))
-  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
-  (add-to-list 'org-structure-template-alist '("js" . "src js"))
-  (add-to-list 'org-structure-template-alist '("py" . "src python"))
-  (add-to-list 'org-structure-template-alist '("rb" . "src ruby"))
-  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
 
   (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
-
   :general
   (+local-leader-def
     :keymaps '(org-mode-map)
@@ -2226,6 +2228,23 @@ window that already exists in that direction. It will split otherwise."
           ))
   (setq org-super-agenda-header-map (make-sparse-keymap))
   (org-super-agenda-mode 1))
+
+(use-package org-tempo
+  :after org
+  :elpaca nil
+  :config
+  (org-babel-do-load-languages
+    'org-babel-load-languages
+    '((emacs-lisp . t)
+      (shell . t)
+      (js . t)
+      (verb . t)))
+  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+  (add-to-list 'org-structure-template-alist '("js" . "src js"))
+  (add-to-list 'org-structure-template-alist '("py" . "src python"))
+  (add-to-list 'org-structure-template-alist '("rb" . "src ruby"))
+  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body")))
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
