@@ -678,7 +678,7 @@ of the tab bar."
             :state    #'consult--buffer-state
             :default  t
             :items    (lambda () (consult--buffer-query
-                                  :predicate #'tabspaces--local-buffer-p
+                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
                                   :sort 'visibility
                                   :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
@@ -692,7 +692,7 @@ of the tab bar."
 
 (use-package popper
   :general
-  ("C-`" 'popper-toggle-latest)
+  ("C-`" 'popper-toggle)
   ("C-\\"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
   :init
@@ -814,8 +814,6 @@ of the tab bar."
                      #'consult-completion-in-region
                    #'completion--in-region)
                  args)))
-  :config
-  (add-to-list 'consult-buffer-filter "\\`\\*compilation\\*\\'")
   )
 
 (use-package consult-dir
@@ -1969,7 +1967,7 @@ window that already exists in that direction. It will split otherwise."
           :state    #'consult--buffer-state
           :items (lambda () (consult--buffer-query
                              :predicate #'tabspaces--local-buffer-p
-                             :mode '(shell-mode eshell-mode term-mode eat-mode)
+                             :mode '(shell-mode eshell-mode term-mode eat-mode compilation-mode)
                              :sort 'visibility
                              :as #'buffer-name))))
   (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
@@ -2108,11 +2106,8 @@ window that already exists in that direction. It will split otherwise."
   :after (org evil)
   :hook (org-mode . evil-org-mode)
   :hook (org-agenda-mode . evil-org-mode)
-  :general
-  (:keymaps 'org-mode-map
-            "M-O" 'evil-org-org-insert-subheading-below)
   :config
-  (evil-org-set-key-theme '(navigation insert textobjects additional todo calendar))
+  (evil-org-set-key-theme '(navigation insert textobjects additional todo heading))
   (require 'evil-org-agenda)
   (evil-org-agenda-set-keys))
 
