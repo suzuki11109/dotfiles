@@ -23,20 +23,10 @@ return {
                enabled = true,
             },
             treesitter = true,
-            -- overseer = true,
-            -- telescope = true,
-            -- lsp_trouble = true,
+            telescope = true,
+            lsp_trouble = true,
             which_key = true,
          },
       },
-   },
-   {
-      'navarasu/onedark.nvim',
-      config = function()
-         require('onedark').setup {
-            style = 'dark',
-            transparent = true,
-         }
-      end,
    },
 }

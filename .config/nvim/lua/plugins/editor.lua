@@ -31,13 +31,11 @@ return {
 
          cmp.setup {
             completion = {
-               -- keyword_length = 2,
-               -- completeopt = 'menu,menuone,noinsert',
-               autocomplete = false,
+                keyword_length = 2,
+                completeopt = 'menu,menuone,noinsert',
             },
             preselect = cmp.PreselectMode.None,
             window = {
-               -- documentation = cmp.config.window.bordered(),
                documentation = cmp.config.disable,
             },
             snippet = {
@@ -113,7 +111,6 @@ return {
             },
          }
 
-         -- Set configuration for specific filetype.
          cmp.setup.filetype('lua', {
             sources = cmp.config.sources {
                { name = 'nvim_lsp' },
@@ -125,7 +122,7 @@ return {
                { name = 'nvim_lsp' },
             },
          })
-
+         
          local cmp_autopairs = require 'nvim-autopairs.completion.cmp'
          cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
       end,
@@ -149,15 +146,14 @@ return {
          require('nvim-autopairs').setup {}
       end,
    },
-
+   
    {
       'numToStr/Comment.nvim',
-      event = { 'TextChanged', 'TextChanged' },
-      dependencies = { 'JoosepAlviste/nvim-ts-context-commentstring' },
+      lazy = false, 
+      -- dependencies = { 'JoosepAlviste/nvim-ts-context-commentstring' },
       config = function()
-         require('Comment').setup {
-            pre_hook = require('ts_context_commentstring.integrations.comment_nvim').create_pre_hook(),
-         }
+         require('Comment').setup {}
+            --pre_hook = require('ts_context_commentstring.integrations.comment_nvim').create_pre_hook(),
       end,
    },
 
@@ -177,20 +173,5 @@ return {
       opts = {
          mapping = { 'kj' },
       },
-   },
-
-   {
-      'ggandor/leap.nvim',
-      event = { 'BufReadPre', 'BufNewFile' },
-      config = function()
-         vim.keymap.set('n', 's', function()
-            -- local current_window = vim.fn.win_getid()
-            -- require('leap').leap { target_windows = { current_window } }
-            local focusable_windows_on_tabpage = vim.tbl_filter(function(win)
-               return vim.api.nvim_win_get_config(win).focusable
-            end, vim.api.nvim_tabpage_list_wins(0))
-            require('leap').leap { target_windows = focusable_windows_on_tabpage }
-         end)
-      end,
    },
 }

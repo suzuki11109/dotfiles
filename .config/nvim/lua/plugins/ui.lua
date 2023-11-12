@@ -1,39 +1,25 @@
 return {
    {
-      'aserowy/tmux.nvim',
-      event = 'VeryLazy',
-      config = function()
-         return require('tmux').setup {}
-      end,
-   },
-   {
       'google/vim-searchindex',
       event = 'CmdlineEnter',
    },
 
    {
       'nvim-telescope/telescope.nvim',
-      tag = '0.1.1',
+      tag = '0.1.4',
       cmd = 'Telescope',
       dependencies = {
          'nvim-telescope/telescope-fzf-native.nvim',
-         'prochri/telescope-all-recent.nvim',
-         'window-picker',
       },
       config = function()
          local actions = require 'telescope.actions'
          require('telescope').setup {
             defaults = {
-               preview = false,
                file_ignore_patterns = { '.git/' },
                results_title = '',
-               layout_strategy = 'bottom_pane',
                layout_config = {
-                  height = 0.5,
-                  width = vim.o.columns,
                   prompt_position = 'top',
-                  -- preview_height = 0.5,
-                  preview_cutoff = 0.5,
+                  preview_width = 0.5,
                },
                cache_picker = {
                   num_pickers = 20,
@@ -49,21 +35,6 @@ return {
                      ['<C-g>'] = actions.close,
                      ['<C-f>'] = actions.preview_scrolling_down,
                      ['<C-b>'] = actions.preview_scrolling_up,
-                     ['<C-o>'] = function(prompt_bufnr)
-                        -- Use nvim-window-picker to choose the window by dynamically attaching a function
-                        local action_set = require 'telescope.actions.set'
-                        local action_state = require 'telescope.actions.state'
-
-                        local picker = action_state.get_current_picker(prompt_bufnr)
-                        picker.get_selection_window = function(picker, entry)
-                           local picked_window_id = require('window-picker').pick_window() or vim.api.nvim_get_current_win()
-                           -- Unbind after using so next instance of the picker acts normally
-                           picker.get_selection_window = nil
-                           return picked_window_id
-                        end
-
-                        return action_set.edit(prompt_bufnr, 'edit')
-                     end,
                   },
                },
             },
@@ -85,46 +56,17 @@ return {
       end,
    },
 
-   {
-      'prochri/telescope-all-recent.nvim',
-      dependencies = {
-         'kkharji/sqlite.lua',
-      },
-      config = function()
-         require('telescope-all-recent').setup {
-            pickers = {
-               find_files = {
-                  sorting = 'recent',
-               },
-            },
-         }
-      end,
-   },
+   -- {
+   --    'princejoogie/dir-telescope.nvim',
+   --    config = function()
+   --       require('dir-telescope').setup {
+   --          hidden = true,
+   --       }
+   --
+   --       require('telescope').load_extension 'dir'
+   --    end,
+   -- },
 
-   {
-      'princejoogie/dir-telescope.nvim',
-      config = function()
-         require('dir-telescope').setup {
-            hidden = true,
-         }
-
-         require('telescope').load_extension 'dir'
-      end,
-   },
-
-   {
-      's1n7ax/nvim-window-picker',
-      name = 'window-picker',
-      version = '2.*',
-      config = function()
-         require('window-picker').setup {
-            hint = 'floating-big-letter',
-            filter_rules = {
-               include_current_win = true,
-            },
-         }
-      end,
-   },
    {
       'stevearc/dressing.nvim',
       event = 'VeryLazy',
@@ -145,20 +87,12 @@ return {
    },
 
    {
-      'NvChad/nvim-colorizer.lua',
-      event = { 'BufReadPre', 'BufNewFile' },
-      name = 'colorizer',
-      opts = {
-         user_default_options = {
-            names = false,
-         },
-      },
-   },
-
-   {
       'nvim-treesitter/nvim-treesitter',
       event = { 'BufReadPre', 'BufNewFile' },
-      dependencies = { 'nvim-treesitter/nvim-treesitter-textobjects' },
+      dependencies = { 
+         'nvim-treesitter/nvim-treesitter-textobjects',
+         'JoosepAlviste/nvim-ts-context-commentstring',
+      },
       build = function()
          pcall(require('nvim-treesitter.install').update { with_sync = true })
       end,
@@ -193,6 +127,9 @@ return {
          },
          highlight = { enable = true },
          indent = { enable = true },
+         context_commentstring = {
+           enable = true,
+         }, 
          textobjects = {
             select = {
                enable = true,
@@ -242,17 +179,6 @@ return {
          })
       end,
    },
-
-   -- {
-   --    'cbochs/grapple.nvim',
-   --    cmd = { 'GrappleSelect', 'GrapplePopup', 'GrappleTag', 'GrappleUntag', 'GrappleCycle' },
-   --    opts = {
-   --       popup_options = {
-   --          border = 'rounded',
-   --          height = 17,
-   --       },
-   --    },
-   -- },
 
    {
       'folke/which-key.nvim',
