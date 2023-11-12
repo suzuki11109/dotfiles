@@ -611,34 +611,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package evil-anzu
   :after (evil anzu))
 
-(use-package dashboard
-  :init
-  (setq initial-buffer-choice (lambda () (get-buffer-create "*dashboard*")))
-  (setq dashboard-image-banner-max-height 300)
-  (setq dashboard-startup-banner "~/Downloads/pngaaa.com-6989263.png")
-  (setq dashboard-show-shortcuts nil)
-  (setq dashboard-center-content t)
-  (setq dashboard-display-icons-p t)
-  (setq dashboard-icon-type 'nerd-icons)
-  (setq dashboard-set-heading-icons t)
-  (setq dashboard-set-file-icons t)
-  (setq dashboard-set-footer nil)
-  (setq dashboard-set-init-info nil)
-  (setq dashboard-projects-backend 'project-el)
-  (setq dashboard-projects-switch-function 'tabspaces-open-or-create-project-and-workspace)
-  (setq dashboard-items '((recents . 3)
-                          (projects . 4)
-                          (agenda . 3)))
-  :config
-  (add-hook 'elpaca-after-init-hook #'dashboard-insert-startupify-lists)
-  (add-hook 'elpaca-after-init-hook #'dashboard-initialize)
-  (dashboard-setup-startup-hook))
-
- (use-package link-hint
-  :bind
-  ("C-c l o" . link-hint-open-link)
-  ("C-c l c" . link-hint-copy-link))
-
 (use-package tab-bar
   :elpaca nil
   :after (project)
@@ -757,6 +729,7 @@ of the tab bar."
       "\\*xref\\*"
       "\\*eldoc\\*"
       "\\magit-process:"
+      inf-ruby-mode
       ))
   (popper-mode 1)
   (popper-echo-mode 1))
@@ -2081,7 +2054,6 @@ window that already exists in that direction. It will split otherwise."
   :init
   (setq org-directory "~/Dropbox/org/")
   :custom
-  (org-ellipsis " ▾")
   (org-hide-emphasis-markers t)
   (org-pretty-entities t)
   (org-cycle-separator-lines 2)
