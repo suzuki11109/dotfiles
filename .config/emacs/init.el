@@ -416,8 +416,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "p!" #'project-async-shell-command
     ))
 
-;; (setq eldoc-echo-area-prefer-doc-buffer t)
 (setq eldoc-echo-area-use-multiline-p nil)
+(setq eldoc-idle-delay 0.6)
+(global-eldoc-mode -1)
 
 (setq help-window-select t)
 (use-package helpful
@@ -1398,8 +1399,8 @@ window that already exists in that direction. It will split otherwise."
   ;;                          (constant expression identifier jsx number pattern property property_identifier jsx_element jsx_opening_element jsx_attribute jsx_closing_element jsx_expression jsx_text)
   ;;                          (function bracket delimiter)))
   ;;                  (treesit-font-lock-recompute-features)))
-  ;; :init
-  ;; (setq treesit-font-lock-level 4)
+  :init
+  (setq treesit-font-lock-level 4)
   ;; (setq treesit-language-source-alist
   ;;       '((bash "https://github.com/tree-sitter/tree-sitter-bash")
   ;;         (c "https://github.com/tree-sitter/tree-sitter-c")
@@ -1548,11 +1549,15 @@ window that already exists in that direction. It will split otherwise."
                                   :keymaps 'local
                                   "K" 'lsp-describe-thing-at-point)))
   (lsp-managed-mode . (lambda ()
-                         (setq eldoc-documentation-functions
-                           '(+flycheck-eldoc
-                             t
-                             lsp-eldoc-function))
-                         (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)))
+                         (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc nil t)
+                         (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
+                         ))
+  ;; (lsp-managed-mode . (lambda ()
+  ;;                       (setq eldoc-documentation-functions
+  ;;                             (cons #'flymake-eldoc-function
+  ;;                                   (remove #'flymake-eldoc-function eldoc-documentation-functions)))
+  ;;                       ;; Show all eldoc feedback.
+  ;;                       (setq eldoc-documentation-strategy #'eldoc-documentation-compose)))
   (lsp-completion-mode . +update-completions-list)
   :general
   (+leader-def
@@ -1621,6 +1626,7 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-display-errors-function nil)
   (flycheck-help-echo-function nil)
   (flycheck-idle-change-delay 0.6)
+  (flycheck-display-error-delay 0.3)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
@@ -1767,7 +1773,8 @@ window that already exists in that direction. It will split otherwise."
   :elpaca nil
   :hook
   (ruby-ts-mode . apheleia-mode)
-  (ruby-ts-mode . lsp-deferred))
+  (ruby-ts-mode . lsp-deferred)
+  (ruby-ts-mode . eldoc-mode)) ;; lsp is not enabling eldoc for some reason
 
 (use-package inf-ruby
   :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
