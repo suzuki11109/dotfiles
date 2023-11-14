@@ -3,9 +3,9 @@
 #+AUTO_TANGLE: t
 
 * Todo list
-** TODO build own snippets
-** TODO code-review
+** TODO ruby-lsp
 ** TODO copilot
+** TODO code-review
 * Early init
 #+begin_src emacs-lisp :tangle early-init.el
 ;;; early-init.el --- early init -*- lexical-binding: t; -*-
@@ -206,14 +206,14 @@
     "fd"  #'dired
     "fD"  '(+delete-this-file :wk "Delete this file")
     "fe"  '((lambda () (interactive)
-              (let ((default-directory "~/.config/emacs/"))
+              (let ((default-directory user-emacs-directory))
                 (call-interactively 'find-file))) :wk "Find in emacs config")
     "ff"  '(find-file :wk "Find file")
     "fg"  '((lambda () (interactive) (find-file "~/.gitconfig")) :wk "Edit .gitconfig")
     "fh"  '((lambda () (interactive)
               (let ((default-directory "~/"))
                 (call-interactively 'find-file))) :wk "Find in home")
-    "fi"  '((lambda () (interactive) (find-file "~/.config/emacs/init.org")) :wk "Edit init.org")
+    "fi"  '((lambda () (interactive) (find-file (expand-file-name "init.org" user-emacs-directory))) :wk "Edit init.org")
     "fl"  #'locate
     "fr"  '(recentf :wk "Recent files")
     "fR"  '(+rename-this-file :wk "Rename/move file")
@@ -360,8 +360,8 @@
 ;; But turn on auto-save, so we have a fallback in case of crashes or lost data.
 (setq auto-save-default t
       auto-save-include-big-deletions t
-      auto-save-list-file-prefix "~/.config/emacs/auto-save/"
-      tramp-auto-save-directory  "~/.config/emacs/tramp-auto-save/"
+      auto-save-list-file-prefix (expand-file-name "auto-save/" user-emacs-directory)
+      tramp-auto-save-directory  (expand-file-name "tramp-auto-save/" user-emacs-directory)
       auto-save-file-name-transforms
       (list (list "\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
                   ;; Prefix tramp autosaves to prevent conflicts with local ones
@@ -1820,7 +1820,8 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   :hook
-  (prog-mode . flycheck-mode))
+  (prog-mode . flycheck-mode)
+  (flycheck-mode . eldoc-mode))
 
 #+end_src
 
@@ -1979,7 +1980,7 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (ruby-ts-mode . apheleia-mode)
   (ruby-ts-mode . lsp-deferred)
-  (ruby-ts-mode . eldoc-mode)) ;; lsp is not enabling eldoc for some reason
+)
 
 (use-package inf-ruby
   :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
