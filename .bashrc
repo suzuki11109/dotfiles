@@ -30,6 +30,10 @@ export SDKMAN_DIR="$HOME/.sdkman"
 
 [[ -r "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
 
+command -v yarn >/dev/null && export PATH="$PATH:$(yarn global bin)"
+
+export PATH="$PATH:/home/aki/.local/share/coursier/bin"
+
 [[ $- != *i* ]] && return
 
 if [ -f ~/bash-sensible/sensible.bash ]; then
