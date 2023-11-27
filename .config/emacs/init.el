@@ -464,7 +464,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (load-theme 'catppuccin t))
 
 ;; Set default fonts
-(set-face-attribute 'default nil :font "monospace" :height 110)
+(set-face-attribute 'default nil :font "monospace" :height 100)
 (set-face-attribute 'variable-pitch nil :family "Noto Serif" :height 1.1)
 (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
 ;; Set thai font
@@ -731,6 +731,7 @@ of the tab bar."
       "\\*eldoc\\*"
       "\\magit-process:"
       inf-ruby-mode
+      sbt-mode
       ))
   (popper-mode 1)
   (popper-echo-mode 1))
@@ -1473,44 +1474,43 @@ window that already exists in that direction. It will split otherwise."
    "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
   )
 
-(use-package eglot
-  :disabled t
-  :elpaca nil
-  :commands eglot eglot-ensure
-  :custom
-  (eglot-sync-connect 1)
-  (eglot-connect-timeout 10)
-  (eglot-autoshutdown t)
-  (eglot-send-changes-idle-time 0.5)
-  (eglot-events-buffer-size 0)
-  (eglot-ignored-server-capabilities '(:hoverProvider :documentHighlightProvider))
-  :init
-  (defvar +eglot--help-buffer nil)
-  (defun +eglot-describe-at-point ()
-    (interactive)
-    "Request documentation for the thing at point."
-    (eglot--dbind ((Hover) contents range)
-                  (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
-                                   (eglot--TextDocumentPositionParams))
-                  (let ((blurb (and (not (seq-empty-p contents))
-                                    (eglot--hover-info contents range)))
-                        (hint (thing-at-point 'symbol)))
-                    (if blurb
-                        (with-current-buffer
-                            (or (and (buffer-live-p +eglot--help-buffer)
-                                     +eglot--help-buffer)
-                                (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
-                          (with-help-window (current-buffer)
-                            (rename-buffer (format "*eglot-help for %s*" hint))
-                            (with-current-buffer standard-output (insert blurb))
-                            (setq-local nobreak-char-display nil)))
-                      (display-local-help))))
-    'deferred)
-  :hook
-  (eglot-managed-mode . (lambda () (general-define-key
-                                    :states '(normal)
-                                    :keymaps 'local
-                                    "K" '+eglot-describe-at-point))))
+;; (use-package eglot
+;;   :elpaca nil
+;;   :commands eglot eglot-ensure
+;;   :custom
+;;   (eglot-sync-connect 1)
+;;   (eglot-connect-timeout 10)
+;;   (eglot-autoshutdown t)
+;;   (eglot-send-changes-idle-time 0.5)
+;;   (eglot-events-buffer-size 0)
+;;   (eglot-ignored-server-capabilities '(:documentHighlightProvider))
+;;   :init
+;;   (defvar +eglot--help-buffer nil)
+;;   (defun +eglot-describe-at-point ()
+;;     (interactive)
+;;     "Request documentation for the thing at point."
+;;     (eglot--dbind ((Hover) contents range)
+;;                   (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
+;;                                    (eglot--TextDocumentPositionParams))
+;;                   (let ((blurb (and (not (seq-empty-p contents))
+;;                                     (eglot--hover-info contents range)))
+;;                         (hint (thing-at-point 'symbol)))
+;;                     (if blurb
+;;                         (with-current-buffer
+;;                             (or (and (buffer-live-p +eglot--help-buffer)
+;;                                      +eglot--help-buffer)
+;;                                 (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
+;;                           (with-help-window (current-buffer)
+;;                             (rename-buffer (format "*eglot-help for %s*" hint))
+;;                             (with-current-buffer standard-output (insert blurb))
+;;                             (setq-local nobreak-char-display nil)))
+;;                       (display-local-help))))
+;;     'deferred)
+;;   :hook
+;;   (eglot-managed-mode . (lambda () (general-define-key
+;;                                     :states '(normal)
+;;                                     :keymaps 'local
+;;                                     "K" '+eglot-describe-at-point))))
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred lsp-install-server)
@@ -1524,16 +1524,18 @@ window that already exists in that direction. It will split otherwise."
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
-  (lsp-keep-workspace-alive nil)
   (lsp-headerline-breadcrumb-enable nil)
+  (lsp-keep-workspace-alive nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-text-document-color nil)
   (lsp-insert-final-newline nil)
-  (lsp-semantic-tokens-enable nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
-  (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-modeline-code-action-fallback-icon "󰌶")
+  (lsp-disabled-clients '(rubocop-ls))
+  (lsp-solargraph-formatting nil)
+  ;; (lsp-clients-typescript-prefer-use-project-ts-server t)
+  :config
   :init
   (defun +update-completions-list ()
     (progn
@@ -1548,16 +1550,6 @@ window that already exists in that direction. It will split otherwise."
                                   :states '(normal)
                                   :keymaps 'local
                                   "K" 'lsp-describe-thing-at-point)))
-  (lsp-managed-mode . (lambda ()
-                         (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc nil t)
-                         (setq eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
-                         ))
-  ;; (lsp-managed-mode . (lambda ()
-  ;;                       (setq eldoc-documentation-functions
-  ;;                             (cons #'flymake-eldoc-function
-  ;;                                   (remove #'flymake-eldoc-function eldoc-documentation-functions)))
-  ;;                       ;; Show all eldoc feedback.
-  ;;                       (setq eldoc-documentation-strategy #'eldoc-documentation-compose)))
   (lsp-completion-mode . +update-completions-list)
   :general
   (+leader-def
@@ -1622,16 +1614,19 @@ window that already exists in that direction. It will split otherwise."
        flycheck-errors)))
 
   :custom
+  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
   (flycheck-checkers nil)
   (flycheck-display-errors-function nil)
   (flycheck-help-echo-function nil)
-  (flycheck-idle-change-delay 0.6)
+  ;; (flycheck-idle-change-delay 0.6)
   (flycheck-display-error-delay 0.3)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   :hook
   (prog-mode . flycheck-mode)
+  (flycheck-mode . (lambda ()
+                        (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc nil t)))
   (flycheck-mode . eldoc-mode))
 
 (use-package go-ts-mode
@@ -1644,8 +1639,8 @@ window that already exists in that direction. It will split otherwise."
     ;; (+add-pairs '((?` . ?`)))
     (add-hook 'before-save-hook 'lsp-organize-imports t t))
   :hook
-  (go-ts-mode . +go-mode-setup)
   (go-ts-mode . apheleia-mode)
+  (go-ts-mode . +go-mode-setup)
   (go-ts-mode . lsp-deferred)
   )
 
@@ -1674,12 +1669,60 @@ window that already exists in that direction. It will split otherwise."
   (rust-ts-mode . lsp-deferred))
 
 (use-package scala-mode
+  :custom
+  (scala-indent:align-parameters t)
+  (scala-indent:use-javadoc-style t)
   :interpreter ("scala" . scala-mode)
   :mode "\\.scala\\'"
   :mode "\\.sbt\\'")
 
 (use-package sbt-mode
+  :general
+  (+local-leader-def
+    :keymaps '(scala-mode-map)
+    "b" '(nil :wk "sbt")
+    "bb" #'sbt-command
+    "bc" #'sbt-compile
+    "br" #'sbt-start
+    "b." #'sbt-run-previous-command
+    "t" '(nil :wk "test")
+    "ta" '(sbt-do-test :wk "Test quick")
+    "tf" '(+sbt-test-file :wk "Test current file")
+    ;; "tt" '(nil :wk "Test quick")
+  )
   :commands sbt-start sbt-command
+  :init
+  (defun +sbt-get-testonly-file (&optional file)
+    "Return FILE formatted in a sbt testOnly command."
+    (--> (or file (file-name-base))
+         (format "testOnly *%s" it)))
+
+  (defun +sbt-test-file (&optional file)
+    (interactive)
+    (sbt-command (+sbt-get-testonly-file file)))
+
+  ;; (defun +sbt-get-testcase-name ()
+  ;;   "Get Scala test case nearby point."
+  ;;   (interactive)
+  ;;   (save-excursion
+  ;;     (let* ((line (thing-at-point 'line t))
+  ;;            (on-testcase-p (and (s-contains? "\"" line)
+  ;;                                (s-contains? "{\n" line)))
+  ;;            (get-testcase-name (lambda (l)
+  ;;                                 (--> l
+  ;;                                      (s-split "\"" it)
+  ;;                                      reverse
+  ;;                                      cl-second))))
+  ;;       (if on-testcase-p
+  ;;           (funcall get-testcase-name line)
+  ;;         (progn
+  ;;           (search-backward "{\n")
+  ;;           (funcall get-testcase-name (thing-at-point 'line t)))))))
+
+  ;; (defun +sbt-run-testcase-at-point ()
+  ;;   "Run Scala test case at point."
+  ;;   (interactive)
+  ;;   (sbt-command (format "%s -- -z \"%s\"" (+sbt-get-testonly-file) (+sbt-get-testcase-name))))
   :config
   ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
   ;; allows using SPACE when in the minibuffer
@@ -1691,6 +1734,12 @@ window that already exists in that direction. It will split otherwise."
   (setq sbt:program-options '("-Dsbt.supershell=false")))
 
 (use-package lsp-metals
+  :general
+  (+local-leader-def
+    :keymaps '(scala-mode-map)
+    "fn" #'lsp-metals-new-scala-file)
+  :custom
+  (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"))
   :hook
   (scala-mode . lsp-deferred))
 
@@ -1727,6 +1776,7 @@ window that already exists in that direction. It will split otherwise."
   (web-mode-attr-indent-offset 2)
   (web-mode-attr-value-indent-offset 2)
   (web-mode-auto-close-style 1)
+  (web-mode-comment-style 2)
   :init
   (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
   (define-derived-mode erb-mode web-mode
