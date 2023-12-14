@@ -960,11 +960,11 @@ targets."
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
   (:states 'motion
-    "j" 'evil-next-visual-line
-    "k" 'evil-previous-visual-line
-    ";" 'evil-ex)
+           "j" 'evil-next-visual-line
+           "k" 'evil-previous-visual-line
+           ";" 'evil-ex)
   (:states '(normal visual)
-    "$" 'evil-end-of-line)
+           "$" 'evil-end-of-line)
   :config
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
@@ -990,7 +990,7 @@ targets."
   :commands evilnc-comment-operator
   :general
   (:states '(normal visual)
-    "gc" #'evilnc-comment-operator))
+           "gc" #'evilnc-comment-operator))
 
 (use-package evil-escape
   :hook (evil-mode . evil-escape-mode)
@@ -1015,7 +1015,7 @@ targets."
   :commands evil-avy-goto-char-2
   :general
   (:states '(normal)
-    "s" #'evil-avy-goto-char-2)
+           "s" #'evil-avy-goto-char-2)
   :custom
   (avy-background t))
 
@@ -1142,51 +1142,10 @@ targets."
    [tab] #'corfu-complete)
   )
 
-(use-package kind-icon
-  :after (corfu nerd-icons)
-  :custom
-  (kind-icon-default-face 'corfu-default)
-  (kind-icon-use-icons nil)
-  (kind-icon-mapping
-   `(
-     (array ,(nerd-icons-codicon "nf-cod-symbol_array") :face font-lock-type-face)
-     (boolean ,(nerd-icons-codicon "nf-cod-symbol_boolean") :face font-lock-builtin-face)
-     (class ,(nerd-icons-codicon "nf-cod-symbol_class") :face font-lock-type-face)
-     (color ,(nerd-icons-codicon "nf-cod-symbol_color") :face success)
-     (command ,(nerd-icons-codicon "nf-cod-terminal") :face default)
-     (constant ,(nerd-icons-codicon "nf-cod-symbol_constant") :face font-lock-constant-face)
-     (constructor ,(nerd-icons-codicon "nf-cod-triangle_right") :face font-lock-function-name-face)
-     (enummember ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-     (enum-member ,(nerd-icons-codicon "nf-cod-symbol_enum_member") :face font-lock-builtin-face)
-     (enum ,(nerd-icons-codicon "nf-cod-symbol_enum") :face font-lock-builtin-face)
-     (event ,(nerd-icons-codicon "nf-cod-symbol_event") :face font-lock-warning-face)
-     (field ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-variable-name-face)
-     (file ,(nerd-icons-codicon "nf-cod-symbol_file") :face font-lock-string-face)
-     (folder ,(nerd-icons-codicon "nf-cod-folder") :face font-lock-doc-face)
-     (interface ,(nerd-icons-codicon "nf-cod-symbol_interface") :face font-lock-type-face)
-     (keyword ,(nerd-icons-codicon "nf-cod-symbol_keyword") :face font-lock-keyword-face)
-     (macro ,(nerd-icons-codicon "nf-cod-symbol_misc") :face font-lock-keyword-face)
-     (magic ,(nerd-icons-codicon "nf-cod-wand") :face font-lock-builtin-face)
-     (method ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-     (function ,(nerd-icons-codicon "nf-cod-symbol_method") :face font-lock-function-name-face)
-     (module ,(nerd-icons-codicon "nf-cod-file_submodule") :face font-lock-preprocessor-face)
-     (numeric ,(nerd-icons-codicon "nf-cod-symbol_numeric") :face font-lock-builtin-face)
-     (operator ,(nerd-icons-codicon "nf-cod-symbol_operator") :face font-lock-comment-delimiter-face)
-     (param ,(nerd-icons-codicon "nf-cod-symbol_parameter") :face default)
-     (property ,(nerd-icons-codicon "nf-cod-symbol_property") :face font-lock-variable-name-face)
-     (reference ,(nerd-icons-codicon "nf-cod-references") :face font-lock-variable-name-face)
-     (snippet ,(nerd-icons-codicon "nf-cod-symbol_snippet") :face font-lock-string-face)
-     (string ,(nerd-icons-codicon "nf-cod-symbol_string") :face font-lock-string-face)
-     (struct ,(nerd-icons-codicon "nf-cod-symbol_structure") :face font-lock-variable-name-face)
-     (text ,(nerd-icons-codicon "nf-cod-text_size") :face font-lock-doc-face)
-     (typeparameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-     (type-parameter ,(nerd-icons-codicon "nf-cod-list_unordered") :face font-lock-type-face)
-     (unit ,(nerd-icons-codicon "nf-cod-symbol_ruler") :face font-lock-constant-face)
-     (value ,(nerd-icons-codicon "nf-cod-symbol_field") :face font-lock-builtin-face)
-     (variable ,(nerd-icons-codicon "nf-cod-symbol_variable") :face font-lock-variable-name-face)
-     (t ,(nerd-icons-codicon "nf-cod-code") :face font-lock-warning-face)))
+(use-package nerd-icons-corfu
+  :after corfu
   :config
-  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+  (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
 (use-package git-commit
   :after magit
@@ -1223,8 +1182,6 @@ targets."
   (magit-revision-show-gravatars t)
   (magit-revision-insert-related-refs nil)
   (magit-bury-buffer-function #'magit-mode-quit-window)
-  :init
-  (setq magit-auto-revert-mode nil)
 
   :config
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
@@ -1391,77 +1348,21 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package treesit
   :elpaca nil
-  ;; :demand t
-  ;; :hook
-  ;; (tsx-ts-mode . (lambda ()
-  ;;                  (setq treesit-font-lock-feature-list
-  ;;                        `((comment declaration)
-  ;;                          (keyword string escape-sequence)
-  ;;                          (constant expression identifier jsx number pattern property property_identifier jsx_element jsx_opening_element jsx_attribute jsx_closing_element jsx_expression jsx_text)
-  ;;                          (function bracket delimiter)))
-  ;;                  (treesit-font-lock-recompute-features)))
   :init
   (setq treesit-font-lock-level 4)
-  ;; (setq treesit-language-source-alist
-  ;;       '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-  ;;         (c "https://github.com/tree-sitter/tree-sitter-c")
-  ;;         (css "https://github.com/tree-sitter/tree-sitter-css")
-  ;;         (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
-  ;;         (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
-  ;;         (go "https://github.com/tree-sitter/tree-sitter-go")
-  ;;         (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
-  ;;         (html "https://github.com/tree-sitter/tree-sitter-html")
-  ;;         (java "https://github.com/tree-sitter/tree-sitter-java")
-  ;;         (javascript "https://github.com/tree-sitter/tree-sitter-javascript")
-  ;;         (json "https://github.com/tree-sitter/tree-sitter-json")
-  ;;         (kotlin "https://github.com/fwcd/tree-sitter-kotlin")
-  ;;         (python "https://github.com/tree-sitter/tree-sitter-python")
-  ;;         (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
-  ;;         (rust "https://github.com/tree-sitter/tree-sitter-rust")
-  ;;         (toml "https://github.com/tree-sitter/tree-sitter-toml")
-  ;;         (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
-  ;;         (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
-  ;;         (yaml "https://github.com/ikatyang/tree-sitter-yaml")))
-
-  ;; ;; remap built-in modes to new ts-modes
-  ;; (setq major-mode-remap-alist
-  ;;       '((html-mode . html-ts-mode)
-  ;;         (mhtml-mode . html-ts-mode)
-  ;;         (bash-mode . bash-ts-mode)
-  ;;         (js-json-mode . json-ts-mode)
-  ;;         (json-mode . json-ts-mode)
-  ;;         (css-mode . css-ts-mode)
-  ;;         (python-mode . python-ts-mode)
-  ;;         (ruby-mode . ruby-ts-mode)
-  ;;         (javascript-mode . js-ts-mode)
-  ;;         (js-mode . js-ts-mode)
-  ;;         (js-jsx-mode . js-ts-mode)
-  ;;         (yaml-mode . yaml-ts-mode)
-  ;;         ))
-
-  ;; (defun +treesit-install-all-languages ()
-  ;;   "Install all languages specified by `treesit-language-source-alist'."
-  ;;   (interactive)
-  ;;   (let ((languages (mapcar 'car treesit-language-source-alist)))
-  ;;     (dolist (lang languages)
-  ;;       (treesit-install-language-grammar lang)
-  ;;       (message "`%s' parser was installed." lang)
-  ;;       (sit-for 0.75))))
 )
 
 (use-package treesit-auto
-  ;; :demand t
   :config
   (setq treesit-auto-install 'prompt)
+  (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
 
 
 (use-package evil-textobj-tree-sitter
   :after (evil)
-  :elpaca (:host github
-                 :repo "meain/evil-textobj-tree-sitter"
-                 :files (:defaults "queries" "treesit-queries"))
   :config
+  (add-to-list 'evil-textobj-tree-sitter-major-mode-language-alist '(tsx-ts-mode . "typescript"))
   (general-define-key
    :keymaps 'evil-outer-text-objects-map
    "f" (evil-textobj-tree-sitter-get-textobj "function.outer")
@@ -1618,7 +1519,6 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-checkers nil)
   (flycheck-display-errors-function nil)
   (flycheck-help-echo-function nil)
-  ;; (flycheck-idle-change-delay 0.6)
   (flycheck-display-error-delay 0.3)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
@@ -1636,7 +1536,7 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode-indent-offset 4)
   :init
   (defun +go-mode-setup ()
-    ;; (+add-pairs '((?` . ?`)))
+    (+add-pairs '((?` . ?`)))
     (add-hook 'before-save-hook 'lsp-organize-imports t t))
   :hook
   (go-ts-mode . apheleia-mode)
@@ -1743,11 +1643,6 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (scala-mode . lsp-deferred))
 
-(setq js-chain-indent t)
-(setq js-indent-level 2)
-(add-hook 'js-ts-mode-hook #'lsp-deferred)
-(add-hook 'js-ts-mode-hook #'apheleia-mode)
-
 (use-package css-mode
   :elpaca nil
   :custom
@@ -1756,13 +1651,29 @@ window that already exists in that direction. It will split otherwise."
   (css-ts-mode . lsp-deferred)
   (css-ts-mode . apheleia-mode))
 
-(use-package typescript-ts-mode
-  :demand t
-  :elpaca nil
+(use-package jtsx
+  :elpaca (:host github :repo "llemaitre19/jtsx")
+  :mode (("\\.jsx?\\'" . jtsx-jsx-mode)
+         ("\\.tsx?\\'" . jtsx-tsx-mode))
+  :commands jtsx-install-treesit-language
+  :custom
+  (js-chain-indent t)
+  (js-indent-level 2)
+  (typescript-ts-mode-indent-offset 2)
   :hook
-  ((tsx-ts-mode typescript-ts-mode) . apheleia-mode)
-  ((tsx-ts-mode typescript-ts-mode) . lsp-deferred)
+  (jtsx-tsx-mode . lsp-deferred)
+  (jtsx-tsx-mode . apheleia-mode)
+  (jtsx-jsx-mode . lsp-deferred)
+  (jtsx-jsx-mode . apheleia-mode)
   )
+
+;; (use-package typescript-ts-mode
+;;   :demand t
+;;   :elpaca nil
+;;   :hook
+;;   ((tsx-ts-mode typescript-ts-mode) . apheleia-mode)
+;;   ((tsx-ts-mode typescript-ts-mode) . lsp-deferred)
+;;   )
 
 (use-package web-mode
   :defer .5
@@ -1934,7 +1845,6 @@ window that already exists in that direction. It will split otherwise."
 ;; If a shell command never outputs anything, don't show it.
 (customize-set-variable 'async-shell-command-display-buffer nil)
 (customize-set-variable 'shell-command-prompt-show-cwd t)
-;; (add-hook 'shell-mode-hook #'ansi-color-for-comint-mode-on)
 
 ;;;###autoload
 (defun async-shell-command-region (start end)
@@ -1950,7 +1860,7 @@ window that already exists in that direction. It will split otherwise."
   :custom
   (compile-command "make ")
   (compilation-always-kill t)
-  (compilation-ask-about-save nil)  ; save all buffers on `compile'
+  (compilation-ask-about-save nil)
   (compilation-scroll-output 'first-error)
   :config
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
@@ -2050,6 +1960,9 @@ window that already exists in that direction. It will split otherwise."
   (:states '(normal visual insert)
            :keymaps 'eshell-mode-map
            "C-t" #'+interactive-cd)
+  (:states '(normal visual insert)
+           :keymaps 'eshell-mode-map
+           "M-r" #'consult-history)
   :preface
   (defface +eshell-prompt-pwd '((t (:inherit font-lock-constant-face)))
     "TODO"
@@ -2317,14 +2230,20 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "od" #'docker))
 
-(use-package kubel
-  :commands kubel
-  :general
-  (+leader-def
-    "ok" #'kubel))
+(use-package kubernetes
+  :commands (kubernetes-overview)
+  :config
+  (setq kubernetes-poll-frequency 3600
+        kubernetes-redraw-frequency 3600))
 
-(use-package kubel-evil
-  :after kubel)
+;; (use-package kubel
+;;   :commands kubel
+;;   :general
+;;   (+leader-def
+;;     "ok" #'kubel))
+
+;; (use-package kubel-evil
+;;   :after kubel)
 
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")

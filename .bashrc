@@ -9,6 +9,9 @@ export PATH=$PATH:$HOME/.local/bin
 export PATH=$PATH:$HOME/go/bin
 export KUBECONFIG=$HOME/.kube/config
 
+[ -n "$EAT_SHELL_INTEGRATION_DIR" ] && \
+  source "$EAT_SHELL_INTEGRATION_DIR/bash"
+
 alias vi="nvim"
 alias vim="nvim"
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
