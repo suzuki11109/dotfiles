@@ -1,13 +1,12 @@
 ;; Prevent package.el from loading packages
 (setq package-enable-at-startup nil)
-
 ;; Boostraping
 (defvar elpaca-installer-version 0.6)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
 (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
 (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil
+                              :ref "3656cb9c90689b5ba29d14f4ff916c412ec045f3"
                               :files (:defaults (:exclude "extensions"))
                               :build (:not elpaca--activate-package)))
 (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
@@ -732,6 +731,7 @@ of the tab bar."
       "\\magit-process:"
       inf-ruby-mode
       sbt-mode
+      deadgrep-mode
       ))
   (popper-mode 1)
   (popper-echo-mode 1))
@@ -1172,8 +1172,8 @@ targets."
     "d" #'magit-diff-dwim
     "D" #'dotfiles-magit-status
     "g" #'magit-status
-    "S" #'magit-stage-file
-    "U" #'magit-unstage-file
+    "S" #'magit-stage-buffer-file
+    "U" #'magit-unstage-buffer-file
     "L" #'magit-log-buffer-file)
   :custom
   (transient-default-level 5)
@@ -1355,7 +1355,7 @@ window that already exists in that direction. It will split otherwise."
 (use-package treesit-auto
   :config
   (setq treesit-auto-install 'prompt)
-  (treesit-auto-add-to-auto-mode-alist 'all)
+  ;; (treesit-auto-add-to-auto-mode-alist '(go gomod))
   (global-treesit-auto-mode))
 
 
@@ -1436,6 +1436,8 @@ window that already exists in that direction. It will split otherwise."
   (lsp-disabled-clients '(rubocop-ls))
   (lsp-solargraph-formatting nil)
   ;; (lsp-clients-typescript-prefer-use-project-ts-server t)
+  (lsp-kotlin-compiler-jvm-target "2.1")
+  (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
   :config
   :init
   (defun +update-completions-list ()
@@ -1784,6 +1786,21 @@ window that already exists in that direction. It will split otherwise."
     "be" #'bundle-exec
     "bo" #'bundle-open))
 
+(use-package kotlin-ts-mode
+  :mode "\\.kt\\'"
+  :hook
+  (kotlin-ts-mode . lsp-deferred)
+  :config
+  (require 'dap-kotlin)
+  (dap-register-debug-template "Kotlin tests with launcher"
+                               (list :type "kotlin"
+                                     :request "launch"
+                                     :mainClass "org.junit.platform.console.ConsoleLauncher --scan-classpath"
+                                     :enableJsonLogging nil
+                                     :noDebug nil))
+
+  )
+
 (use-package elisp-mode
   :elpaca nil
   :hook
@@ -1822,7 +1839,20 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package yaml-ts-mode
   :elpaca nil
-  :mode "\\.ya?ml\\'")
+  :mode "\\.ya?ml\\'"
+  :init
+  (setq yaml-ts-mode--syntax-table
+    (let ((table (make-syntax-table)))
+        (modify-syntax-entry ?#  "<"  table)
+        (modify-syntax-entry ?\n ">"  table)
+        (modify-syntax-entry ?&  "."  table)
+        (modify-syntax-entry ?*  "."  table)
+        (modify-syntax-entry ?\( "."  table)
+        (modify-syntax-entry ?\) "."  table)
+        (modify-syntax-entry ?\' "\"" table)
+        (modify-syntax-entry ?/  ". 124b" table)
+        table))
+  )
 
 (use-package json-ts-mode
   :elpaca nil
@@ -2228,13 +2258,8 @@ window that already exists in that direction. It will split otherwise."
       ))
   :general
   (+leader-def
-    "od" #'docker))
-
-(use-package kubernetes
-  :commands (kubernetes-overview)
-  :config
-  (setq kubernetes-poll-frequency 3600
-        kubernetes-redraw-frequency 3600))
+    "od" #'docker)
+  )
 
 ;; (use-package kubel
 ;;   :commands kubel
