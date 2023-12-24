@@ -707,14 +707,14 @@ of the tab bar."
       "\\*Go Test\\*$"
       "\\*eshell\\*"
       "-eshell\\*$"
-      eshell-mode
+      ;; eshell-mode
       "\\*shell\\*"
-      shell-mode
+      ;; shell-mode
       "\\*term\\*"
-      term-mode
+      ;; term-mode
       "-eat\\*$"
       "\\*eat\\*"
-      eat-mode
+      ;; eat-mode
       "\\*rake-compilation\\*"
       "\\*rspec-compilation\\*"
       "\\*Flymake "
@@ -778,7 +778,8 @@ of the tab bar."
           '(orderless))
     (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local))
   :hook
-  (lsp-completion-mode . +lsp-mode-setup-completion))
+  (lsp-completion-mode . +lsp-mode-setup-completion)
+)
 
 (use-package consult
   :bind
@@ -794,12 +795,12 @@ of the tab bar."
   ([remap yank-pop]                      . consult-yank-pop)
   ([remap project-switch-to-buffer]      . consult-project-buffer)
   :general
-  ("C-s" 'consult-line)
   (+leader-def
     "sb"  #'consult-line
     "sB"  #'consult-line-multi
+    "sc"  '((lambda () (interactive) (consult-history compile-history)) :wk "Compile history")
     "sf"  #'consult-find
-    "sh"  #'consult-history
+    "sh"  '((lambda () (interactive) (consult-history shell-command-history)) :wk "Shell command history")
     "sp"  #'consult-ripgrep
     "hI"  #'consult-info)
   :bind
@@ -1117,9 +1118,14 @@ targets."
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
 
-(use-package cape)
+(use-package cape
+  :init
+  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
+)
 (use-package corfu
   :elpaca (:host github :repo "minad/corfu"
+                 :tag "1.0"
                  :files (:defaults "extensions/*"))
   :hook
   ((prog-mode text-mode conf-mode) . corfu-mode)
@@ -1444,10 +1450,7 @@ window that already exists in that direction. It will split otherwise."
     (progn
       (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
       (setq-local completion-at-point-functions
-                  (list (cape-super-capf
-                         'non-greedy-lsp
-                         #'yasnippet-capf
-                         )))))
+                  (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
@@ -1654,7 +1657,6 @@ window that already exists in that direction. It will split otherwise."
   (css-ts-mode . apheleia-mode))
 
 (use-package jtsx
-  :elpaca (:host github :repo "llemaitre19/jtsx")
   :mode (("\\.jsx?\\'" . jtsx-jsx-mode)
          ("\\.tsx?\\'" . jtsx-tsx-mode))
   :commands jtsx-install-treesit-language
@@ -1980,7 +1982,7 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def
     "oe"  #'eshell
-    "oE"  #'eshell-new)
+    "oE"  #'+eshell-new)
   (:states '(normal visual)
            :keymaps 'eshell-mode-map
            "<return>" #'evil-insert-resume)
@@ -2017,12 +2019,12 @@ window that already exists in that direction. It will split otherwise."
     (pcase major-mode
       ('shell-mode (comint-send-input))
       ('eshell-mode (eshell-send-input))))
-  :init
-  (defun eshell-new ()
+
+  (defun +eshell-new ()
     "Open a new instance of eshell."
     (interactive)
     (eshell 'N))
-
+  :init
   (setq eshell-banner-message ""
         eshell-scroll-to-bottom-on-input 'all
         eshell-scroll-to-bottom-on-output 'all
@@ -2247,19 +2249,18 @@ window that already exists in that direction. It will split otherwise."
 (use-package envrc
   :hook (on-first-file . envrc-global-mode))
 
-(use-package docker
-  :init
-  (setq docker-show-messages nil)
-  (setq docker-image-run-arguments '("-i" "-t" "--rm"))
-  (add-to-list
-    'display-buffer-alist
-     `("\\*docker-"
-       (display-buffer-same-window)
-      ))
-  :general
-  (+leader-def
-    "od" #'docker)
-  )
+;; (use-package docker
+;;   :init
+;;   (setq docker-show-messages nil)
+;;   (add-to-list
+;;     'display-buffer-alist
+;;      `("\\*docker-"
+;;        (display-buffer-same-window)
+;;       ))
+;;   :general
+;;   (+leader-def
+;;     "od" #'docker)
+;;   )
 
 ;; (use-package kubel
 ;;   :commands kubel
