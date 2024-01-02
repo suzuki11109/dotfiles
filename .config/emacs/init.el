@@ -406,7 +406,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
              project-switch-project
              project-switch-project-open-file)
   :config
-  (setq project-vc-extra-root-markers '("go.mod"))
+  ;; (setq project-vc-extra-root-markers '("go.mod"))
   (setq project-switch-commands 'project-find-file)
   (project-forget-zombie-projects) ;; really need to this to make tabspaces works
   :general
@@ -1036,6 +1036,7 @@ targets."
     (setq-local electric-pair-text-pairs electric-pair-pairs)))
 
 (use-package lispyville
+  :after evil
   :config
   (setq lispy-safe-paste nil)
   (lispyville-set-key-theme '(operators
@@ -1118,11 +1119,7 @@ targets."
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
 
-(use-package cape
-  :init
-  (add-to-list 'completion-at-point-functions #'cape-dabbrev)
-  (add-to-list 'completion-at-point-functions #'cape-file)
-)
+(use-package cape)
 (use-package corfu
   :elpaca (:host github :repo "minad/corfu"
                  :tag "1.0"
@@ -1366,7 +1363,7 @@ window that already exists in that direction. It will split otherwise."
 
 
 (use-package evil-textobj-tree-sitter
-  :after (evil)
+  :after (treesit evil)
   :config
   (add-to-list 'evil-textobj-tree-sitter-major-mode-language-alist '(tsx-ts-mode . "typescript"))
   (general-define-key
@@ -1441,9 +1438,9 @@ window that already exists in that direction. It will split otherwise."
   (lsp-modeline-code-action-fallback-icon "󰌶")
   (lsp-disabled-clients '(rubocop-ls))
   (lsp-solargraph-formatting nil)
-  ;; (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-kotlin-compiler-jvm-target "2.1")
   (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
+  ;; (lsp-clients-typescript-prefer-use-project-ts-server t)
   :config
   :init
   (defun +update-completions-list ()
@@ -1506,17 +1503,17 @@ window that already exists in that direction. It will split otherwise."
       (mapc
        (lambda (err)
          (funcall callback
-           (format "%s: %s"
-                   (let ((level (flycheck-error-level err)))
-                     (pcase level
-                       ('info (propertize "I" 'face 'flycheck-error-list-info))
-                       ('error (propertize "E" 'face 'flycheck-error-list-error))
-                       ('warning (propertize "W" 'face 'flycheck-error-list-warning))
-                       (_ level)))
-                   (flycheck-error-message err))
-           :thing (or (flycheck-error-id err)
-                      (flycheck-error-group err))
-           :face 'font-lock-doc-face))
+                  (format "%s: %s"
+                          (let ((level (flycheck-error-level err)))
+                            (pcase level
+                              ('info (propertize "I" 'face 'flycheck-error-list-info))
+                              ('error (propertize "E" 'face 'flycheck-error-list-error))
+                              ('warning (propertize "W" 'face 'flycheck-error-list-warning))
+                              (_ level)))
+                          (flycheck-error-message err))
+                  :thing (or (flycheck-error-id err)
+                             (flycheck-error-group err))
+                  :face 'font-lock-doc-face))
        flycheck-errors)))
 
   :custom
@@ -1524,15 +1521,14 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-checkers nil)
   (flycheck-display-errors-function nil)
   (flycheck-help-echo-function nil)
-  (flycheck-display-error-delay 0.3)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   :hook
-  (prog-mode . flycheck-mode)
   (flycheck-mode . (lambda ()
-                        (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc nil t)))
-  (flycheck-mode . eldoc-mode))
+                     (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc nil t)))
+  ;; (flycheck-mode . eldoc-mode)
+  )
 
 (use-package go-ts-mode
   :elpaca nil
@@ -1832,6 +1828,9 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (emacs-lisp-mode . eros-mode))
 
+(use-package log4j-mode
+  :defer t)
+
 (use-package markdown-mode
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
   :custom
@@ -2047,9 +2046,6 @@ window that already exists in that direction. It will split otherwise."
               (set-display-table-slot standard-display-table 0 ?\ )))
   )
 
-;; (use-package eshell-z
-;;   :hook (eshell-mode . (lambda () (require 'eshell-z))))
-
 (use-package org
   :elpaca nil
   :init
@@ -2249,18 +2245,18 @@ window that already exists in that direction. It will split otherwise."
 (use-package envrc
   :hook (on-first-file . envrc-global-mode))
 
-;; (use-package docker
-;;   :init
-;;   (setq docker-show-messages nil)
-;;   (add-to-list
-;;     'display-buffer-alist
-;;      `("\\*docker-"
-;;        (display-buffer-same-window)
-;;       ))
-;;   :general
-;;   (+leader-def
-;;     "od" #'docker)
-;;   )
+(use-package docker
+  :init
+  (setq docker-show-messages nil)
+  (add-to-list
+    'display-buffer-alist
+     `("\\*docker-"
+       (display-buffer-same-window)
+      ))
+  :general
+  (+leader-def
+    "od" #'docker)
+  )
 
 ;; (use-package kubel
 ;;   :commands kubel
