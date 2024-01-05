@@ -161,8 +161,9 @@
     "ld" #'elpaca-delete
     "ll" #'elpaca-log
     "lt" #'elpaca-status
-    "lu" #'elpaca-update
-    "lU" #'elpaca-update-all
+    "lf" #'elpaca-fetch
+    "lF" #'elpaca-fetch-all
+    "lM" #'elpaca-merge-all
 
     "m"   '(nil :wk "mode-specific")
 
@@ -709,9 +710,9 @@ of the tab bar."
       "-eshell\\*$"
       ;; eshell-mode
       "\\*shell\\*"
-      ;; shell-mode
+      shell-mode
       "\\*term\\*"
-      ;; term-mode
+      term-mode
       "-eat\\*$"
       "\\*eat\\*"
       ;; eat-mode
@@ -1122,7 +1123,6 @@ targets."
 (use-package cape)
 (use-package corfu
   :elpaca (:host github :repo "minad/corfu"
-                 :tag "1.0"
                  :files (:defaults "extensions/*"))
   :hook
   ((prog-mode text-mode conf-mode) . corfu-mode)
@@ -1492,6 +1492,8 @@ window that already exists in that direction. It will split otherwise."
   ;; (setf (alist-get 'erb-formatter apheleia-formatters)
   ;;       '("erb-format" "--print-width=140" filepath))
   ;; (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
+  (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
+      '(ruby-standard))
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   )
 
@@ -1676,7 +1678,7 @@ window that already exists in that direction. It will split otherwise."
 ;;   )
 
 (use-package web-mode
-  :defer .5
+  ;; :defer .5
   :demand t
   :custom
   (web-mode-enable-html-entities-fontification t)
@@ -1689,7 +1691,7 @@ window that already exists in that direction. It will split otherwise."
   (web-mode-auto-close-style 1)
   (web-mode-comment-style 2)
   :init
-  (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
+  ;; (add-to-list 'auto-mode-alist '("\\.vue\\'" . web-mode) 'append)
   (define-derived-mode erb-mode web-mode
     "Web[erb]")
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
@@ -1697,7 +1699,8 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'web-mode-engines-alist '("elixir" . "\\.eex\\'"))
   (add-to-list 'web-mode-engines-alist '("phoenix" . "\\.[lh]eex\\'"))
   :hook
-  (web-mode . apheleia-mode))
+  (web-mode . apheleia-mode)
+)
 
 (use-package auto-rename-tag
   :hook ((js-ts-mode . auto-rename-tag-mode)
