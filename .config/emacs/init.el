@@ -6,7 +6,6 @@
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
 (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
 (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref "3656cb9c90689b5ba29d14f4ff916c412ec045f3"
                               :files (:defaults (:exclude "extensions"))
                               :build (:not elpaca--activate-package)))
 (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
@@ -592,6 +591,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package doom-modeline
   :custom
+  (doom-modeline-bar-width 0)
   (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
@@ -733,6 +733,7 @@ of the tab bar."
       inf-ruby-mode
       sbt-mode
       deadgrep-mode
+      forge-post-mode
       ))
   (popper-mode 1)
   (popper-echo-mode 1))
@@ -1293,10 +1294,20 @@ window that already exists in that direction. It will split otherwise."
   :demand t
   :custom
   (forge-add-default-bindings nil)
+  :config
+  (transient-append-suffix 'forge-dispatch "c f"
+    '("c m" "merge pull request" forge-merge))
   :general
+  (+leader-def
+    :keymaps '(magit-mode-map)
+    "gw" 'forge-browse)
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
-    "q" #'kill-current-buffer))
+    "q" #'kill-current-buffer)
+  ;; (general-define-key
+  ;;   :keymaps 'forge-pullreq-mode-map
+  ;;   "m" '(lambda () (interactive) (forge-merge (forge-current-pullreq) "")))
+)
 
 (use-package smerge-mode
   :elpaca nil
@@ -1347,7 +1358,9 @@ window that already exists in that direction. It will split otherwise."
 (use-package browse-at-remote
   :general
   (+leader-def
-    "gw" #'browse-at-remote))
+    :keymaps '(prog-mode-map text-mode-map conf-mode-map)
+    "gw" #'browse-at-remote)
+)
 
 (use-package treesit
   :elpaca nil
@@ -1440,14 +1453,14 @@ window that already exists in that direction. It will split otherwise."
   (lsp-solargraph-formatting nil)
   (lsp-kotlin-compiler-jvm-target "2.1")
   (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
-  ;; (lsp-clients-typescript-prefer-use-project-ts-server t)
-  :config
+  (lsp-clients-typescript-prefer-use-project-ts-server t)
+  (lsp-javascript-implicit-project-config-check-js t)
   :init
   (defun +update-completions-list ()
     (progn
       (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
       (setq-local completion-at-point-functions
-                  (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
+                  (list (cape-capf-super #'yasnippet-capf #'non-greedy-lsp)))))
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
@@ -1528,7 +1541,7 @@ window that already exists in that direction. It will split otherwise."
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   :hook
   (flycheck-mode . (lambda ()
-                     (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc nil t)))
+                     (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc 0 t)))
   ;; (flycheck-mode . eldoc-mode)
   )
 
@@ -1667,6 +1680,11 @@ window that already exists in that direction. It will split otherwise."
   (jtsx-tsx-mode . apheleia-mode)
   (jtsx-jsx-mode . lsp-deferred)
   (jtsx-jsx-mode . apheleia-mode)
+  (jtsx-jsx-mode . (lambda ()
+                     (yas-activate-extra-mode 'js-mode)
+                     (yas-activate-extra-mode '+web-react-mode)))
+  (jtsx-tsx-mode . (lambda ()
+                     (yas-activate-extra-mode 'typescript-tsx-mode)))
   )
 
 ;; (use-package typescript-ts-mode
@@ -2144,9 +2162,7 @@ window that already exists in that direction. It will split otherwise."
   ;;     ((org-agenda-files
   ;;       `(,(expand-file-name "groceries.org" org-directory)))))))
   (org-capture-templates
-   `(("i" "Inbox" entry (file "inbox.org")
-      "* %?")
-     ("t" "Tasks" entry (file "tasks.org")
+   `(("t" "Tasks" entry (file "tasks.org")
       "* TODO %?")
      ;; ("g" "Groceries" entry (file+olp "groceries.org" "Groceries")
      ;;  "* [ ] %?")
