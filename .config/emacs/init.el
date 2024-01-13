@@ -697,7 +697,7 @@ of the tab bar."
   ("C-\\"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
   :init
-  (setq popper-window-height 0.35)
+  (setq popper-window-height 0.40)
   (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
     '("\\*Messages\\*"
@@ -1449,23 +1449,27 @@ window that already exists in that direction. It will split otherwise."
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-modeline-code-action-fallback-icon "󰌶")
+  (lsp-auto-execute-action nil)
   (lsp-disabled-clients '(rubocop-ls))
   (lsp-solargraph-formatting nil)
   (lsp-kotlin-compiler-jvm-target "2.1")
   (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
   (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-javascript-implicit-project-config-check-js t)
+  (lsp-javascript-suggest-complete-js-docs nil)
+  (lsp-clients-typescript-preferences '(:includeCompletionsForImportStatements nil))
   :init
   (defun +update-completions-list ()
     (progn
       (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
       (setq-local completion-at-point-functions
-                  (list (cape-capf-super #'yasnippet-capf #'non-greedy-lsp)))))
+                  (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
                                   :keymaps 'local
                                   "K" 'lsp-describe-thing-at-point)))
+  (lsp-managed-mode . evil-normalize-keymaps)
   (lsp-completion-mode . +update-completions-list)
   :general
   (+leader-def
@@ -1483,7 +1487,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package consult-lsp
-  :after (lsp-mode)
+  :after lsp-mode
   :general
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
@@ -1542,7 +1546,6 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (flycheck-mode . (lambda ()
                      (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc 0 t)))
-  ;; (flycheck-mode . eldoc-mode)
   )
 
 (use-package go-ts-mode
@@ -1721,10 +1724,9 @@ window that already exists in that direction. It will split otherwise."
 )
 
 (use-package auto-rename-tag
-  :hook ((js-ts-mode . auto-rename-tag-mode)
+  :hook ((jtsx-jsx-mode . auto-rename-tag-mode)
          (html-ts-mode . auto-rename-tag-mode)
-         (typescript-ts-mode . auto-rename-tag-mode)
-         (tsx-ts-mode . auto-rename-tag-mode)))
+         (jtsx-tsx-mode . auto-rename-tag-mode)))
 
 (use-package lsp-pyright
   :hook
@@ -1918,6 +1920,9 @@ window that already exists in that direction. It will split otherwise."
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
 (use-package shell-command-x
+  :custom
+  (shell-command-x-buffer-name-async-format "*shell:%a*")
+  (shell-command-x-buffer-name-format "*shell:%a*")
   :hook
   (on-first-input . shell-command-x-mode))
 
