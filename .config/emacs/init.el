@@ -6,7 +6,8 @@
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
 (defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
 (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :files (:defaults (:exclude "extensions"))
+                              :ref nil
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
                               :build (:not elpaca--activate-package)))
 (let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
        (build (expand-file-name "elpaca/" elpaca-builds-directory))
@@ -148,6 +149,7 @@
     "i"   '(nil :wk "insert")
     "iu"  '(insert-char :wk "Unicode char")
     "ie"  `(,(when (>= emacs-major-version 29) #'emoji-search) :wk "Emoji")
+    "iy"  '(yank-pop :wk "From clipboard")
 
     "k"  '(nil :wk "bookmark")
     "ks"  #'bookmark-set
@@ -197,10 +199,9 @@
 
     "t"   '(nil :wk "toggle")
     "tc" '(global-display-fill-column-indicator-mode :wk "Fill column indicator")
-
-    "tf"  #'toggle-frame-fullscreen
+    "tf"  '(toggle-frame-fullscreen :wk "Frame fullscreen")
     "th"  '(load-theme :wk "Load theme")
-    "tr"  #'read-only-mode
+    "tr"  '(read-only-mode :wk "Read-only mode")
     )
   )
 
@@ -417,7 +418,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (setq eldoc-echo-area-use-multiline-p nil)
 (setq eldoc-idle-delay 0.6)
-(global-eldoc-mode -1)
+;; (global-eldoc-mode 1)
 
 (setq help-window-select t)
 (use-package helpful
@@ -546,12 +547,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  ;; Keep the point in the same position while scrolling
  scroll-preserve-screen-position t
  ;; Do not move cursor to the center when scrolling
- scroll-conservatively 10
- ;; Scroll at a margin of one line
+ scroll-conservatively 101
+ ;; Scroll at a margin
  scroll-margin 3)
 
 ;; Horizontal scrolling
-(setq hscroll-step 1)
+(setq hscroll-step 1
+      hscroll-margin 2)
 
 ;; Fluid scrolling
 (setq pixel-scroll-precision-use-momentum t)
@@ -582,7 +584,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (savehist-save-minibuffer-history t)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
-  :hook (on-first-input . savehist-mode))
+  :config
+  (savehist-mode)
+)
 
 ;; Show line, columns number in modeline
 (size-indication-mode 1)
@@ -766,21 +770,33 @@ of the tab bar."
   :demand t
   :custom
   (completion-ignore-case t)
-  (completion-styles '(orderless basic))
+  (read-buffer-completion-ignore-case t)
+  (read-file-name-completion-ignore-case t)
+  (completion-styles '(basic substring initials flex orderless))
   (completion-category-defaults nil)
   (completion-category-overrides
-   '((file (styles . (partial-completion)))
+   '((file (styles . (basic partial-completion orderless)))
+     (imenu (styles . (basic substring orderless)))
+     (lsp-capf (styles . (emacs22 substring orderless)))
      ))
-  :init
-  (defun +orderless-dispatch-flex-first (_pattern index _total)
-    (and (eq index 0) 'orderless-flex))
+  (orderless-matching-styles '(orderless-prefixes orderless-regexp))
+  (orderless-affix-dispatch-alist
+    '((37 . orderless-regexp)
+      (33 . orderless-without-literal)
+      (44 . orderless-initialism)
+      (61 . orderless-literal)
+      (126 . orderless-flex)))
+  ;; :init
+  ;; (defun +orderless-dispatch-flex-first (_pattern index _total)
+  ;;   (and (eq index 0) 'orderless-flex))
 
-  (defun +lsp-mode-setup-completion ()
-    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
-          '(orderless))
-    (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local))
-  :hook
-  (lsp-completion-mode . +lsp-mode-setup-completion)
+  ;; (defun +lsp-mode-setup-completion ()
+  ;;   (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+  ;;         '(orderless))
+    ;; (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
+  ;;)
+  ;; :hook
+  ;; (lsp-completion-mode . +lsp-mode-setup-completion)
 )
 
 (use-package consult
@@ -903,18 +919,19 @@ targets."
   (marginalia-mode))
 
 (use-package vertico
-  :elpaca (:host github :repo "minad/vertico"
-                 :files (:defaults "extensions/*"))
+  :elpaca (:files (:defaults "extensions/*.el"))
   :init
   (setq vertico-resize nil
-        vertico-count 14)
+        vertico-count 16)
+  (setq read-extended-command-predicate
+	    #'command-completion-default-include-p)
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
   :general
   (+leader-def
-    "." '(vertico-repeat :wk "Resume last search"))
+    "." '(vertico-repeat-select :wk "Resume previous search"))
   :hook
   (on-first-input . vertico-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
@@ -1100,6 +1117,9 @@ targets."
   :after corfu
   :init
   (setq yas-verbosity 2)
+  :general
+  (+leader-def
+    "is" '(yas-insert-snippet :wk "Snippet"))
   :config
   (yas-global-mode +1)
   (define-key yas-minor-mode-map [(tab)] nil)
@@ -1108,15 +1128,13 @@ targets."
   (define-key yas-keymap (kbd "TAB") nil)
   (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand)))
 
-(use-package doom-snippets
-  :after yasnippet
-  :elpaca (:host github :repo "suzuki11109/snippets" :files ("*.el" "*"))
-  :config
-  (yas-reload-all))
-
 (use-package yasnippet-capf
   :after (yasnippet cape)
-  :elpaca (:host github :repo "elken/yasnippet-capf"))
+  :elpaca (:host github :repo "elken/yasnippet-capf")
+  :config
+  (setq completion-at-point-functions
+              (list #'yasnippet-capf))
+)
 
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
@@ -1126,7 +1144,7 @@ targets."
   :elpaca (:host github :repo "minad/corfu"
                  :files (:defaults "extensions/*"))
   :hook
-  ((prog-mode text-mode conf-mode) . corfu-mode)
+  (on-first-buffer . global-corfu-mode)
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1134,12 +1152,12 @@ targets."
   (corfu-min-width 25)
   (corfu-preview-current nil)
   (corfu-preselect 'first)
-  (corfu-on-exact-match nil)
+  (corfu-on-exact-match 'show)
   (corfu-cycle t)
   :config
+  (corfu-history-mode 1)
   (with-eval-after-load 'savehist
     (add-to-list 'savehist-additional-variables 'corfu-history))
-  (corfu-history-mode 1)
 
   (general-define-key
    :keymaps 'corfu-map
@@ -1391,44 +1409,6 @@ window that already exists in that direction. It will split otherwise."
    "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
   )
 
-;; (use-package eglot
-;;   :elpaca nil
-;;   :commands eglot eglot-ensure
-;;   :custom
-;;   (eglot-sync-connect 1)
-;;   (eglot-connect-timeout 10)
-;;   (eglot-autoshutdown t)
-;;   (eglot-send-changes-idle-time 0.5)
-;;   (eglot-events-buffer-size 0)
-;;   (eglot-ignored-server-capabilities '(:documentHighlightProvider))
-;;   :init
-;;   (defvar +eglot--help-buffer nil)
-;;   (defun +eglot-describe-at-point ()
-;;     (interactive)
-;;     "Request documentation for the thing at point."
-;;     (eglot--dbind ((Hover) contents range)
-;;                   (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
-;;                                    (eglot--TextDocumentPositionParams))
-;;                   (let ((blurb (and (not (seq-empty-p contents))
-;;                                     (eglot--hover-info contents range)))
-;;                         (hint (thing-at-point 'symbol)))
-;;                     (if blurb
-;;                         (with-current-buffer
-;;                             (or (and (buffer-live-p +eglot--help-buffer)
-;;                                      +eglot--help-buffer)
-;;                                 (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
-;;                           (with-help-window (current-buffer)
-;;                             (rename-buffer (format "*eglot-help for %s*" hint))
-;;                             (with-current-buffer standard-output (insert blurb))
-;;                             (setq-local nobreak-char-display nil)))
-;;                       (display-local-help))))
-;;     'deferred)
-;;   :hook
-;;   (eglot-managed-mode . (lambda () (general-define-key
-;;                                     :states '(normal)
-;;                                     :keymaps 'local
-;;                                     "K" '+eglot-describe-at-point))))
-
 (use-package lsp-mode
   :commands (lsp lsp-deferred lsp-install-server)
   :preface
@@ -1471,6 +1451,7 @@ window that already exists in that direction. It will split otherwise."
                                   "K" 'lsp-describe-thing-at-point)))
   (lsp-managed-mode . evil-normalize-keymaps)
   (lsp-completion-mode . +update-completions-list)
+  (lsp-managed-mode . eldoc-mode)
   :general
   (+leader-def
     :keymaps 'lsp-mode-map
@@ -1487,7 +1468,6 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package consult-lsp
-  :after lsp-mode
   :general
   (+leader-def :keymaps 'lsp-mode-map
     "cs" '(consult-lsp-file-symbols :wk "Symbols")
@@ -1688,15 +1668,11 @@ window that already exists in that direction. It will split otherwise."
                      (yas-activate-extra-mode '+web-react-mode)))
   (jtsx-tsx-mode . (lambda ()
                      (yas-activate-extra-mode 'typescript-tsx-mode)))
+  (jtsx-jsx-mode . (lambda ()
+                     (+add-pairs '((?` . ?`)))))
+  (jtsx-tsx-mode . (lambda ()
+                     (+add-pairs '((?` . ?`)))))
   )
-
-;; (use-package typescript-ts-mode
-;;   :demand t
-;;   :elpaca nil
-;;   :hook
-;;   ((tsx-ts-mode typescript-ts-mode) . apheleia-mode)
-;;   ((tsx-ts-mode typescript-ts-mode) . lsp-deferred)
-;;   )
 
 (use-package web-mode
   ;; :defer .5
@@ -2209,12 +2185,8 @@ window that already exists in that direction. It will split otherwise."
   :config
   (setq org-super-agenda-groups
         `(
-          (:name "Next"
-                 :todo "NEXT")
-          (:name "Todo"
-                 :todo "TODO")
-          ;; (:name "Groceries"
-          ;;        :file-path ,(expand-file-name "groceries.org" org-directory))
+          (:name "Next" :todo "NEXT")
+          (:name "Todo" :todo "TODO")
           ))
   (setq org-super-agenda-header-map (make-sparse-keymap))
   (org-super-agenda-mode 1))

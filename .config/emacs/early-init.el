@@ -19,7 +19,7 @@
    native-comp-jit-compilation t))
 
 ;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer noninteractive)
+(setq load-prefer-newer t)
 
 ;; Case-insensitive pass over `auto-mode-alist' is time wasted.
 (setq auto-mode-case-fold nil)
