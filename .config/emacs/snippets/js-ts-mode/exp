@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: expect(expression).toBe();
+# key: exp
+# --
+expect(${1:expression}).${2:toBe}($3);

@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: <%= button_tag ... %>
+# key: button
+# --
+<%= button_tag ${1:text}$0 %>

@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: <%= f.hidden_field ... %>
+# key: hidden
+# --
+<%= f.hidden_field :${1:name}$0 %>

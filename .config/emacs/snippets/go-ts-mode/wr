@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: http ResponseWriter *Request
+# key: wr
+# --
+${1:w} http.ResponseWriter, ${2:r} *http.Request

@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: async method() { ... }
+# key: asom
+# --
+async ${1:method}($2) {
+  $0
+}

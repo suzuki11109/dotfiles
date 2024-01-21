@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: <%= f.submit ... %>
+# key: submit
+# --
+<%= f.submit $0 %>

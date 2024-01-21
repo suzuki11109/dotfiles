@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: <%= f.text_field ... %>
+# key: text
+# --
+<%= f.text_field :${1:name}$0 %>

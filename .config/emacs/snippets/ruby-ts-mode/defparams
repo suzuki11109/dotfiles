@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: params.require(...).permit(...)
+# --
+def $1_params
+  params.require(:$2).permit(:$0)
+end

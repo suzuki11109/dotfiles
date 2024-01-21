@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: it('description', async () => { ... })
+# key: ita
+# --
+it('${1:description}', async () => {
+  $0
+})

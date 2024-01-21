@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: <%= f.label ... %>
+# key: label
+# --
+<%= f.label :${1:name}, "${2:text}"$0 %>

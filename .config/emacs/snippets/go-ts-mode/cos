@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: const ( name = value )
+# key: cos
+# --
+const (
+    ${1:name} = ${2:value}
+)

@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: try { ... } catch (err) { ... } finally { ... }
+# key: tcf
+# --
+try {
+  $1
+} catch (${2:err}) {
+  $3
+} finally {
+  $4
+}

@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: for i, v := range target { ... }
+# key: forr
+# --
+for ${2:i}${3:, v} := range ${1:target} {
+   $0
+}

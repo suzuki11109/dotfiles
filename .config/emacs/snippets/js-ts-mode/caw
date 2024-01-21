@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: const name = await promise;
+# key: caw
+# --
+const ${1:name} = await ${2:promise};

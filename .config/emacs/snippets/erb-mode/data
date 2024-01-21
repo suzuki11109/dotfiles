@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: data: { ... }
+# key: data
+# --
+data: { "${1:key}": "${2:val}"$0 }

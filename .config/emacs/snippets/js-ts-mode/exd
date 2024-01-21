@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: export default expression;
+# key: exd
+# --
+export default ${1:expression};

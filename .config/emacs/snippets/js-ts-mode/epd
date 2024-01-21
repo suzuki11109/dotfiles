@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: event.preventDefault();
+# key: epd
+# --
+event.preventDefault();

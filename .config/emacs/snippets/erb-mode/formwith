@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: <%= form_with model: ... do |f| %>
+# key: formwith
+# --
+<%= form_with model: ${1:model}$2 do |f| %>
+  $3
+<% end %>

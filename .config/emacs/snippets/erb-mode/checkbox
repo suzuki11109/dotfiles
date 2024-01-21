@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: <%= f.check_box ... %>
+# key: checkbox
+# --
+<%= f.check_box :${1:name}$0 %>

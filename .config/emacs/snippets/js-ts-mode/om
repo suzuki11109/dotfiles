@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: method() { ... }
+# key: om
+# --
+${1:method}($2) {
+  $0
+}

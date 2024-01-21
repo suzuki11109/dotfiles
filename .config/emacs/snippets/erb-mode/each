@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: <% items.each do |item| %>
+# --
+<% ${1:items}.each do |${2:item}| %>
+  $3
+<% end %>

@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: await promise
+# key: aw
+# --
+await ${2:promise};

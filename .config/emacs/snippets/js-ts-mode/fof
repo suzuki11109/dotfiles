@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: for (const item of object) { ... }
+# key: fof
+# --
+for (const ${2:item} of ${1:object}) {
+  $0
+}
