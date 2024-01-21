@@ -1313,6 +1313,8 @@ targets."
                  :files (:defaults "extensions/*"))
   :hook
   (on-first-buffer . global-corfu-mode)
+  ((eshell-mode eat-mode) . (lambda ()
+                              (corfu-mode -1)))
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
