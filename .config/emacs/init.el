@@ -93,7 +93,7 @@
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
-    "!"   #'async-shell-command
+    "!"   #'project-or-cwd-async-shell-command
     "|"   #'async-shell-command-region
 
     "b"   '(nil :wk "buffer")
@@ -113,6 +113,7 @@
     "cc" '(compile :wk "Compile")
     "cC" '(recompile :wk "Recompile")
     "cd" '(xref-find-definitions :wk "Go to definitions")
+    "cD" '(xref-find-definitions-other-windows :wk "Go to definitions other window")
 
     "f"   '(nil :wk "file")
     "fd"  #'dired
@@ -212,7 +213,7 @@
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
-  (which-key-min-display-lines 5)
+  (which-key-min-display-lines 3)
   (which-key-add-column-padding 1)
   :hook
   (on-first-input . which-key-mode))
@@ -461,11 +462,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package catppuccin-theme
   :init
+  (setq catppuccin-height-title-3 1.1)
   (load-theme 'catppuccin t))
 
 ;; Set default fonts
 (set-face-attribute 'default nil :font "monospace" :height 100)
-(set-face-attribute 'variable-pitch nil :family "Noto Serif" :height 1.1)
+(set-face-attribute 'variable-pitch nil :family "Inter" :height 1.1)
 (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
 ;; Set thai font
 (set-fontset-font t 'thai "SF Thonburi")
@@ -506,7 +508,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (display-line-numbers-type 'relative)
   (display-line-numbers-widen t)
   :init
-  (dolist (mode '(org-mode-hook))
+  (dolist (mode '(org-mode-hook markdown-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
 
 ;; Frame title
@@ -1145,8 +1147,6 @@ targets."
                  :files (:defaults "extensions/*"))
   :hook
   (on-first-buffer . global-corfu-mode)
-  ((eshell-mode eat-mode) . (lambda ()
-                              (corfu-mode -1)))
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1156,7 +1156,9 @@ targets."
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
   (corfu-cycle t)
+  (global-corfu-modes '(prog-mode text-mode conf-mode))
   :config
+  (advice-add 'evil-escape-func :after 'corfu-quit)
   (corfu-history-mode 1)
   (with-eval-after-load 'savehist
     (add-to-list 'savehist-additional-variables 'corfu-history))
@@ -1446,6 +1448,7 @@ window that already exists in that direction. It will split otherwise."
       (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
       (setq-local completion-at-point-functions
                   (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
+
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
@@ -1459,20 +1462,19 @@ window that already exists in that direction. It will split otherwise."
     :keymaps 'lsp-mode-map
     :infix "c"
     "a" '(lsp-execute-code-action :wk "Code action")
-    "D" '(lsp-find-references :wk "Find references")
     "i" '(lsp-find-implementation :wk "Find implementation")
     "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
     "l" '(lsp-avy-lens :wk "Click lens")
     "o" '(lsp-organize-imports :wk "Organize imports")
     "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
+    "Q" '(lsp-workspace-restart :wk "Restart workspace")
     "r" '(lsp-rename :wk "Rename")
-    "R" '(lsp-workspace-restart :wk "Restart workspace"))
+    "R" '(lsp-find-references :wk "Restart workspace"))
   )
 
 (use-package consult-lsp
   :general
   (+leader-def :keymaps 'lsp-mode-map
-    "cs" '(consult-lsp-file-symbols :wk "Symbols")
     "cj" '(consult-lsp-symbols :wk "Workspace symbols")
     "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
 
@@ -1736,11 +1738,19 @@ window that already exists in that direction. It will split otherwise."
   :elpaca nil
   :hook
   (ruby-ts-mode . apheleia-mode)
-  (ruby-ts-mode . lsp-deferred)
-)
+  (ruby-ts-mode . lsp-deferred))
 
 (use-package inf-ruby
-  :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode))
+  :hook (compilation-filter . inf-ruby-auto-enter)
+  :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode)
+  :general
+  (+local-leader-def
+    :keymaps 'ruby-ts-mode-map
+    "r" '(:ignore t :wk "run")
+    "rl" 'ruby-send-line
+    "rr" 'ruby-send-region
+    "rd" 'ruby-send-definition
+    "ro" 'inf-ruby-console-auto))
 
 (use-package ruby-end
   :after (ruby-mode ruby-ts-mode))
@@ -1834,6 +1844,8 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package markdown-mode
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
+  :hook
+  (markdown-mode . variable-pitch-mode)
   :custom
   (markdown-enable-math t)
   (markdown-fontify-code-blocks-natively t)
@@ -1858,6 +1870,11 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package json-ts-mode
   :elpaca nil
+  :init
+  (defun +json-mode-setup ()
+    (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
+  :hook
+  (json-ts-mode . +json-mode-setup)
   :mode "\\.prettierrc\\'")
 
 (use-package terraform-mode
@@ -1887,6 +1904,17 @@ window that already exists in that direction. It will split otherwise."
   (let ((cmd (string-trim (buffer-substring-no-properties start end))))
     (async-shell-command cmd)))
 
+;;;###autoload
+(defun project-or-cwd-async-shell-command ()
+  "Run `async-shell-command' in the current project's root directory."
+  (declare (interactive-only async-shell-command))
+  (interactive)
+  (let ((project (project-current)))
+    (if project
+        (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'async-shell-command))
+      (call-interactively #'async-shell-command))))
+
 (use-package compile
   :elpaca nil
   :custom
@@ -1904,22 +1932,31 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (on-first-input . shell-command-x-mode))
 
-(use-package bash-completion
-  :config
-  (setq bash-completion-use-separate-processes t)
-  (bash-completion-setup)
+;; (use-package bash-completion
+;;   :config
+;;   (setq bash-completion-use-separate-processes t)
+;;   (bash-completion-setup)
 
-  (defun eshell-bash-completion-capf-nonexclusive ()
-    (let ((compl (bash-completion-dynamic-complete-nocomint
-                  (save-excursion (eshell-bol) (point))
-                  (point) t)))
-      (when compl
-        (append compl '(:exclusive no)))))
+;;   (defun eshell-bash-completion-capf-nonexclusive ()
+;;     (let ((compl (bash-completion-dynamic-complete-nocomint
+;;                   (save-excursion (eshell-bol) (point))
+;;                   (point) t)))
+;;       (when compl
+;;         (append compl '(:exclusive no)))))
 
-  (add-hook 'eshell-mode-hook
-            (lambda ()
-              (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
-  )
+;;   (add-hook 'eshell-mode-hook
+;;             (lambda ()
+;;               (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
+;;   )
+
+;; (use-package capf-autosuggest
+;;   :general
+;;   (:keymaps 'capf-autosuggest-active-mode-map
+;;             [(tab)] #'capf-autosuggest-move-end-of-line
+;;             "TAB" #'capf-autosuggest-move-end-of-line
+;;   )
+;;   :hook
+;;   (eshell-mode . capf-autosuggest-mode))
 
 (use-package eat
   :elpaca (eat :type git
@@ -2040,6 +2077,8 @@ window that already exists in that direction. It will split otherwise."
 
   (add-hook 'eshell-mode-hook
             (defun +eshell-setup ()
+              ;; (eshell-cmpl-mode -1)
+              ;; (add-to-list 'capf-autosuggest-capf-functions 'pcomplete-completions-at-point)
               ;; remove fringe
               (set-window-fringes nil 0 0)
               (set-window-margins nil 1 nil)
@@ -2066,19 +2105,19 @@ window that already exists in that direction. It will split otherwise."
   (org-edit-src-content-indentation 0)
   (org-confirm-babel-evaluate nil)
   :config
-  (dolist (face '((org-level-1 . 1.2)
-                  (org-level-2 . 1.1)
-                  (org-level-3 . 1.05)
-                  (org-level-4 . 1.0)
-                  (org-level-5 . 1.1)
-                  (org-level-6 . 1.1)
-                  (org-level-7 . 1.1)
-                  (org-level-8 . 1.1)))
-    (set-face-attribute (car face) nil :height (cdr face)))
-
   (require 'org-indent)
+  ;; (dolist (face '((org-level-1 . 1.2)
+  ;;                 (org-level-2 . 1.1)
+  ;;                 (org-level-3 . 1.05)
+  ;;                 (org-level-4 . 1.0)
+  ;;                 (org-level-5 . 1.1)
+  ;;                 (org-level-6 . 1.1)
+  ;;                 (org-level-7 . 1.1)
+  ;;                 (org-level-8 . 1.1)))
+  ;;   (set-face-attribute (car face) nil :weight 'semibold :height (cdr face)))
+
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-  (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
+  ;; (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
@@ -2087,8 +2126,8 @@ window that already exists in that direction. It will split otherwise."
   (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-column nil :background nil)
-  (set-face-attribute 'org-column-title nil :background nil)
+  ;; (set-face-attribute 'org-column nil :background nil)
+  ;; (set-face-attribute 'org-column-title nil :background nil)
 
   (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
   :general
@@ -2103,7 +2142,8 @@ window that already exists in that direction. It will split otherwise."
     "l" #'org-insert-link)
   :hook
   (org-mode . org-indent-mode)
-  (org-mode . variable-pitch-mode))
+  (org-mode . variable-pitch-mode)
+)
 
 (use-package evil-org
   :after (org evil)
@@ -2233,8 +2273,6 @@ window that already exists in that direction. It will split otherwise."
     "sg" #'deadgrep))
 
 (use-package exec-path-from-shell
-  ;; :custom
-  ;; (exec-path-from-shell-arguments '("-l"))
   :config
   (dolist (var '("KUBECONFIG"))
     (add-to-list 'exec-path-from-shell-variables var))
