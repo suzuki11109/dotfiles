@@ -2,6 +2,6 @@
 # name: for i, v := range target { ... }
 # key: forr
 # --
-for ${2:i}${3:, v} := range ${1:target} {
+for ${3:${2:_}, }${4:v} := range ${1:target} {
    $0
 }
