@@ -3,23 +3,51 @@
 ;;; Code:
 
 ;; Increase the garbage collection (GC) threshold for faster startup.
-(setq gc-cons-threshold most-positive-fixnum
-      gc-cons-percentage 0.6)
-(add-hook 'elpaca-after-init-hook
+(setq gc-cons-threshold most-positive-fixnum)
+
+(defvar +file-name-handler-alist file-name-handler-alist)
+(setq file-name-handler-alist nil)
+
+(add-hook 'after-init-hook
           (lambda ()
-            (setq gc-cons-threshold (* 32 1024 1024)
-                  gc-cons-percentage 0.1)))
+            (setq file-name-handler-alist +file-name-handler-alist)))
 
-;; Native compilation settings
-(when (featurep 'native-compile)
-  (setq
-   ;; Silence compiler warnings as they can be pretty disruptive.
-   native-comp-async-report-warnings-errors nil
-   ;; Make native compilation happens asynchronously
-   native-comp-jit-compilation t))
+(setq frame-inhibit-implied-resize t)
 
-;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer t)
+(setq inhibit-startup-screen t
+      inhibit-startup-echo-area-message user-login-name)
+
+;; PERF,UX: Remove "For information about GNU Emacs..." message at startup.
+;;   It's redundant with our dashboard and incurs a premature redraw.
+(advice-add #'display-startup-echo-area-message :override #'ignore)
+
+;; PERF: Suppress the vanilla startup screen completely. We've disabled it
+;;   with `inhibit-startup-screen', but it would still initialize anyway.
+;;   This involves some file IO and/or bitmap work (depending on the frame
+;;   type) that we can no-op for a free 50-100ms boost in startup time.
+(advice-add #'display-startup-screen :override #'ignore)
+
+;; Set initial buffer to fundamental-mode for faster load
+(setq initial-major-mode 'fundamental-mode
+      initial-scratch-message nil)
+
+;; Remove some unneeded UI elements
+(push '(tool-bar-lines . 0)   default-frame-alist)
+(push '(menu-bar-lines . 0)   default-frame-alist)
+(push '(vertical-scroll-bars) default-frame-alist)
+(setq tool-bar-mode nil
+      menu-bar-mode nil
+      scroll-bar-mode nil)
+;; Maximize frame by default
+(push '(fullscreen . maximized) default-frame-alist)
+
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s with %d garbage collections."
+                     (format "%.2f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
 
 ;; Case-insensitive pass over `auto-mode-alist' is time wasted.
 (setq auto-mode-case-fold nil)
@@ -27,9 +55,18 @@
 ;; Slightly faster re-display
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
+(setq bidi-inhibit-bpa t)  ; Emacs 27+ only
+
+;; Reduce rendering/line scan work for Emacs by not rendering cursors or regions
+;; in non-focused windows.
+(setq-default cursor-in-non-selected-windows nil)
+(setq highlight-nonselected-windows nil)
 
 ;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
 (setq idle-update-delay 1.0)
+
+;; Don't ping things that look like domain names.
+(setq ffap-machine-p-known 'reject)
 
 ;; Don’t compact font caches during GC
 (setq inhibit-compacting-font-caches t)
@@ -46,24 +83,4 @@
 ;; Improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
 
-;; Remove some unneeded UI elements
-(push '(tool-bar-lines . 0)   default-frame-alist)
-(push '(menu-bar-lines . 0)   default-frame-alist)
-(push '(vertical-scroll-bars) default-frame-alist)
-(setq tool-bar-mode nil
-      menu-bar-mode nil
-      scroll-bar-mode nil)
-
-;; Disable start-up screen
-(setq-default inhibit-startup-screen t)
-(setq-default initial-scratch-message "")
-
-;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode)
-
-;; Inhibit startup message in echo area
-(fset 'display-startup-echo-area-message #'ignore)
-
-;; Maximize frame by default
-(push '(fullscreen . maximized) default-frame-alist)
 ;;; early-init.el ends here

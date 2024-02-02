@@ -1,80 +1,38 @@
-;; Prevent package.el from loading packages
-(setq package-enable-at-startup nil)
-;; Boostraping
-(defvar elpaca-installer-version 0.6)
-(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
-(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil
-                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-                              :build (:not elpaca--activate-package)))
-(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
-       (build (expand-file-name "elpaca/" elpaca-builds-directory))
-       (order (cdr elpaca-order))
-       (default-directory repo))
-  (add-to-list 'load-path (if (file-exists-p build) build repo))
-  (unless (file-exists-p repo)
-    (make-directory repo t)
-    (when (< emacs-major-version 28) (require 'subr-x))
-    (condition-case-unless-debug err
-        (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                 ((zerop (call-process "git" nil buffer t "clone"
-                                       (plist-get order :repo) repo)))
-                 ((zerop (call-process "git" nil buffer t "checkout"
-                                       (or (plist-get order :ref) "--"))))
-                 (emacs (concat invocation-directory invocation-name))
-                 ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-                                       "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-                 ((require 'elpaca))
-                 ((elpaca-generate-autoloads "elpaca" repo)))
-            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-          (error "%s" (with-current-buffer buffer (buffer-string))))
-      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
-  (unless (require 'elpaca-autoloads nil t)
-    (require 'elpaca)
-    (elpaca-generate-autoloads "elpaca" repo)
-    (load "./elpaca-autoloads")))
-(add-hook 'after-init-hook #'elpaca-process-queues)
-(elpaca `(,@elpaca-order))
+;; Make native compilation silent and prune its cache.
+(when (native-comp-available-p)
+  (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
 
-;; Install use-package support
-(elpaca elpaca-use-package
-  (elpaca-use-package-mode)
-  (setq elpaca-use-package-by-default t))
+;; Do not wast time checking the modification time of each file
+(setq load-prefer-newer t)
 
-;; Block until current queue processed.
-(elpaca-wait)
+(add-hook 'package-menu-mode-hook #'hl-line-mode)
 
-;; Use imenu with use-package
+(setq package-archives '(("melpa" . "https://melpa.org/packages/")
+                         ("org" . "https://orgmode.org/elpa/")
+                         ("elpa" . "https://elpa.gnu.org/packages/")
+                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+
+(setq package-install-upgrade-built-in nil)
+
 (setq use-package-enable-imenu-support t)
 
-;; For :bind
-(require 'bind-key)
+(setq use-package-always-ensure t)
 
-;; Load general first for :general
-(use-package general
-  :demand t)
+(setq package-vc-register-as-project nil) ; Emacs 30
 
-(elpaca-wait)
-
-;; Profile emacs startup
-(add-hook 'elpaca-after-init-hook
-          (lambda ()
-            (message "Emacs loaded in %s with %d garbage collections."
-                    (format "%.2f seconds"
-                             (float-time (time-subtract (current-time) before-init-time)))
-                     gcs-done)))
+(eval-when-compile
+  (unless (package-installed-p 'vc-use-package)
+    (package-vc-install "https://github.com/slotThe/vc-use-package"))
+  (require 'vc-use-package))
 
 (use-package on
-  :elpaca (:host github :repo "ajgrf/on.el"))
+  :vc (:fetcher github :repo ajgrf/on.el))
 
 ;; Some constants
 (defconst IS-MAC      (eq system-type 'darwin))
 (defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 
 (use-package general
-  :elpaca nil
   :config
   (general-auto-unbind-keys)
 
@@ -158,14 +116,7 @@
     "kl"  #'list-bookmarks
     "kd"  #'bookmark-delete
 
-    "l"  '(nil :wk "package")
-    "lm" #'elpaca-manager
-    "ld" #'elpaca-delete
-    "ll" #'elpaca-log
-    "lt" #'elpaca-status
-    "lf" #'elpaca-fetch
-    "lF" #'elpaca-fetch-all
-    "lM" #'elpaca-merge-all
+    ;; "l"  '(nil :wk "package")
 
     "m"   '(nil :wk "mode-specific")
 
@@ -218,15 +169,16 @@
   :hook
   (on-first-input . which-key-mode))
 
-;; Confirm before quitting
-(setq confirm-kill-emacs #'y-or-n-p)
-
-;; No beep or blink
-(setq ring-bell-function #'ignore
-      visible-bell nil)
+(use-package gcmh
+  :init
+  (setq gcmh-idle-delay 'auto
+        gcmh-auto-idle-delay-factor 10
+        gcmh-high-cons-threshold (* 16 1024 1024))
+  :hook
+  (on-first-buffer . gcmh-mode))
 
 (use-package recentf
-  :elpaca nil
+  :ensure nil
   :init
   (setq
    recentf-max-saved-items 100
@@ -271,13 +223,13 @@
 
 ;; Auto load files changed on disk
 (use-package autorevert
-  :elpaca nil
+  :ensure nil
   :custom
   (auto-revert-verbose nil)
   (global-auto-revert-non-file-buffers t)
   (auto-revert-interval 3)
-  :config
-  (global-auto-revert-mode 1))
+  :hook
+  (on-first-file . global-auto-revert-mode))
 
 ;;  funtions put to custom lisp file
 (defun +delete-this-file (&optional forever)
@@ -322,7 +274,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Better handling for files with so long lines
 (use-package so-long
-  :elpaca nil
+  :ensure nil
   :hook
   (on-first-file . global-so-long-mode))
 
@@ -349,8 +301,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (persistent-scratch-setup-default))
 
 (use-package dired
-  :elpaca nil
-  :defer t
+  :ensure nil
   :commands dired
   :custom
   (dired-listing-switches "-ahl")
@@ -362,7 +313,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dired-create-destination-dirs 'ask))
 
 (use-package dired-x
-  :elpaca nil
+  :ensure nil
   :hook (dired-mode . dired-omit-mode)
   :config
   (setq dired-clean-confirm-killing-deleted-buffers nil)
@@ -390,7 +341,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 )
 
 (use-package dired-aux
-  :elpaca nil
+  :ensure nil
   :after dired
   :custom
   (dired-create-destination-dirs 'always)
@@ -402,15 +353,15 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :hook (dired-mode . diredfl-mode))
 
 (use-package project
-  :elpaca nil
+  :ensure nil
+  :demand t
   :commands (project-find-file
              project-switch-to-buffer
              project-switch-project
              project-switch-project-open-file)
   :config
-  ;; (setq project-vc-extra-root-markers '("go.mod"))
   (setq project-switch-commands 'project-find-file)
-  (project-forget-zombie-projects) ;; really need to this to make tabspaces works
+  ;; (project-forget-zombie-projects) ;; really need to this to make tabspaces works
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
@@ -497,12 +448,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (blink-cursor-mode -1)
 ;; Remember cursor position in files
 (use-package saveplace
-  :elpaca nil
+  :ensure nil
   :hook
   (on-first-file . save-place-mode))
 
 (use-package display-line-numbers
-  :elpaca nil
+  :ensure nil
   :hook ((prog-mode conf-mode text-mode) . display-line-numbers-mode)
   :custom
   (display-line-numbers-type 'relative)
@@ -510,36 +461,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :init
   (dolist (mode '(org-mode-hook markdown-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
-
-;; Frame title
-(setq frame-title-format
-      (list
-       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
-       '(:eval
-         (let ((project (project-current)))
-           (when project
-             (format " — %s" (project-name project)))))))
-
-;; Resize a frame by pixel
-(setq frame-resize-pixelwise t)
-
- ;; Always prompt in minibuffer (no GUI)
-(setq use-dialog-box nil)
-(when (bound-and-true-p tooltip-mode)
-  (tooltip-mode -1))
-
-;; New frame initial buffer
-(defun +set-frame-scratch-buffer (frame)
-  (with-selected-frame frame
-    (switch-to-buffer "*scratch*")))
-(add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
-
-;; Do not resize windows pixelwise, this can cause crashes in some cases
-;; when resizing too many windows at once or rapidly.
-(setq window-resize-pixelwise nil)
-
-;; Window layout undo/redo
-(winner-mode 1)
 
 (setq
  ;; Fast scrolling
@@ -579,14 +500,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Enable saving minibuffer history
 (use-package savehist
-  :elpaca nil
-  :init
-  ;; Don't store duplicated entries
-  (setq history-delete-duplicates t)
+  :ensure nil
   :custom
   (savehist-save-minibuffer-history t)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
   :config
+  (setq history-delete-duplicates t)
   (savehist-mode)
 )
 
@@ -607,7 +526,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
   :hook
-  (elpaca-after-init . doom-modeline-mode))
+  (after-init . doom-modeline-mode))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -618,11 +537,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package evil-anzu
   :after (evil anzu))
 
+;; New frame initial buffer
+;; (defun +set-frame-scratch-buffer (frame)
+;;   (with-selected-frame frame
+;;     (switch-to-buffer "*scratch*")))
+;; (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
+
 (use-package tab-bar
-  :elpaca nil
+  :ensure nil
   :after (project)
   :custom
-  (tab-bar-show 1)
+  (tab-bar-show t)
   (tab-bar-close-button nil)
   (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-tab-select 'recent)
@@ -691,6 +616,33 @@ of the tab bar."
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
 
+;; Frame title
+(setq frame-title-format
+      (list
+       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+       '(:eval
+         (let ((project (project-current)))
+           (when project
+             (format " — %s" (project-name project)))))))
+
+;; Resize a frame by pixel
+(setq frame-resize-pixelwise t)
+
+;; Always prompt in minibuffer (no GUI)
+(setq use-dialog-box nil)
+(when (bound-and-true-p tooltip-mode)
+  (tooltip-mode -1))
+
+;; Confirm before quitting
+(setq confirm-kill-emacs #'y-or-n-p)
+
+;; No beep or blink
+(setq ring-bell-function #'ignore
+      visible-bell nil)
+
+;; Window layout undo/redo
+(winner-mode 1)
+
 (use-package ace-window
   :custom
   (aw-scope 'frame)
@@ -741,11 +693,13 @@ of the tab bar."
       deadgrep-mode
       forge-post-mode
       ))
-  (popper-mode 1)
-  (popper-echo-mode 1))
+  :hook
+  (after-init . popper-mode)
+  (after-init . popper-echo-mode)
+)
 
 (use-package transient
-  :elpaca nil
+  :ensure nil
   :defer t
   :config
   ;; Map ESC and q to quit transient
@@ -753,7 +707,7 @@ of the tab bar."
   (keymap-set transient-map "q" 'transient-quit-one))
 
 (use-package paren
-  :elpaca nil
+  :ensure nil
   :hook
   (on-first-buffer . show-paren-mode)
   :init
@@ -768,37 +722,13 @@ of the tab bar."
   :hook
   ((prog-mode text-mode conf-mode) . hl-todo-mode))
 
-(use-package orderless
-  :demand t
+(use-package hotfuzz
   :custom
   (completion-ignore-case t)
-  (read-buffer-completion-ignore-case t)
-  (read-file-name-completion-ignore-case t)
-  (completion-styles '(basic substring initials flex orderless))
+  (completion-styles '(basic substring initials hotfuzz))
   (completion-category-defaults nil)
   (completion-category-overrides
-   '((file (styles . (basic partial-completion orderless)))
-     (imenu (styles . (basic substring orderless)))
-     (lsp-capf (styles . (emacs22 substring orderless)))
-     ))
-  (orderless-matching-styles '(orderless-prefixes orderless-regexp))
-  (orderless-affix-dispatch-alist
-    '((37 . orderless-regexp)
-      (33 . orderless-without-literal)
-      (44 . orderless-initialism)
-      (61 . orderless-literal)
-      (126 . orderless-flex)))
-  ;; :init
-  ;; (defun +orderless-dispatch-flex-first (_pattern index _total)
-  ;;   (and (eq index 0) 'orderless-flex))
-
-  ;; (defun +lsp-mode-setup-completion ()
-  ;;   (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
-  ;;         '(orderless))
-    ;; (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
-  ;;)
-  ;; :hook
-  ;; (lsp-completion-mode . +lsp-mode-setup-completion)
+   '((file (styles . (basic partial-completion))))) ;; add remote
 )
 
 (use-package consult
@@ -818,9 +748,7 @@ of the tab bar."
   (+leader-def
     "sb"  #'consult-line
     "sB"  #'consult-line-multi
-    "sc"  '((lambda () (interactive) (consult-history compile-history)) :wk "Compile history")
     "sf"  #'consult-find
-    "sh"  '((lambda () (interactive) (consult-history shell-command-history)) :wk "Shell command history")
     "sp"  #'consult-ripgrep
     "hI"  #'consult-info)
   :bind
@@ -838,12 +766,6 @@ of the tab bar."
                    #'completion--in-region)
                  args)))
   )
-
-(use-package consult-dir
-  :bind (("C-x C-d" . consult-dir)
-         :map minibuffer-local-completion-map
-         ("C-x C-d" . consult-dir)
-         ("C-x C-j" . consult-dir-jump-file)))
 
 (use-package embark
   :commands (embark-act embark-dwim)
@@ -921,7 +843,6 @@ targets."
   (marginalia-mode))
 
 (use-package vertico
-  :elpaca (:files (:defaults "extensions/*.el"))
   :init
   (setq vertico-resize nil
         vertico-count 16)
@@ -967,11 +888,12 @@ targets."
       save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :defer .2
+  :defer .3
+  :init
+  (setq evil-want-keybinding nil)
   :custom
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
-  (evil-want-keybinding nil)
   (evil-want-C-u-scroll t)
   (evil-want-fine-undo t)
   (evil-split-window-below t)
@@ -1042,7 +964,7 @@ targets."
   (avy-background t))
 
 (use-package elec-pair
-  :elpaca nil
+  :ensure nil
   :custom
   (electric-pair-skip-whitespace nil)
   :hook
@@ -1132,7 +1054,7 @@ targets."
 
 (use-package yasnippet-capf
   :after (yasnippet cape)
-  :elpaca (:host github :repo "elken/yasnippet-capf")
+  :vc (:fetcher github :repo elken/yasnippet-capf)
   :config
   (setq completion-at-point-functions
               (list #'yasnippet-capf))
@@ -1140,13 +1062,14 @@ targets."
 
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
+;; Remove ispell from default completion
+(setq text-mode-ispell-word-completion nil)
 
 (use-package cape)
 (use-package corfu
-  :elpaca (:host github :repo "minad/corfu"
-                 :files (:defaults "extensions/*"))
   :hook
   (on-first-buffer . global-corfu-mode)
+  (on-first-buffer . corfu-history-mode)
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1159,9 +1082,7 @@ targets."
   (global-corfu-modes '(prog-mode text-mode conf-mode))
   :config
   (advice-add 'evil-escape-func :after 'corfu-quit)
-  (corfu-history-mode 1)
-  (with-eval-after-load 'savehist
-    (add-to-list 'savehist-additional-variables 'corfu-history))
+  (add-to-list 'savehist-additional-variables 'corfu-history)
 
   (general-define-key
    :keymaps 'corfu-map
@@ -1202,6 +1123,7 @@ targets."
     "U" #'magit-unstage-buffer-file
     "L" #'magit-log-buffer-file)
   :custom
+  (magit-auto-revert-mode nil) ;; does not need because global-auto-revert-mode is enabled
   (transient-default-level 5)
   (magit-diff-refine-hunk t)
   (magit-save-repository-buffers nil)
@@ -1332,7 +1254,7 @@ window that already exists in that direction. It will split otherwise."
 )
 
 (use-package smerge-mode
-  :elpaca nil
+  :ensure nil
   :commands +smerge-hydra/body
   :general
   (+leader-def
@@ -1385,7 +1307,7 @@ window that already exists in that direction. It will split otherwise."
 )
 
 (use-package treesit
-  :elpaca nil
+  :ensure nil
   :init
   (setq treesit-font-lock-level 4)
 )
@@ -1415,8 +1337,6 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred lsp-install-server)
-  :preface
-  (setq lsp-use-plists t)
   :config
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
   (lsp-register-custom-settings
@@ -1429,13 +1349,11 @@ window that already exists in that direction. It will split otherwise."
   (lsp-keep-workspace-alive nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-text-document-color nil)
-  (lsp-insert-final-newline nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-modeline-code-action-fallback-icon "󰌶")
   (lsp-auto-execute-action nil)
   (lsp-disabled-clients '(rubocop-ls))
-  (lsp-solargraph-formatting nil)
   (lsp-kotlin-compiler-jvm-target "2.1")
   (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
   (lsp-clients-typescript-prefer-use-project-ts-server t)
@@ -1482,7 +1400,7 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def
     "fc" #'editorconfig-find-current-editorconfig)
-  :hook (on-first-buffer . editorconfig-mode))
+  :hook (on-first-file . editorconfig-mode))
 
 (use-package apheleia
   :commands apheleia-mode
@@ -1533,7 +1451,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package go-ts-mode
-  :elpaca nil
+  :ensure nil
   :mode "\\.go\\'"
   :custom
   (go-ts-mode-indent-offset 4)
@@ -1562,7 +1480,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package rust-ts-mode
   :mode "\\.rs\\'"
-  :elpaca nil
+  :ensure nil
   :init
   (setq lsp-rust-analyzer-experimental-proc-attr-macros t
         lsp-rust-analyzer-proc-macro-enable t
@@ -1636,18 +1554,18 @@ window that already exists in that direction. It will split otherwise."
   ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
   (setq sbt:program-options '("-Dsbt.supershell=false")))
 
-(use-package lsp-metals
-  :general
-  (+local-leader-def
-    :keymaps '(scala-mode-map)
-    "fn" #'lsp-metals-new-scala-file)
-  :custom
-  (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"))
-  :hook
-  (scala-mode . lsp-deferred))
+;; (use-package lsp-metals
+;;   :general
+;;   (+local-leader-def
+;;     :keymaps '(scala-mode-map)
+;;     "fn" #'lsp-metals-new-scala-file)
+;;   :custom
+;;   (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"))
+;;   :hook
+;;   (scala-mode . lsp-deferred))
 
 (use-package css-mode
-  :elpaca nil
+  :ensure nil
   :custom
   (css-indent-offset 2)
   :hook
@@ -1680,7 +1598,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package web-mode
   ;; :defer .5
-  :demand t
+  ;; :demand t
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1713,7 +1631,7 @@ window that already exists in that direction. It will split otherwise."
   ((python-mode python-ts-mode) . lsp-deferred))
 
 (use-package pytest
-  :elpaca (:host github :repo "ionrock/pytest-el")
+  :vc (:fetcher github :repo ionrock/pytest-el)
   :general
   (+local-leader-def
     :keymaps '(python-ts-mode-map)
@@ -1735,7 +1653,7 @@ window that already exists in that direction. It will split otherwise."
   ((python-mode python-ts-mode) . pyvenv-mode))
 
 (use-package ruby-ts-mode
-  :elpaca nil
+  :ensure nil
   :hook
   (ruby-ts-mode . apheleia-mode)
   (ruby-ts-mode . lsp-deferred))
@@ -1811,7 +1729,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package elisp-mode
-  :elpaca nil
+  :ensure nil
   :hook
   (emacs-lisp-mode . apheleia-mode)
   :general
@@ -1839,20 +1757,22 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (emacs-lisp-mode . eros-mode))
 
-(use-package log4j-mode
-  :defer t)
+;; (use-package log4j-mode
+;;   :defer t)
 
 (use-package markdown-mode
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
   :hook
   (markdown-mode . variable-pitch-mode)
+  :config
+  (set-face-attribute 'markdown-code-face nil :inherit 'fixed-pitch)
   :custom
   (markdown-enable-math t)
   (markdown-fontify-code-blocks-natively t)
   (markdown-gfm-additional-languages '("sh")))
 
 (use-package yaml-ts-mode
-  :elpaca nil
+  :ensure nil
   :mode "\\.ya?ml\\'"
   :init
   (setq yaml-ts-mode--syntax-table
@@ -1869,7 +1789,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package json-ts-mode
-  :elpaca nil
+  :ensure nil
   :init
   (defun +json-mode-setup ()
     (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
@@ -1916,7 +1836,7 @@ window that already exists in that direction. It will split otherwise."
       (call-interactively #'async-shell-command))))
 
 (use-package compile
-  :elpaca nil
+  :ensure nil
   :custom
   (compile-command "make ")
   (compilation-always-kill t)
@@ -1929,6 +1849,8 @@ window that already exists in that direction. It will split otherwise."
   :custom
   (shell-command-x-buffer-name-async-format "*shell:%a*")
   (shell-command-x-buffer-name-format "*shell:%a*")
+  :bind
+  ([remap shell-command] . project-or-cwd-async-shell-command)
   :hook
   (on-first-input . shell-command-x-mode))
 
@@ -1949,24 +1871,7 @@ window that already exists in that direction. It will split otherwise."
 ;;               (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
 ;;   )
 
-;; (use-package capf-autosuggest
-;;   :general
-;;   (:keymaps 'capf-autosuggest-active-mode-map
-;;             [(tab)] #'capf-autosuggest-move-end-of-line
-;;             "TAB" #'capf-autosuggest-move-end-of-line
-;;   )
-;;   :hook
-;;   (eshell-mode . capf-autosuggest-mode))
-
 (use-package eat
-  :elpaca (eat :type git
-               :host codeberg
-               :repo "akib/emacs-eat"
-               :files ("*.el" ("term" "term/*.el") "*.texi"
-                       "*.ti" ("terminfo/e" "terminfo/e/*")
-                       ("terminfo/65" "terminfo/65/*")
-                       ("integration" "integration/*")
-                       (:exclude ".dir-locals.el" "*-tests.el")))
   :commands (eat project-eat)
   :config
   (defun project-eat ()
@@ -2013,12 +1918,12 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
 (use-package shell
-  :elpaca nil
+  :ensure nil
   :hook
   (shell-mode . evil-normal-state))
 
 (use-package eshell
-  :elpaca nil
+  :ensure nil
   :general
   (+leader-def
     "oe"  #'eshell
@@ -2090,7 +1995,7 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package org
-  :elpaca nil
+  :ensure nil
   :init
   (setq org-directory "~/Dropbox/org/")
   :custom
@@ -2106,22 +2011,13 @@ window that already exists in that direction. It will split otherwise."
   (org-confirm-babel-evaluate nil)
   :config
   (require 'org-indent)
-  ;; (dolist (face '((org-level-1 . 1.2)
-  ;;                 (org-level-2 . 1.1)
-  ;;                 (org-level-3 . 1.05)
-  ;;                 (org-level-4 . 1.0)
-  ;;                 (org-level-5 . 1.1)
-  ;;                 (org-level-6 . 1.1)
-  ;;                 (org-level-7 . 1.1)
-  ;;                 (org-level-8 . 1.1)))
-  ;;   (set-face-attribute (car face) nil :weight 'semibold :height (cdr face)))
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   ;; (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
   (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
   (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-formula nil  :inherit 'fixed-pitch)
-  (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch))
+  (set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-code nil  :inherit '(shadow fixed-pitch))
   (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
   (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
@@ -2164,7 +2060,7 @@ window that already exists in that direction. It will split otherwise."
   :hook (org-mode . org-superstar-mode))
 
 (use-package org-agenda
-  :elpaca nil
+  :ensure nil
   :custom
   (org-agenda-sorting-strategy '((agenda habit-down time-up priority-down category-keep)
                                 (todo tag-up priority-down category-keep)
@@ -2235,7 +2131,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package org-tempo
   :after org
-  :elpaca nil
+  :ensure nil
   :config
   (org-babel-do-load-languages
     'org-babel-load-languages
@@ -2248,7 +2144,7 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'org-structure-template-alist '("py" . "src python"))
   (add-to-list 'org-structure-template-alist '("rb" . "src ruby"))
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body")))
+)
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
@@ -2274,6 +2170,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package exec-path-from-shell
   :config
+  (setq exec-path-from-shell-arguments '("-l"))
   (dolist (var '("KUBECONFIG"))
     (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
@@ -2325,6 +2222,8 @@ window that already exists in that direction. It will split otherwise."
   :init
   (setq verb-auto-kill-response-buffers t
         verb-json-use-mode 'json-ts-mode)
+  :config
+  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
   :general
   (+leader-def
    :keymaps 'org-mode-map
