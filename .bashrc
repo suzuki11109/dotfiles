@@ -37,6 +37,8 @@ command -v yarn >/dev/null && export PATH="$PATH:$(yarn global bin)"
 
 export PATH="$PATH:/home/aki/.local/share/coursier/bin"
 
+[[ -s "$HOME/.bashrc.local" ]] && source "$HOME/.bashrc.local"
+
 [[ $- != *i* ]] && return
 
 if [ -f ~/bash-sensible/sensible.bash ]; then
@@ -46,5 +48,3 @@ fi
 command -v direnv > /dev/null && eval "$(direnv hook bash)"
 
 command -v starship > /dev/null && eval "$(starship init bash)"
-
-[[ -s "$HOME/.bashrc.local" ]] && source "$HOME/.bashrc.local"
