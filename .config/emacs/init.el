@@ -722,14 +722,25 @@ of the tab bar."
   :hook
   ((prog-mode text-mode conf-mode) . hl-todo-mode))
 
-(use-package hotfuzz
+(setq read-file-name-completion-ignore-case t
+      read-buffer-completion-ignore-case t
+      completion-ignore-case t)
+
+(use-package orderless
   :custom
-  (completion-ignore-case t)
-  (completion-styles '(basic substring initials hotfuzz))
+  (completion-styles '(basic orderless))
   (completion-category-defaults nil)
   (completion-category-overrides
-   '((file (styles . (basic partial-completion))))) ;; add remote
-)
+   '((file (styles . (basic partial-completion orderless))) ;; add remote
+     (project-file (styles . (basic substring partial-completion orderless)))
+     (imenu (styles . (basic substring orderless)))
+     ))
+  (orderless-matching-styles
+   '(orderless-prefixes
+     orderless-initialism
+     orderless-regexp
+     orderless-flex))
+  )
 
 (use-package consult
   :bind
@@ -837,17 +848,15 @@ targets."
 (use-package marginalia
   :after vertico
   :custom
-  (setq marginalia-align 'right)
-  (setq marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
-  :init
+  (marginalia-align 'right)
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :config
   (marginalia-mode))
 
 (use-package vertico
-  :init
-  (setq vertico-resize nil
-        vertico-count 16)
-  (setq read-extended-command-predicate
-	    #'command-completion-default-include-p)
+  :custom
+  (read-extended-command-predicate #'command-completion-default-include-p) ;; hide commands that does not work
+  (vertico-resize nil)
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
@@ -1068,8 +1077,21 @@ targets."
 (use-package cape)
 (use-package corfu
   :hook
-  (on-first-buffer . global-corfu-mode)
-  (on-first-buffer . corfu-history-mode)
+  (on-first-input . global-corfu-mode)
+  (on-first-input . corfu-history-mode)
+  ;; (eshell-mode . (lambda ()
+  ;;                  (setq-local corfu-count 5)
+  ;;                  (setq-local corfu-auto-delay 0.3)
+  ;;                  (corfu-mode 1)))
+  ;; (minibuffer-setup . corfu-enable-in-minibuffer)
+  ;; :init
+  ;; (defun corfu-enable-in-minibuffer ()
+  ;;   "Enable Corfu in the minibuffer."
+  ;;   (when (local-variable-p 'completion-at-point-functions)
+  ;;     (setq-local corfu-count 5)
+  ;;     (setq-local corfu-auto nil)
+  ;;     ;; (setq-local corfu-auto-delay 0.3)
+  ;;     (corfu-mode 1)))
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1077,16 +1099,16 @@ targets."
   (corfu-min-width 25)
   (corfu-preview-current nil)
   (corfu-preselect 'first)
-  (corfu-on-exact-match 'show)
+  (corfu-on-exact-match nil)
   (corfu-cycle t)
   (global-corfu-modes '(prog-mode text-mode conf-mode))
   :config
   (advice-add 'evil-escape-func :after 'corfu-quit)
   (add-to-list 'savehist-additional-variables 'corfu-history)
-
-  (general-define-key
-   :keymaps 'corfu-map
-   [tab] #'corfu-complete)
+  ;; :general
+  ;; (:keymaps 'corfu-map
+  ;;           :predicate '(eq major-mode 'eshell-mode)
+  ;;           "RET" 'eshell-send-input)
   )
 
 (use-package nerd-icons-corfu
@@ -1854,22 +1876,21 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (on-first-input . shell-command-x-mode))
 
-;; (use-package bash-completion
-;;   :config
-;;   (setq bash-completion-use-separate-processes t)
-;;   (bash-completion-setup)
+(use-package bash-completion
+  :init
+  (setq bash-completion-use-separate-processes t)
 
-;;   (defun eshell-bash-completion-capf-nonexclusive ()
-;;     (let ((compl (bash-completion-dynamic-complete-nocomint
-;;                   (save-excursion (eshell-bol) (point))
-;;                   (point) t)))
-;;       (when compl
-;;         (append compl '(:exclusive no)))))
-
-;;   (add-hook 'eshell-mode-hook
-;;             (lambda ()
-;;               (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
-;;   )
+  (defun eshell-bash-completion-capf-nonexclusive ()
+    (let ((compl (bash-completion-dynamic-complete-nocomint
+                  (save-excursion (eshell-bol) (point))
+                  (point) t)))
+      (when compl
+        (append compl '(:exclusive no)))))
+  :hook
+  (on-first-buffer . bash-completion-setup)
+  (eshell-mode . (lambda ()
+                   (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
+  )
 
 (use-package eat
   :commands (eat project-eat)
@@ -1928,6 +1949,8 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "oe"  #'eshell
     "oE"  #'+eshell-new)
+  (:keymaps 'eshell-cmpl-mode-map
+            "TAB" #'+vertico-flat-completion-at-point)
   (:states '(normal visual)
            :keymaps 'eshell-mode-map
            "<return>" #'evil-insert-resume)
@@ -1969,6 +1992,13 @@ window that already exists in that direction. It will split otherwise."
     "Open a new instance of eshell."
     (interactive)
     (eshell 'N))
+
+  (defun +vertico-flat-completion-at-point ()
+    "Temporarily toggles vertico-flat-mode when using completion-at-point"
+    (interactive)
+    (vertico-flat-mode 1)
+    (completion-at-point)
+    (vertico-flat-mode -1))
   :init
   (setq eshell-banner-message ""
         eshell-scroll-to-bottom-on-input 'all
@@ -1983,7 +2013,6 @@ window that already exists in that direction. It will split otherwise."
   (add-hook 'eshell-mode-hook
             (defun +eshell-setup ()
               ;; (eshell-cmpl-mode -1)
-              ;; (add-to-list 'capf-autosuggest-capf-functions 'pcomplete-completions-at-point)
               ;; remove fringe
               (set-window-fringes nil 0 0)
               (set-window-margins nil 1 nil)
