@@ -1,4 +1,4 @@
-;; Make native compilation silent and prune its cache.
+;; Make native compilation silent
 (when (native-comp-available-p)
   (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
 
@@ -28,7 +28,6 @@
 (use-package on
   :vc (:fetcher github :repo ajgrf/on.el))
 
-;; Some constants
 (defconst IS-MAC      (eq system-type 'darwin))
 (defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 
@@ -51,7 +50,7 @@
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
-    "!"   #'project-or-cwd-async-shell-command
+    "!"   #'projectile-run-async-shell-command-in-root ; TODO: project or cwd
     "|"   #'async-shell-command-region
 
     "b"   '(nil :wk "buffer")
@@ -68,10 +67,11 @@
     "bz"  '(bury-buffer :wk "Bury buffer")
 
     "c"  '(nil :wk "code")
-    "cc" '(compile :wk "Compile")
-    "cC" '(recompile :wk "Recompile")
+    "cc" '(compile :wk "Compile") ;; TODO: project or cwd
+    "cC" '(recompile :wk "Recompile") ;; TODO: project or cwd
     "cd" '(xref-find-definitions :wk "Go to definitions")
-    "cD" '(xref-find-definitions-other-windows :wk "Go to definitions other window")
+    "cD" '(xref-find-definitions-other-window :wk "Go to definitions other window")
+    "cR" '(xref-find-references :wk "Find references")
 
     "f"   '(nil :wk "file")
     "fd"  #'dired
@@ -161,13 +161,19 @@
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package which-key
+  :defer .3
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
   (which-key-min-display-lines 3)
   (which-key-add-column-padding 1)
-  :hook
-  (on-first-input . which-key-mode))
+  :config
+  (setq which-key-replacement-alist (append
+                                     which-key-replacement-alist
+                                     '((("" . "\\`+?evil[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "◂\\1"))
+                                       (("" . "\\`+?projectile-rails[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "rails-\\1"))
+                                       (("" . "\\`+?projectile[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "‹\\1")))))
+  (which-key-mode +1))
 
 (use-package gcmh
   :init
@@ -287,7 +293,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  ;; Display the true file name for symlinks
  find-file-visit-truename t)
 
-;; suppress large file opening confirmation
+;; Suppress large file opening confirmation
 (setq large-file-warning-threshold nil)
 
 (defun bury-or-kill ()
@@ -352,25 +358,62 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
-(use-package project
-  :ensure nil
-  :demand t
-  :commands (project-find-file
-             project-switch-to-buffer
-             project-switch-project
-             project-switch-project-open-file)
+(use-package projectile
+  :defer .3
+  :commands (projectile-project-root
+             projectile-project-name
+             projectile-project-p
+             projectile-locate-dominating-file
+             projectile-relevant-known-projects)
+  :custom
+  ;; (projectile-enable-caching (not noninteractive))
+  (projectile-project-search-path '("~/code"))
+  (projectile-globally-ignored-files '(".DS_Store" "TAGS"))
+  (projectile-globally-ignored-file-suffixes '(".elc" ".pyc" ".o"))
+  (projectile-ignored-projects '("~/"))
+  (projectile-kill-buffers-filter 'kill-only-files)
   :config
-  (setq project-switch-commands 'project-find-file)
-  ;; (project-forget-zombie-projects) ;; really need to this to make tabspaces works
+  ;; Reduce the number of project root marker files/directories for performance
+  (setq projectile-project-root-files-bottom-up
+        (append '(".projectile"
+                  ".project"
+                  ".git")))
+  (setq projectile-project-root-files '())
+  (setq projectile-project-root-files-top-down-recurring '("Makefile"))
+
+  ;; Per-project compilation buffers
+  (setq compilation-buffer-name-function #'projectile-compilation-buffer-name
+        compilation-save-buffers-predicate #'projectile-current-project-buffer-p)
+
+  (projectile-mode +1)
+  :general
+  (+leader-def :infix "p"
+    "&" #'projectile-run-async-shell-command-in-root
+    "!" #'projectile-run-async-shell-command-in-root
+    "a" #'projectile-add-known-project
+    "b" #'projectile-switch-to-buffer
+    "c" #'projectile-compile-project
+    "C" #'projectile-repeat-last-command
+    "d" #'projectile-remove-known-project
+    "D" #'projectile-dired
+    "e" #'projectile-run-eshell
+    "f" #'projectile-find-file
+    "i" #'projectile-invalidate-cache
+    "o" #'projectile-find-other-file
+    "R" #'projectile-run-project
+    "r" #'projectile-recentf
+    "S" #'projectile-save-project-buffers
+    "T" #'projectile-test-project)
+  )
+
+(use-package persp-projectile
+  :after (projectile perspective)
   :general
   (+leader-def
-    "p" '(:keymap project-prefix-map :wk "project")
-    "p!" #'project-async-shell-command
-    ))
+    "pp" #'projectile-persp-switch-project))
 
 (setq eldoc-echo-area-use-multiline-p nil)
 (setq eldoc-idle-delay 0.6)
-;; (global-eldoc-mode 1)
 
 (setq help-window-select t)
 (use-package helpful
@@ -420,18 +463,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (set-face-attribute 'default nil :font "monospace" :height 100)
 (set-face-attribute 'variable-pitch nil :family "Inter" :height 1.1)
 (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
+
 ;; Set thai font
 (set-fontset-font t 'thai "SF Thonburi")
 (set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
 
-;; Font scaling
 (use-package default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
   :general
   ("M--" 'default-text-scale-decrease)
   ("M-=" 'default-text-scale-increase))
 
-;; Font icons
 (use-package nerd-icons
   :demand t
   :general
@@ -442,10 +484,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
+
 ;; Remove visual indicators from non selected windows
 (setq-default cursor-in-non-selected-windows nil)
+
 ;; No blinking cursor
 (blink-cursor-mode -1)
+
 ;; Remember cursor position in files
 (use-package saveplace
   :ensure nil
@@ -545,16 +590,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package tab-bar
   :ensure nil
-  :after (project)
   :custom
-  (tab-bar-show t)
-  (tab-bar-close-button nil)
-  (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-tab-select 'recent)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
-  (tab-bar-new-tab-to 'rightmost)
-  (tab-bar-new-button nil)
+  (tab-bar-close-button-show nil)
+  (tab-bar-new-button-show nil)
   (tab-bar-auto-width nil)
+  (tab-bar-new-tab-to 'rightmost)
   (tab-bar-format '(tab-bar-format-tabs
                     +tab-bar-suffix
                     tab-bar-format-add-tab))
@@ -580,24 +622,38 @@ of the tab bar."
     " ")
   )
 
-(use-package tabspaces
+(use-package perspective
+  :demand t
   :custom
-  (tabspaces-use-filtered-buffers-as-default t)
-  (tabspaces-default-tab "home")
-  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
-  (tabspaces-keymap-prefix nil)
-  (tabspaces-initialize-project-with-todo nil)
+  (persp-sort 'created)
+  (persp-show-modestring nil)
+  (persp-initial-frame-name "home")
+  (persp-mode-prefix-key (kbd "C-c M-p"))
   :general
   (+leader-def
-    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
-    "<tab><tab>" #'tab-bar-switch-to-tab
-    "<tab>n" #'tab-bar-switch-to-next-tab
-    "<tab>p" #'tab-bar-switch-to-prev-tab)
-  (+leader-def
-    "pp" #'tabspaces-open-or-create-project-and-workspace)
-  :init
-  (tabspaces-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab)
+    "<tab>" '(:keymap perspective-map :wk "workspaces")
+    "<tab><tab>" #'persp-switch
+    "<tab>k" '((lambda () (interactive) (persp-kill (persp-current-name))) :wk "Kill this workspace")
+    )
+  :preface
+  (defun +persp-names ()
+    "Return a list of the perspective names sorted in different direction."
+    (let ((persps (hash-table-values (perspectives-hash))))
+      (cond ((eq persp-sort 'name)
+             (sort (mapcar 'persp-name persps) 'string<))
+            ((eq persp-sort 'access)
+             (mapcar 'persp-name
+                     (sort persps (lambda (a b)
+                                    (time-less-p (persp-last-switch-time a)
+                                                 (persp-last-switch-time b))))))
+            ((eq persp-sort 'created)
+             (mapcar 'persp-name
+                     (sort persps (lambda (a b)
+                                    (time-less-p (persp-created-time a)
+                                                 (persp-created-time b)))))))))
+  :config
+  (advice-add 'persp-names :override #'+persp-names)
+  (persp-mode +1)
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -610,20 +666,26 @@ of the tab bar."
             :state    #'consult--buffer-state
             :default  t
             :items    (lambda () (consult--buffer-query
-                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
+                                  :predicate (lambda (x) (and (persp-is-current-buffer x) (not (popper-popup-p x))))
                                   :sort 'visibility
                                   :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
+
+(use-package perspective-tabs
+  :after (perspective)
+  :vc (:fetcher sourcehut :repo woozong/perspective-tabs)
+  :config
+  (perspective-tabs-mode +1))
 
 ;; Frame title
 (setq frame-title-format
       (list
        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
        '(:eval
-         (let ((project (project-current)))
-           (when project
-             (format " — %s" (project-name project)))))))
+         (let ((project (projectile-project-name)))
+           (unless (string= "-" project)
+             (format " — %s" project))))))
 
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
@@ -650,13 +712,14 @@ of the tab bar."
   (aw-minibuffer-flag t))
 
 (use-package popper
+  :defer .3
   :general
   ("C-`" 'popper-toggle)
   ("C-\\"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
-  :init
+  :config
   (setq popper-window-height 0.40)
-  (setq popper-group-function #'popper-group-by-project)
+  (setq popper-group-function #'popper-group-by-projectile)
   (setq popper-reference-buffers
     '("\\*Messages\\*"
       "\\*Warnings\\*"
@@ -664,16 +727,14 @@ of the tab bar."
       "\\*Async Shell Command\\*$"
       compilation-mode
       "\\*Go Test\\*$"
-      "\\*eshell\\*"
+      "\\*eshell"
       "-eshell\\*$"
-      ;; eshell-mode
       "\\*shell\\*"
       shell-mode
       "\\*term\\*"
       term-mode
       "-eat\\*$"
-      "\\*eat\\*"
-      ;; eat-mode
+      "\\*eat"
       "\\*rake-compilation\\*"
       "\\*rspec-compilation\\*"
       "\\*Flymake "
@@ -690,13 +751,10 @@ of the tab bar."
       "\\magit-process:"
       inf-ruby-mode
       sbt-mode
-      deadgrep-mode
       forge-post-mode
       ))
-  :hook
-  (after-init . popper-mode)
-  (after-init . popper-echo-mode)
-)
+  (popper-mode +1)
+  (popper-echo-mode +1))
 
 (use-package transient
   :ensure nil
@@ -769,6 +827,7 @@ of the tab bar."
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
+  (consult-project-function (lambda (_) (projectile-project-root)))
   :init
   (setq completion-in-region-function
         (lambda (&rest args)
@@ -851,7 +910,9 @@ targets."
   (marginalia-align 'right)
   (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   :config
-  (marginalia-mode))
+  (add-to-list 'marginalia-command-categories '(projectile-find-file . project-file))
+  (add-to-list 'marginalia-command-categories '(projectile-recentf . project-file))
+  (marginalia-mode 1))
 
 (use-package vertico
   :custom
@@ -865,7 +926,7 @@ targets."
   (+leader-def
     "." '(vertico-repeat-select :wk "Resume previous search"))
   :hook
-  (on-first-input . vertico-mode)
+  (after-init . vertico-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   (minibuffer-setup . vertico-repeat-save))
 
@@ -886,15 +947,16 @@ targets."
 ;; Always add final newline
 (setq require-final-newline t)
 
-;; lines
 (setq-default truncate-lines t)
 (setq truncate-partial-width-windows nil)
 ;; Wrap long lines
 (global-visual-line-mode 1)
 
-(setq kill-do-not-save-duplicates t
-      ;; Save existing clipboard text into the kill ring before replacing it.
-      save-interprogram-paste-before-kill t)
+(setq
+ ;; Cull duplicates in the kill ring to reduce bloat and make the kill ring easier to peruse
+ kill-do-not-save-duplicates t
+ ;; Save existing clipboard text into the kill ring before replacing it.
+ save-interprogram-paste-before-kill t)
 
 (use-package evil
   :defer .3
@@ -1064,13 +1126,14 @@ targets."
 (use-package yasnippet-capf
   :after (yasnippet cape)
   :vc (:fetcher github :repo elken/yasnippet-capf)
-  :config
-  (setq completion-at-point-functions
-              (list #'yasnippet-capf))
-)
+  ;; :init
+  ;; (setq completion-at-point-functions
+  ;;             (list #'yasnippet-capf))
+  )
 
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
+
 ;; Remove ispell from default completion
 (setq text-mode-ispell-word-completion nil)
 
@@ -1079,19 +1142,6 @@ targets."
   :hook
   (on-first-input . global-corfu-mode)
   (on-first-input . corfu-history-mode)
-  ;; (eshell-mode . (lambda ()
-  ;;                  (setq-local corfu-count 5)
-  ;;                  (setq-local corfu-auto-delay 0.3)
-  ;;                  (corfu-mode 1)))
-  ;; (minibuffer-setup . corfu-enable-in-minibuffer)
-  ;; :init
-  ;; (defun corfu-enable-in-minibuffer ()
-  ;;   "Enable Corfu in the minibuffer."
-  ;;   (when (local-variable-p 'completion-at-point-functions)
-  ;;     (setq-local corfu-count 5)
-  ;;     (setq-local corfu-auto nil)
-  ;;     ;; (setq-local corfu-auto-delay 0.3)
-  ;;     (corfu-mode 1)))
   :custom
   (corfu-auto t)
   (corfu-auto-prefix 2)
@@ -1157,7 +1207,6 @@ targets."
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
-  ;; layout
   (defun +magit-display-buffer-fn (buffer)
     "Same as `magit-display-buffer-traditional', except...
 
@@ -1270,10 +1319,7 @@ window that already exists in that direction. It will split otherwise."
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
     "q" #'kill-current-buffer)
-  ;; (general-define-key
-  ;;   :keymaps 'forge-pullreq-mode-map
-  ;;   "m" '(lambda () (interactive) (forge-merge (forge-current-pullreq) "")))
-)
+  )
 
 (use-package smerge-mode
   :ensure nil
@@ -1340,7 +1386,6 @@ window that already exists in that direction. It will split otherwise."
   ;; (treesit-auto-add-to-auto-mode-alist '(go gomod))
   (global-treesit-auto-mode))
 
-
 (use-package evil-textobj-tree-sitter
   :after (treesit evil)
   :config
@@ -1357,66 +1402,87 @@ window that already exists in that direction. It will split otherwise."
    "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
   )
 
-(use-package lsp-mode
-  :commands (lsp lsp-deferred lsp-install-server)
-  :config
-  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
-  (lsp-register-custom-settings
-   '(("gopls.completeUnimported" t t)
-     ("gopls.staticcheck" t t)))
+(use-package eglot
+  :ensure nil
+  :commands eglot eglot-ensure
   :custom
-  (lsp-keymap-prefix nil)
-  (lsp-completion-provider :none)
-  (lsp-headerline-breadcrumb-enable nil)
-  (lsp-keep-workspace-alive nil)
-  (lsp-enable-symbol-highlighting nil)
-  (lsp-enable-text-document-color nil)
-  (lsp-signature-auto-activate nil)
-  (lsp-signature-render-documentation nil)
-  (lsp-modeline-code-action-fallback-icon "󰌶")
-  (lsp-auto-execute-action nil)
-  (lsp-disabled-clients '(rubocop-ls))
-  (lsp-kotlin-compiler-jvm-target "2.1")
-  (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
-  (lsp-clients-typescript-prefer-use-project-ts-server t)
-  (lsp-javascript-implicit-project-config-check-js t)
-  (lsp-javascript-suggest-complete-js-docs nil)
-  (lsp-clients-typescript-preferences '(:includeCompletionsForImportStatements nil))
-  :init
-  (defun +update-completions-list ()
-    (progn
-      (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
-      (setq-local completion-at-point-functions
-                  (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
+  (eglot-sync-connect 1)
+  (eglot-connect-timeout 10)
+  (eglot-autoshutdown t)
+  (eglot-ignored-server-capabilities '(:documentHighlightProvider))
+  (eglot-extend-to-xref t)
+  (eglot-events-buffer-size 0)
 
+  :init
+  (setq eglot-workspace-configuration
+        '((:solargraph . (:diagnostics t))
+          (:gopls . (:staticcheck t :completeUnimported t))))
+
+  (defun +eglot-organize-imports ()
+    (interactive)
+	  (eglot-code-actions nil nil "source.organizeImports" t))
+
+  (defvar +eglot--help-buffer nil)
+  (defun +eglot-describe-at-point ()
+    (interactive)
+    "Request documentation for the thing at point."
+    (eglot--dbind ((Hover) contents range)
+        (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
+                         (eglot--TextDocumentPositionParams))
+      (let ((blurb (and (not (seq-empty-p contents))
+                        (eglot--hover-info contents range)))
+            (hint (thing-at-point 'symbol)))
+        (if blurb
+            (with-current-buffer
+                (or (and (buffer-live-p +eglot--help-buffer)
+                         +eglot--help-buffer)
+                    (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
+              (with-help-window (current-buffer)
+                (rename-buffer (format "*eglot-help for %s*" hint))
+                (with-current-buffer standard-output (insert blurb))
+                (setq-local nobreak-char-display nil)))
+          (display-local-help))))
+    'deferred)
+
+  (defun +eglot-capf ()
+    (setq-local completion-at-point-functions
+                (list (cape-capf-super
+                       #'eglot-completion-at-point
+                       #'yasnippet-capf))))
+
+  (defun +eglot-eldoc ()
+    ;; Show flymake diagnostics first.
+    (setq eldoc-documentation-functions
+          (cons #'flymake-eldoc-function
+                (remove #'flymake-eldoc-function eldoc-documentation-functions)))
+    ;; Show all eldoc feedback.
+    (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
   :hook
-  (lsp-managed-mode . (lambda () (general-define-key
-                                  :states '(normal)
-                                  :keymaps 'local
-                                  "K" 'lsp-describe-thing-at-point)))
-  (lsp-managed-mode . evil-normalize-keymaps)
-  (lsp-completion-mode . +update-completions-list)
-  (lsp-managed-mode . eldoc-mode)
+  (eglot-managed-mode . (lambda () (general-define-key
+                                    :states '(normal)
+                                    :keymaps 'local
+                                    "K" '+eglot-describe-at-point)))
+  (eglot-managed-mode . +eglot-capf)
+  (eglot-managed-mode . +eglot-eldoc)
   :general
   (+leader-def
-    :keymaps 'lsp-mode-map
+    :keymaps 'eglot-mode-map
     :infix "c"
-    "a" '(lsp-execute-code-action :wk "Code action")
-    "i" '(lsp-find-implementation :wk "Find implementation")
-    "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
-    "l" '(lsp-avy-lens :wk "Click lens")
-    "o" '(lsp-organize-imports :wk "Organize imports")
-    "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
-    "Q" '(lsp-workspace-restart :wk "Restart workspace")
-    "r" '(lsp-rename :wk "Rename")
-    "R" '(lsp-find-references :wk "Restart workspace"))
+    "a" '(eglot-code-actions :wk "Code action")
+    "i" '(eglot-find-implementation :wk "Find implementation")
+    "k" '(+eglot-describe-at-point :wk "Show hover doc")
+    "o" '(+eglot-organize-imports :wk "Organize imports")
+    "q" '(eglot-shutdown :wk "Shutdown LSP")
+    "Q" '(eglot-reconnect :wk "Restart LSP")
+    "r" '(eglot-rename :wk "Rename"))
   )
 
-(use-package consult-lsp
+(use-package consult-eglot
   :general
-  (+leader-def :keymaps 'lsp-mode-map
-    "cj" '(consult-lsp-symbols :wk "Workspace symbols")
-    "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
+  (+leader-def
+    :keymaps 'eglot-mode-map
+    :infix "c"
+    "j" '(consult-eglot-symbols :wk "Find symbol")))
 
 (use-package editorconfig
   :general
@@ -1438,39 +1504,11 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   )
 
-(use-package flycheck
-  :preface
-  (defun +flycheck-eldoc (callback &rest _ignored)
-    "Print flycheck messages at point by calling CALLBACK."
-    (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
-      (mapc
-       (lambda (err)
-         (funcall callback
-                  (format "%s: %s"
-                          (let ((level (flycheck-error-level err)))
-                            (pcase level
-                              ('info (propertize "I" 'face 'flycheck-error-list-info))
-                              ('error (propertize "E" 'face 'flycheck-error-list-error))
-                              ('warning (propertize "W" 'face 'flycheck-error-list-warning))
-                              (_ level)))
-                          (flycheck-error-message err))
-                  :thing (or (flycheck-error-id err)
-                             (flycheck-error-group err))
-                  :face 'font-lock-doc-face))
-       flycheck-errors)))
-
-  :custom
-  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
-  (flycheck-checkers nil)
-  (flycheck-display-errors-function nil)
-  (flycheck-help-echo-function nil)
-  (flycheck-buffer-switch-check-intermediate-buffers t)
-  (flycheck-emacs-lisp-load-path 'inherit)
-  (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
-  :hook
-  (flycheck-mode . (lambda ()
-                     (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc 0 t)))
-  )
+(use-package flymake
+  :ensure nil
+  :general
+  (+leader-def
+    "cx" '(flymake-show-project-diagnostics :wk "Show project diagnostics")))
 
 (use-package go-ts-mode
   :ensure nil
@@ -1479,12 +1517,12 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode-indent-offset 4)
   :init
   (defun +go-mode-setup ()
-    (+add-pairs '((?` . ?`)))
-    (add-hook 'before-save-hook 'lsp-organize-imports t t))
+    (add-hook 'before-save-hook '+eglot-organize-imports nil t)
+    (+add-pairs '((?` . ?`))))
   :hook
   (go-ts-mode . apheleia-mode)
   (go-ts-mode . +go-mode-setup)
-  (go-ts-mode . lsp-deferred)
+  (go-ts-mode . eglot-ensure)
   )
 
 (use-package gotest
@@ -1503,95 +1541,16 @@ window that already exists in that direction. It will split otherwise."
 (use-package rust-ts-mode
   :mode "\\.rs\\'"
   :ensure nil
-  :init
-  (setq lsp-rust-analyzer-experimental-proc-attr-macros t
-        lsp-rust-analyzer-proc-macro-enable t
-        lsp-rust-analyzer-server-display-inlay-hints t)
   :hook
   (rust-ts-mode . apheleia-mode)
-  (rust-ts-mode . lsp-deferred))
-
-(use-package scala-mode
-  :custom
-  (scala-indent:align-parameters t)
-  (scala-indent:use-javadoc-style t)
-  :interpreter ("scala" . scala-mode)
-  :mode "\\.scala\\'"
-  :mode "\\.sbt\\'")
-
-(use-package sbt-mode
-  :general
-  (+local-leader-def
-    :keymaps '(scala-mode-map)
-    "b" '(nil :wk "sbt")
-    "bb" #'sbt-command
-    "bc" #'sbt-compile
-    "br" #'sbt-start
-    "b." #'sbt-run-previous-command
-    "t" '(nil :wk "test")
-    "ta" '(sbt-do-test :wk "Test quick")
-    "tf" '(+sbt-test-file :wk "Test current file")
-    ;; "tt" '(nil :wk "Test quick")
-  )
-  :commands sbt-start sbt-command
-  :init
-  (defun +sbt-get-testonly-file (&optional file)
-    "Return FILE formatted in a sbt testOnly command."
-    (--> (or file (file-name-base))
-         (format "testOnly *%s" it)))
-
-  (defun +sbt-test-file (&optional file)
-    (interactive)
-    (sbt-command (+sbt-get-testonly-file file)))
-
-  ;; (defun +sbt-get-testcase-name ()
-  ;;   "Get Scala test case nearby point."
-  ;;   (interactive)
-  ;;   (save-excursion
-  ;;     (let* ((line (thing-at-point 'line t))
-  ;;            (on-testcase-p (and (s-contains? "\"" line)
-  ;;                                (s-contains? "{\n" line)))
-  ;;            (get-testcase-name (lambda (l)
-  ;;                                 (--> l
-  ;;                                      (s-split "\"" it)
-  ;;                                      reverse
-  ;;                                      cl-second))))
-  ;;       (if on-testcase-p
-  ;;           (funcall get-testcase-name line)
-  ;;         (progn
-  ;;           (search-backward "{\n")
-  ;;           (funcall get-testcase-name (thing-at-point 'line t)))))))
-
-  ;; (defun +sbt-run-testcase-at-point ()
-  ;;   "Run Scala test case at point."
-  ;;   (interactive)
-  ;;   (sbt-command (format "%s -- -z \"%s\"" (+sbt-get-testonly-file) (+sbt-get-testcase-name))))
-  :config
-  ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
-  ;; allows using SPACE when in the minibuffer
-  (substitute-key-definition
-   'minibuffer-complete-word
-   'self-insert-command
-   minibuffer-local-completion-map)
-  ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
-  (setq sbt:program-options '("-Dsbt.supershell=false")))
-
-;; (use-package lsp-metals
-;;   :general
-;;   (+local-leader-def
-;;     :keymaps '(scala-mode-map)
-;;     "fn" #'lsp-metals-new-scala-file)
-;;   :custom
-;;   (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"))
-;;   :hook
-;;   (scala-mode . lsp-deferred))
+  (rust-ts-mode . eglot-ensure))
 
 (use-package css-mode
   :ensure nil
   :custom
   (css-indent-offset 2)
   :hook
-  (css-ts-mode . lsp-deferred)
+  (css-ts-mode . eglot-ensure)
   (css-ts-mode . apheleia-mode))
 
 (use-package jtsx
@@ -1603,15 +1562,15 @@ window that already exists in that direction. It will split otherwise."
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
   :hook
-  (jtsx-tsx-mode . lsp-deferred)
+  (jtsx-tsx-mode . eglot-ensure)
   (jtsx-tsx-mode . apheleia-mode)
-  (jtsx-jsx-mode . lsp-deferred)
+  (jtsx-jsx-mode . eglot-ensure)
   (jtsx-jsx-mode . apheleia-mode)
-  (jtsx-jsx-mode . (lambda ()
-                     (yas-activate-extra-mode 'js-mode)
-                     (yas-activate-extra-mode '+web-react-mode)))
-  (jtsx-tsx-mode . (lambda ()
-                     (yas-activate-extra-mode 'typescript-tsx-mode)))
+  ;; (jtsx-jsx-mode . (lambda ()
+  ;;                    (yas-activate-extra-mode 'js-mode)
+  ;;                    (yas-activate-extra-mode '+web-react-mode)))
+  ;; (jtsx-tsx-mode . (lambda ()
+  ;;                    (yas-activate-extra-mode 'typescript-tsx-mode)))
   (jtsx-jsx-mode . (lambda ()
                      (+add-pairs '((?` . ?`)))))
   (jtsx-tsx-mode . (lambda ()
@@ -1650,7 +1609,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package lsp-pyright
   :hook
-  ((python-mode python-ts-mode) . lsp-deferred))
+  ((python-mode python-ts-mode) . eglot-ensure))
 
 (use-package pytest
   :vc (:fetcher github :repo ionrock/pytest-el)
@@ -1678,7 +1637,8 @@ window that already exists in that direction. It will split otherwise."
   :ensure nil
   :hook
   (ruby-ts-mode . apheleia-mode)
-  (ruby-ts-mode . lsp-deferred))
+  (ruby-ts-mode . eglot-ensure)
+)
 
 (use-package inf-ruby
   :hook (compilation-filter . inf-ruby-auto-enter)
@@ -1712,8 +1672,8 @@ window that already exists in that direction. It will split otherwise."
     "te" #'rspec-toggle-example-pendingness))
 
 (use-package rake
-  :init
-  (setq rake-completion-system 'default)
+  :custom
+  (rake-completion-system 'default)
   :general
   (+local-leader-def
     :keymaps '(ruby-ts-mode-map)
@@ -1735,20 +1695,18 @@ window that already exists in that direction. It will split otherwise."
     "be" #'bundle-exec
     "bo" #'bundle-open))
 
-(use-package kotlin-ts-mode
-  :mode "\\.kt\\'"
-  :hook
-  (kotlin-ts-mode . lsp-deferred)
-  :config
-  (require 'dap-kotlin)
-  (dap-register-debug-template "Kotlin tests with launcher"
-                               (list :type "kotlin"
-                                     :request "launch"
-                                     :mainClass "org.junit.platform.console.ConsoleLauncher --scan-classpath"
-                                     :enableJsonLogging nil
-                                     :noDebug nil))
-
-  )
+(use-package projectile-rails
+  :custom
+  (inf-ruby-console-environment "development")
+  ;; (setq auto-insert-query nil)
+  ;; (when (modulep! :lang web)
+  ;;   (add-hook 'web-mode-hook #'projectile-rails-mode))
+  :general
+  (+local-leader-def :keymaps '(projectile-rails-mode-map)
+    "p" '(:keymap projectile-rails-command-map :wk "project"))
+  :hook ((ruby-mode ruby-ts-mode inf-ruby-mode projectile-rails-server-mode) . projectile-rails-mode)
+  :hook (projectile-rails-mode . evil-normalize-keymaps)
+  :hook (projectile-rails-mode . auto-insert-mode))
 
 (use-package elisp-mode
   :ensure nil
@@ -1778,9 +1736,6 @@ window that already exists in that direction. It will split otherwise."
   (eros-eval-result-prefix "⟹ ")
   :hook
   (emacs-lisp-mode . eros-mode))
-
-;; (use-package log4j-mode
-;;   :defer t)
 
 (use-package markdown-mode
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
@@ -1812,7 +1767,7 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package json-ts-mode
   :ensure nil
-  :init
+  :preface
   (defun +json-mode-setup ()
     (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
   :hook
@@ -1846,16 +1801,16 @@ window that already exists in that direction. It will split otherwise."
   (let ((cmd (string-trim (buffer-substring-no-properties start end))))
     (async-shell-command cmd)))
 
-;;;###autoload
-(defun project-or-cwd-async-shell-command ()
-  "Run `async-shell-command' in the current project's root directory."
-  (declare (interactive-only async-shell-command))
-  (interactive)
-  (let ((project (project-current)))
-    (if project
-        (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'async-shell-command))
-      (call-interactively #'async-shell-command))))
+;; ;;;###autoload
+;; (defun project-or-cwd-async-shell-command ()
+;;   "Run `async-shell-command' in the current project's root directory."
+;;   (declare (interactive-only async-shell-command))
+;;   (interactive)
+;;   (let ((project (project-current)))
+;;     (if project
+;;         (let ((default-directory (project-root (project-current t))))
+;;             (call-interactively #'async-shell-command))
+;;       (call-interactively #'async-shell-command))))
 
 (use-package compile
   :ensure nil
@@ -1868,18 +1823,19 @@ window that already exists in that direction. It will split otherwise."
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
 (use-package shell-command-x
+  :defer .3
   :custom
   (shell-command-x-buffer-name-async-format "*shell:%a*")
   (shell-command-x-buffer-name-format "*shell:%a*")
-  :bind
-  ([remap shell-command] . project-or-cwd-async-shell-command)
-  :hook
-  (on-first-input . shell-command-x-mode))
+  ;; :bind
+  ;; ([remap shell-command] . project-or-cwd-async-shell-command)
+  :config
+  (shell-command-x-mode 1))
 
 (use-package bash-completion
   :init
   (setq bash-completion-use-separate-processes t)
-
+  :preface
   (defun eshell-bash-completion-capf-nonexclusive ()
     (let ((compl (bash-completion-dynamic-complete-nocomint
                   (save-excursion (eshell-bol) (point))
@@ -1893,26 +1849,34 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package eat
-  :commands (eat project-eat)
-  :config
-  (defun project-eat ()
-    "Start Eat in the current project's root directory."
-    (interactive)
-    (defvar eat-buffer-name)
-    (let* ((default-directory (project-root (project-current t)))
-           (eat-buffer-name (project-prefixed-buffer-name "eat"))
-           (eat-buffer (get-buffer eat-buffer-name)))
-      (if (and eat-buffer (not current-prefix-arg))
-          (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
-        (eat))))
-
-  (evil-set-initial-state 'eat-mode 'insert)
+  :commands (eat projectile-run-eat)
   :custom
   (eat-kill-buffer-on-exit t)
+  :preface
+  (defun projectile-run-eat (&optional arg)
+    "Start Eat in the current projectile's root directory."
+    (interactive "P")
+    (let ((project (projectile-acquire-root)))
+      (projectile-with-default-dir project
+        (let ((eat-buffer-name (projectile-generate-process-name "eat" arg project)))
+          (eat)))))
+  :config
+  ;; (defun project-eat ()
+  ;;   "Start Eat in the current project's root directory."
+  ;;   (interactive)
+  ;;   (defvar eat-buffer-name)
+  ;;   (let* ((default-directory (project-root (project-current t)))
+  ;;          (eat-buffer-name (project-prefixed-buffer-name "eat"))
+  ;;          (eat-buffer (get-buffer eat-buffer-name)))
+  ;;     (if (and eat-buffer (not current-prefix-arg))
+  ;;         (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
+  ;;       (eat))))
+
+  (evil-set-initial-state 'eat-mode 'insert)
   :general
   (+leader-def
     "ot" #'eat
-    "pt" #'project-eat)
+    "pt" #'projectile-run-eat)
   (:states '(normal visual)
            :keymaps 'eat-mode-map
            "<return>" #'evil-insert-resume)
@@ -1932,7 +1896,7 @@ window that already exists in that direction. It will split otherwise."
           :history  'buffer-name-history
           :state    #'consult--buffer-state
           :items (lambda () (consult--buffer-query
-                             :predicate #'tabspaces--local-buffer-p
+                             :predicate #'persp-is-current-buffer
                              :mode '(shell-mode eshell-mode term-mode eat-mode compilation-mode)
                              :sort 'visibility
                              :as #'buffer-name))))
@@ -1999,35 +1963,30 @@ window that already exists in that direction. It will split otherwise."
     (vertico-flat-mode 1)
     (completion-at-point)
     (vertico-flat-mode -1))
-  :init
-  (setq eshell-banner-message ""
-        eshell-scroll-to-bottom-on-input 'all
-        eshell-scroll-to-bottom-on-output 'all
-        eshell-kill-processes-on-exit t
-        eshell-hist-ignoredups t
-        eshell-prompt-regexp "^.* λ "
-        eshell-prompt-function #'+eshell-default-prompt-fn
-        eshell-glob-case-insensitive t
-        eshell-error-if-no-glob t)
 
-  (add-hook 'eshell-mode-hook
-            (defun +eshell-setup ()
-              ;; (eshell-cmpl-mode -1)
-              ;; remove fringe
-              (set-window-fringes nil 0 0)
-              (set-window-margins nil 1 nil)
-              ;; scrolling
-              (setq hscroll-margin 0)
-              ;; Text wrapping
-              ;; (visual-line-mode +1)
-              (set-display-table-slot standard-display-table 0 ?\ )))
-  )
+  (defun +eshell-setup ()
+    (set-window-fringes nil 0 0)
+    (set-window-margins nil 1 nil)
+    (setq-local hscroll-margin 0)
+    ;; (visual-line-mode +1)
+    (set-display-table-slot standard-display-table 0 ?\ ))
+  :custom
+  (eshell-banner-message "")
+  (eshell-scroll-to-bottom-on-input 'all)
+  (eshell-scroll-to-bottom-on-output 'all)
+  (eshell-kill-processes-on-exit t)
+  (eshell-hist-ignoredups t)
+  (eshell-prompt-regexp "^.* λ ")
+  (eshell-prompt-function #'+eshell-default-prompt-fn)
+  (eshell-glob-case-insensitive t)
+  (eshell-error-if-no-glob t)
+  :hook
+  (eshell-mode . +eshell-setup))
 
 (use-package org
   :ensure nil
-  :init
-  (setq org-directory "~/Dropbox/org/")
   :custom
+  (org-directory "~/Dropbox/org/")
   (org-hide-emphasis-markers t)
   (org-pretty-entities t)
   (org-cycle-separator-lines 2)
@@ -2083,9 +2042,9 @@ window that already exists in that direction. It will split otherwise."
   :hook (org-mode . org-appear-mode))
 
 (use-package org-superstar
-  :init
-  (setq org-superstar-special-todo-items t
-        org-superstar-remove-leading-stars t)
+  :custom
+  (org-superstar-special-todo-items t)
+  (org-superstar-remove-leading-stars t)
   :hook (org-mode . org-superstar-mode))
 
 (use-package org-agenda
@@ -2248,9 +2207,9 @@ window that already exists in that direction. It will split otherwise."
 ;;           (auth-source-pick-first-password :host "api.openai.com"))))
 
 (use-package verb
-  :init
-  (setq verb-auto-kill-response-buffers t
-        verb-json-use-mode 'json-ts-mode)
+  :custom
+  (verb-auto-kill-response-buffers t)
+  (verb-json-use-mode 'json-ts-mode)
   :config
   (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
   :general
@@ -2268,18 +2227,18 @@ window that already exists in that direction. It will split otherwise."
   :general
   (+leader-def
     "or" #'elfeed)
-  :init
-  (setq elfeed-feeds
-        '("https://codeopinion.com/feed"
-          "https://juacompe.medium.com/feed"
-          "https://bitfieldconsulting.com/golang?format=rss"
-          "https://go.dev/blog/feed.atom"
-          "https://particular.net/feed.xml"
-          "https://www.ardanlabs.com/blog/index.xml"
-          "https://www.somkiat.cc/feed"
-          "https://weerasak.dev/feed.xml"
-          "https://engineering.grab.com/feed.xml"
-          )))
+  :custom
+  (elfeed-feeds
+   '("https://codeopinion.com/feed"
+     "https://juacompe.medium.com/feed"
+     "https://bitfieldconsulting.com/golang?format=rss"
+     "https://go.dev/blog/feed.atom"
+     "https://particular.net/feed.xml"
+     "https://www.ardanlabs.com/blog/index.xml"
+     "https://www.somkiat.cc/feed"
+     "https://weerasak.dev/feed.xml"
+     "https://engineering.grab.com/feed.xml"
+     )))
 
 ;; Save custom vars to separate file from init.el.
 (setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))

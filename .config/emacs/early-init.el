@@ -5,31 +5,31 @@
 ;; Increase the garbage collection (GC) threshold for faster startup.
 (setq gc-cons-threshold most-positive-fixnum)
 
+;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (defvar +file-name-handler-alist file-name-handler-alist)
 (setq file-name-handler-alist nil)
-
 (add-hook 'after-init-hook
           (lambda ()
             (setq file-name-handler-alist +file-name-handler-alist)))
 
+;; Resizing the Emacs frame  appears to impact startup time dramatically.
 (setq frame-inhibit-implied-resize t)
 
+;; Reduce *Message* noise at startup.
 (setq inhibit-startup-screen t
       inhibit-startup-echo-area-message user-login-name)
 
-;; PERF,UX: Remove "For information about GNU Emacs..." message at startup.
-;;   It's redundant with our dashboard and incurs a premature redraw.
-(advice-add #'display-startup-echo-area-message :override #'ignore)
+;; Remove "For information about GNU Emacs..." message at startup.
+;; It's redundant with our dashboard and incurs a premature redraw.
+;; (advice-add #'display-startup-echo-area-message :override #'ignore)
 
-;; PERF: Suppress the vanilla startup screen completely. We've disabled it
-;;   with `inhibit-startup-screen', but it would still initialize anyway.
-;;   This involves some file IO and/or bitmap work (depending on the frame
-;;   type) that we can no-op for a free 50-100ms boost in startup time.
+;; Suppress the vanilla startup screen completely. We've disabled it
+;; with `inhibit-startup-screen', but it would still initialize anyway.
 (advice-add #'display-startup-screen :override #'ignore)
 
 ;; Set initial buffer to fundamental-mode for faster load
-(setq initial-major-mode 'fundamental-mode
-      initial-scratch-message nil)
+(setq initial-major-mode 'fundamental-mode)
+;; (setq initial-scratch-message nil)
 
 ;; Remove some unneeded UI elements
 (push '(tool-bar-lines . 0)   default-frame-alist)
@@ -38,6 +38,7 @@
 (setq tool-bar-mode nil
       menu-bar-mode nil
       scroll-bar-mode nil)
+
 ;; Maximize frame by default
 (push '(fullscreen . maximized) default-frame-alist)
 
@@ -80,7 +81,7 @@
 ;; Inhibits fontification while receiving input
 (setq redisplay-skip-fontification-on-input t)
 
-;; Improve `lsp-mode' performances
-(setenv "LSP_USE_PLISTS" "true")
+;; ;; Improve `lsp-mode' performances
+;; (setenv "LSP_USE_PLISTS" "true")
 
 ;;; early-init.el ends here
