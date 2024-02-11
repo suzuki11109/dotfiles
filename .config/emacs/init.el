@@ -786,18 +786,9 @@ of the tab bar."
 
 (use-package orderless
   :custom
-  (completion-styles '(basic orderless))
+  (completion-styles '(orderless basic))
   (completion-category-defaults nil)
-  (completion-category-overrides
-   '((file (styles . (basic partial-completion orderless))) ;; add remote
-     (project-file (styles . (basic substring partial-completion orderless)))
-     (imenu (styles . (basic substring orderless)))
-     ))
-  (orderless-matching-styles
-   '(orderless-prefixes
-     orderless-initialism
-     orderless-regexp
-     orderless-flex))
+  (completion-category-overrides '((file (styles basic orderless partial-completion))))
   )
 
 (use-package consult
@@ -805,6 +796,7 @@ of the tab bar."
   ([remap bookmark-jump]                 . consult-bookmark)
   ([remap evil-show-marks]               . consult-mark)
   ([remap imenu]                         . consult-imenu)
+  ([remap Info-search]                   . consult-info)
   ([remap locate]                        . consult-locate)
   ([remap load-theme]                    . consult-theme)
   ([remap man]                           . consult-man)
@@ -835,6 +827,37 @@ of the tab bar."
                      #'consult-completion-in-region
                    #'completion--in-region)
                  args)))
+  )
+
+(use-package consult-dir
+  :bind (("C-x C-d" . consult-dir)
+         :map minibuffer-local-completion-map
+         ("C-x C-d" . consult-dir)
+         ("C-x C-j" . consult-dir-jump-file))
+  :config
+  (defun eshell/z (&optional regexp)
+    "Navigate to a previously visited directory in eshell, or to
+any directory proferred by `consult-dir'."
+    (let ((eshell-dirs (delete-dups
+                        (mapcar 'abbreviate-file-name
+                                (ring-elements eshell-last-dir-ring)))))
+      (cond
+       ((and (not regexp) (featurep 'consult-dir))
+        (let* ((consult-dir--source-eshell `(:name "Eshell"
+                                             :narrow ?e
+                                             :category file
+                                             :face consult-file
+                                             :items ,eshell-dirs))
+               (consult-dir-sources (cons consult-dir--source-eshell
+                                          consult-dir-sources)))
+          (eshell/cd (substring-no-properties
+                      (consult-dir--pick "Switch directory: ")))))
+       (t (eshell/cd (if regexp (eshell-find-previous-directory regexp)
+                            (completing-read "cd: " eshell-dirs)))))))
+  :general
+  (:states '(normal visual insert)
+           :keymaps 'eshell-mode-map
+           "M-C-t" #'eshell/z)
   )
 
 (use-package embark
@@ -1913,15 +1936,15 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "oe"  #'eshell
     "oE"  #'+eshell-new)
-  (:keymaps 'eshell-cmpl-mode-map
-            "TAB" #'+vertico-flat-completion-at-point)
+  ;; (:keymaps 'eshell-cmpl-mode-map
+  ;;           "TAB" #'+vertico-flat-completion-at-point)
   (:states '(normal visual)
            :keymaps 'eshell-mode-map
            "<return>" #'evil-insert-resume)
   (:states '(insert)
            :keymaps 'eshell-mode-map
            "C-y" #'yank)
-  (:states '(normal visual insert)
+  (:states '(normal insert visual)
            :keymaps 'eshell-mode-map
            "C-t" #'+interactive-cd)
   (:states '(normal visual insert)
@@ -1943,6 +1966,7 @@ window that already exists in that direction. It will split otherwise."
                           'face '+eshell-prompt-pwd))
             (propertize " λ" 'face (if (zerop eshell-last-command-status) 'success 'error))
             " "))
+
   (defun +interactive-cd (dir)
     "Prompt for a directory and cd to it."
     (interactive "Dcd ")
@@ -1950,7 +1974,8 @@ window that already exists in that direction. It will split otherwise."
       (insert (concat "cd " dir)))
     (pcase major-mode
       ('shell-mode (comint-send-input))
-      ('eshell-mode (eshell-send-input))))
+      ('eshell-mode (eshell-send-input)))
+  )
 
   (defun +eshell-new ()
     "Open a new instance of eshell."
