@@ -50,7 +50,7 @@
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
-    "!"   #'projectile-run-async-shell-command-in-root ; TODO: project or cwd
+    "!"   #'project-or-cwd-async-shell-command
     "|"   #'async-shell-command-region
 
     "b"   '(nil :wk "buffer")
@@ -358,59 +358,20 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
-(use-package projectile
-  :defer .3
-  :commands (projectile-project-root
-             projectile-project-name
-             projectile-project-p
-             projectile-locate-dominating-file
-             projectile-relevant-known-projects)
-  :custom
-  ;; (projectile-enable-caching (not noninteractive))
-  (projectile-project-search-path '("~/code"))
-  (projectile-globally-ignored-files '(".DS_Store" "TAGS"))
-  (projectile-globally-ignored-file-suffixes '(".elc" ".pyc" ".o"))
-  (projectile-ignored-projects '("~/"))
-  (projectile-kill-buffers-filter 'kill-only-files)
+(use-package project
+  :ensure nil
+  :demand t
+  :commands (project-find-file
+             project-switch-to-buffer
+             project-switch-project
+             project-switch-project-open-file)
   :config
-  ;; Reduce the number of project root marker files/directories for performance
-  (setq projectile-project-root-files-bottom-up
-        (append '(".projectile"
-                  ".project"
-                  ".git")))
-  (setq projectile-project-root-files '())
-  (setq projectile-project-root-files-top-down-recurring '("Makefile"))
-
-  ;; Per-project compilation buffers
-  (setq compilation-buffer-name-function #'projectile-compilation-buffer-name
-        compilation-save-buffers-predicate #'projectile-current-project-buffer-p)
-
-  (projectile-mode +1)
-  :general
-  (+leader-def :infix "p"
-    "&" #'projectile-run-async-shell-command-in-root
-    "!" #'projectile-run-async-shell-command-in-root
-    "a" #'projectile-add-known-project
-    "b" #'projectile-switch-to-buffer
-    "c" #'projectile-compile-project
-    "C" #'projectile-repeat-last-command
-    "d" #'projectile-remove-known-project
-    "D" #'projectile-dired
-    "e" #'projectile-run-eshell
-    "f" #'projectile-find-file
-    "i" #'projectile-invalidate-cache
-    "o" #'projectile-find-other-file
-    "R" #'projectile-run-project
-    "r" #'projectile-recentf
-    "S" #'projectile-save-project-buffers
-    "T" #'projectile-test-project)
-  )
-
-(use-package persp-projectile
-  :after (projectile perspective)
+  (setq project-switch-commands 'project-find-file)
   :general
   (+leader-def
-    "pp" #'projectile-persp-switch-project))
+    "p" '(:keymap project-prefix-map :wk "project")
+    "p!" #'project-async-shell-command
+    ))
 
 (setq eldoc-echo-area-use-multiline-p nil)
 (setq eldoc-idle-delay 0.6)
@@ -570,6 +531,56 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (doom-modeline-env-version nil)
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
+  :config
+  (defun +modeline-flymake-counter (type)
+    "Compute number of diagnostics in buffer with TYPE's severity.
+TYPE is usually keyword `:error', `:warning' or `:note'."
+    (let ((count 0))
+      (dolist (d (flymake--project-diagnostics))
+        (when (= (flymake--severity type)
+                 (flymake--severity (flymake-diagnostic-type d)))
+          (cl-incf count)))
+      (when (cl-plusp count)
+        (number-to-string count))))
+
+  (defvar +modeline-flymake-map
+    (let ((map (make-sparse-keymap)))
+      (define-key map [mode-line down-mouse-1] 'flymake-show-project-diagnostics)
+      map)
+    "Keymap to display on Flymake indicator.")
+
+  (defmacro +modeline-flymake-type (type &optional face)
+    "Return function that handles Flymake TYPE with stylistic INDICATOR and FACE."
+    `(defun ,(intern (format "+modeline-flymake-%s" type)) ()
+       (when-let ((count (+modeline-flymake-counter
+                          ,(intern (format ":%s" type)))))
+         (concat
+          (propertize count
+                      'face ',(or face type)
+                      'mouse-face 'mode-line-highlight
+                      ;; FIXME 2023-07-03: Clicking on the text with
+                      ;; this buffer and a single warning present, the
+                      ;; diagnostics take up the entire frame.  Why?
+                      'local-map +modeline-flymake-map
+                      'help-echo "mouse-1: projects diagnostics")))))
+
+  (+modeline-flymake-type error)
+  (+modeline-flymake-type warning)
+  (+modeline-flymake-type note success)
+
+  (defvar-local +modeline-flymake
+      `(:eval
+        (when (and (bound-and-true-p flymake-mode)
+                   (mode-line-window-selected-p))
+           ;; See the calls to the macro `+modeline-flymake-type'
+          '(:eval (s-join (propertize "/" 'face 'shadow)
+                          (remove nil (list (+modeline-flymake-error)
+                                            (+modeline-flymake-warning)
+                                            (+modeline-flymake-note)))))
+           ))
+    "Mode line construct displaying `flymake-mode-line-format'.
+Specific to the current window's mode line.")
+  (add-to-list 'mode-line-misc-info +modeline-flymake)
   :hook
   (after-init . doom-modeline-mode))
 
@@ -591,6 +602,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package tab-bar
   :ensure nil
   :custom
+  (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-tab-select 'recent)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
   (tab-bar-close-button-show nil)
@@ -602,6 +614,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                     tab-bar-format-add-tab))
   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
   :config
+  (tab-bar-mode 1)
   (defun +tab-bar-tab-name-format (tab i)
     (let ((current-p (eq (car tab) 'current-tab)))
       (propertize
@@ -622,38 +635,24 @@ of the tab bar."
     " ")
   )
 
-(use-package perspective
-  :demand t
+(use-package tabspaces
   :custom
-  (persp-sort 'created)
-  (persp-show-modestring nil)
-  (persp-initial-frame-name "home")
-  (persp-mode-prefix-key (kbd "C-c M-p"))
+  (tabspaces-use-filtered-buffers-as-default t)
+  (tabspaces-default-tab "home")
+  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
+  (tabspaces-keymap-prefix nil)
+  (tabspaces-initialize-project-with-todo nil)
   :general
   (+leader-def
-    "<tab>" '(:keymap perspective-map :wk "workspaces")
-    "<tab><tab>" #'persp-switch
-    "<tab>k" '((lambda () (interactive) (persp-kill (persp-current-name))) :wk "Kill this workspace")
-    )
-  :preface
-  (defun +persp-names ()
-    "Return a list of the perspective names sorted in different direction."
-    (let ((persps (hash-table-values (perspectives-hash))))
-      (cond ((eq persp-sort 'name)
-             (sort (mapcar 'persp-name persps) 'string<))
-            ((eq persp-sort 'access)
-             (mapcar 'persp-name
-                     (sort persps (lambda (a b)
-                                    (time-less-p (persp-last-switch-time a)
-                                                 (persp-last-switch-time b))))))
-            ((eq persp-sort 'created)
-             (mapcar 'persp-name
-                     (sort persps (lambda (a b)
-                                    (time-less-p (persp-created-time a)
-                                                 (persp-created-time b)))))))))
-  :config
-  (advice-add 'persp-names :override #'+persp-names)
-  (persp-mode +1)
+    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
+  (+leader-def
+    "pp" #'tabspaces-open-or-create-project-and-workspace)
+  :init
+  (tabspaces-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab)
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -666,26 +665,20 @@ of the tab bar."
             :state    #'consult--buffer-state
             :default  t
             :items    (lambda () (consult--buffer-query
-                                  :predicate (lambda (x) (and (persp-is-current-buffer x) (not (popper-popup-p x))))
+                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
                                   :sort 'visibility
                                   :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
-
-(use-package perspective-tabs
-  :after (perspective)
-  :vc (:fetcher sourcehut :repo woozong/perspective-tabs)
-  :config
-  (perspective-tabs-mode +1))
 
 ;; Frame title
 (setq frame-title-format
       (list
        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
        '(:eval
-         (let ((project (projectile-project-name)))
-           (unless (string= "-" project)
-             (format " — %s" project))))))
+         (let ((project (project-current)))
+           (when project
+             (format " — %s" (project-name project)))))))
 
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
@@ -719,7 +712,7 @@ of the tab bar."
   ("C-~" 'popper-toggle-type)
   :config
   (setq popper-window-height 0.40)
-  (setq popper-group-function #'popper-group-by-projectile)
+  (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
     '("\\*Messages\\*"
       "\\*Warnings\\*"
@@ -819,7 +812,6 @@ of the tab bar."
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
-  (consult-project-function (lambda (_) (projectile-project-root)))
   :init
   (setq completion-in-region-function
         (lambda (&rest args)
@@ -933,8 +925,6 @@ targets."
   (marginalia-align 'right)
   (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
   :config
-  (add-to-list 'marginalia-command-categories '(projectile-find-file . project-file))
-  (add-to-list 'marginalia-command-categories '(projectile-recentf . project-file))
   (marginalia-mode 1))
 
 (use-package vertico
@@ -1507,6 +1497,15 @@ window that already exists in that direction. It will split otherwise."
     :infix "c"
     "j" '(consult-eglot-symbols :wk "Find symbol")))
 
+;; (use-package lsp-mode
+;;   :commands (lsp lsp-deferred lsp-install-server)
+;;   :hook
+;;   (lsp-managed-mode . (lambda () (general-define-key
+;;                                   :states '(normal)
+;;                                   :keymaps 'local
+;;                                   "K" 'lsp-describe-thing-at-point)))
+;;   )
+
 (use-package editorconfig
   :general
   (+leader-def
@@ -1529,6 +1528,8 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package flymake
   :ensure nil
+  :hook
+  (flymake-project-diagnostics-mode . hl-line-mode)
   :general
   (+leader-def
     "cx" '(flymake-show-project-diagnostics :wk "Show project diagnostics")))
@@ -1718,19 +1719,6 @@ window that already exists in that direction. It will split otherwise."
     "be" #'bundle-exec
     "bo" #'bundle-open))
 
-(use-package projectile-rails
-  :custom
-  (inf-ruby-console-environment "development")
-  ;; (setq auto-insert-query nil)
-  ;; (when (modulep! :lang web)
-  ;;   (add-hook 'web-mode-hook #'projectile-rails-mode))
-  :general
-  (+local-leader-def :keymaps '(projectile-rails-mode-map)
-    "p" '(:keymap projectile-rails-command-map :wk "project"))
-  :hook ((ruby-mode ruby-ts-mode inf-ruby-mode projectile-rails-server-mode) . projectile-rails-mode)
-  :hook (projectile-rails-mode . evil-normalize-keymaps)
-  :hook (projectile-rails-mode . auto-insert-mode))
-
 (use-package elisp-mode
   :ensure nil
   :hook
@@ -1824,16 +1812,16 @@ window that already exists in that direction. It will split otherwise."
   (let ((cmd (string-trim (buffer-substring-no-properties start end))))
     (async-shell-command cmd)))
 
-;; ;;;###autoload
-;; (defun project-or-cwd-async-shell-command ()
-;;   "Run `async-shell-command' in the current project's root directory."
-;;   (declare (interactive-only async-shell-command))
-;;   (interactive)
-;;   (let ((project (project-current)))
-;;     (if project
-;;         (let ((default-directory (project-root (project-current t))))
-;;             (call-interactively #'async-shell-command))
-;;       (call-interactively #'async-shell-command))))
+;;;###autoload
+(defun project-or-cwd-async-shell-command ()
+  "Run `async-shell-command' in the current project's root directory."
+  (declare (interactive-only async-shell-command))
+  (interactive)
+  (let ((project (project-current)))
+    (if project
+        (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'async-shell-command))
+      (call-interactively #'async-shell-command))))
 
 (use-package compile
   :ensure nil
@@ -1850,8 +1838,8 @@ window that already exists in that direction. It will split otherwise."
   :custom
   (shell-command-x-buffer-name-async-format "*shell:%a*")
   (shell-command-x-buffer-name-format "*shell:%a*")
-  ;; :bind
-  ;; ([remap shell-command] . project-or-cwd-async-shell-command)
+  :bind
+  ([remap shell-command] . project-or-cwd-async-shell-command)
   :config
   (shell-command-x-mode 1))
 
@@ -1872,34 +1860,27 @@ window that already exists in that direction. It will split otherwise."
   )
 
 (use-package eat
-  :commands (eat projectile-run-eat)
+  :commands (eat project-eat)
   :custom
   (eat-kill-buffer-on-exit t)
   :preface
-  (defun projectile-run-eat (&optional arg)
-    "Start Eat in the current projectile's root directory."
-    (interactive "P")
-    (let ((project (projectile-acquire-root)))
-      (projectile-with-default-dir project
-        (let ((eat-buffer-name (projectile-generate-process-name "eat" arg project)))
-          (eat)))))
-  :config
-  ;; (defun project-eat ()
-  ;;   "Start Eat in the current project's root directory."
-  ;;   (interactive)
-  ;;   (defvar eat-buffer-name)
-  ;;   (let* ((default-directory (project-root (project-current t)))
-  ;;          (eat-buffer-name (project-prefixed-buffer-name "eat"))
-  ;;          (eat-buffer (get-buffer eat-buffer-name)))
-  ;;     (if (and eat-buffer (not current-prefix-arg))
-  ;;         (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
-  ;;       (eat))))
+  (defun project-eat ()
+    "Start Eat in the current project's root directory."
+    (interactive)
+    (defvar eat-buffer-name)
+    (let* ((default-directory (project-root (project-current t)))
+           (eat-buffer-name (project-prefixed-buffer-name "eat"))
+           (eat-buffer (get-buffer eat-buffer-name)))
+      (if (and eat-buffer (not current-prefix-arg))
+          (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
+        (eat))))
 
+  :config
   (evil-set-initial-state 'eat-mode 'insert)
   :general
   (+leader-def
     "ot" #'eat
-    "pt" #'projectile-run-eat)
+    "pt" #'project-eat)
   (:states '(normal visual)
            :keymaps 'eat-mode-map
            "<return>" #'evil-insert-resume)
@@ -1919,7 +1900,7 @@ window that already exists in that direction. It will split otherwise."
           :history  'buffer-name-history
           :state    #'consult--buffer-state
           :items (lambda () (consult--buffer-query
-                             :predicate #'persp-is-current-buffer
+                             :predicate #'tabspaces--local-buffer-p
                              :mode '(shell-mode eshell-mode term-mode eat-mode compilation-mode)
                              :sort 'visibility
                              :as #'buffer-name))))
