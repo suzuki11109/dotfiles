@@ -13,12 +13,8 @@
                          ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 
 (setq package-install-upgrade-built-in nil)
-
 (setq use-package-enable-imenu-support t)
-
 (setq use-package-always-ensure t)
-
-(setq package-vc-register-as-project nil) ; Emacs 30
 
 (eval-when-compile
   (unless (package-installed-p 'vc-use-package)
@@ -30,6 +26,17 @@
 
 (defconst IS-MAC      (eq system-type 'darwin))
 (defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+
+(use-package gcmh
+  :init
+  (setq gcmh-idle-delay 'auto
+        gcmh-auto-idle-delay-factor 10
+        gcmh-high-cons-threshold (* 16 1024 1024))
+  :hook
+  (on-first-buffer . gcmh-mode))
+
+;; Escape once
+(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package general
   :config
@@ -157,9 +164,6 @@
     )
   )
 
-;; Escape once
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-
 (use-package which-key
   :defer .3
   :custom
@@ -174,246 +178,6 @@
                                        (("" . "\\`+?projectile-rails[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "rails-\\1"))
                                        (("" . "\\`+?projectile[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "‹\\1")))))
   (which-key-mode +1))
-
-(use-package gcmh
-  :init
-  (setq gcmh-idle-delay 'auto
-        gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold (* 16 1024 1024))
-  :hook
-  (on-first-buffer . gcmh-mode))
-
-(use-package recentf
-  :ensure nil
-  :init
-  (setq
-   recentf-max-saved-items 100
-   recentf-case-fold-search t
-   recentf-exclude
-   `(,(rx (* any)
-          (or
-           "elfeed-db"
-           "eln-cache"
-           "/cache/"
-           ".maildir/"
-           ".cache/")
-          (* any)
-          (? (or "html" "pdf" "tex" "epub")))
-     ,(rx "/"
-          (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
-          (* any))))
-  (recentf-mode 1))
-
-;; Move stuff to trash
-(setq delete-by-moving-to-trash t)
-
-;; Better unique buffer names for files with the same base name.
-(setq uniquify-buffer-name-style 'forward)
-
-(setq
- ;; Disable lockfiles
- create-lockfiles nil
- ;; Disable making backup files
- make-backup-files nil)
-
-;; But turn on auto-save, so we have a fallback in case of crashes or lost data.
-(setq auto-save-default t
-      auto-save-include-big-deletions t
-      auto-save-list-file-prefix (expand-file-name "auto-save/" user-emacs-directory)
-      tramp-auto-save-directory  (expand-file-name "tramp-auto-save/" user-emacs-directory)
-      auto-save-file-name-transforms
-      (list (list "\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
-                  ;; Prefix tramp autosaves to prevent conflicts with local ones
-                  (concat auto-save-list-file-prefix "tramp-\\2") t)
-            (list ".*" auto-save-list-file-prefix t)))
-
-;; Auto load files changed on disk
-(use-package autorevert
-  :ensure nil
-  :custom
-  (auto-revert-verbose nil)
-  (global-auto-revert-non-file-buffers t)
-  (auto-revert-interval 3)
-  :hook
-  (on-first-file . global-auto-revert-mode))
-
-;;  funtions put to custom lisp file
-(defun +delete-this-file (&optional forever)
-  "Delete the file associated with `current-buffer'.
-If FOREVER is non-nil, the file is deleted without being moved to trash."
-  (interactive "P")
-  (when-let ((file (or (buffer-file-name)
-                       (user-error "Current buffer is not visiting a file")))
-             ((y-or-n-p "Delete this file? ")))
-    (delete-file file (not forever))
-    (kill-buffer (current-buffer))))
-
-(defun +rename-this-file ()
-  "Rename the current buffer and file it is visiting."
-  (interactive)
-  (let ((filename (buffer-file-name)))
-    (if (not (and filename (file-exists-p filename)))
-        (message "Buffer is not visiting a file!")
-      (let ((new-name (read-file-name "New name: " filename)))
-        (cond
-         ((vc-backend filename) (vc-rename-file filename new-name))
-         (t
-          (rename-file filename new-name t)
-          (set-visited-file-name new-name t t)))))))
-
-;; Automatically make script executable
-(add-hook 'after-save-hook
-          'executable-make-buffer-file-executable-if-script-p)
-
-;; Guess the major mode after saving a file in `fundamental-mode' (adapted
-;; from Doom Emacs).
-(add-hook
- 'after-save-hook
- (defun +save--guess-file-mode-h ()
-   "Guess major mode when saving a file in `fundamental-mode'.
-    e.g. A shebang line or file path may exist now."
-   (when (eq major-mode 'fundamental-mode)
-     (let ((buffer (or (buffer-base-buffer) (current-buffer))))
-       (and (buffer-file-name buffer)
-            (eq buffer (window-buffer (selected-window)))
-            (set-auto-mode))))))
-
-;; Better handling for files with so long lines
-(use-package so-long
-  :ensure nil
-  :hook
-  (on-first-file . global-so-long-mode))
-
-;; Saving multiple files saves only in sub-directories of current project
-(setq save-some-buffers-default-predicate #'save-some-buffers-root)
-
-(setq
- ;; Do not ask obvious questions, follow symlinks
- vc-follow-symlinks t
- ;; Display the true file name for symlinks
- find-file-visit-truename t)
-
-;; Suppress large file opening confirmation
-(setq large-file-warning-threshold nil)
-
-(defun bury-or-kill ()
-  (if (eq (current-buffer) (get-buffer "*scratch*"))
-      (progn (bury-buffer)
-             nil) t))
-(add-hook 'kill-buffer-query-functions #'bury-or-kill)
-
-(use-package persistent-scratch
-  :config
-  (persistent-scratch-setup-default))
-
-(use-package dired
-  :ensure nil
-  :commands dired
-  :custom
-  (dired-listing-switches "-ahl")
-  (dired-kill-when-opening-new-dired-buffer t)
-  (dired-recursive-copies 'always)
-  (dired-recursive-deletes 'top)
-  (dired-auto-revert-buffer t)
-  (dired-dwim-target t)
-  (dired-create-destination-dirs 'ask))
-
-(use-package dired-x
-  :ensure nil
-  :hook (dired-mode . dired-omit-mode)
-  :config
-  (setq dired-clean-confirm-killing-deleted-buffers nil)
-  (setq dired-omit-verbose nil
-        dired-omit-files
-        (concat dired-omit-files
-                "\\|^\\.DS_Store\\'"
-                "\\|^\\.project\\(?:ile\\)?\\'"
-                "\\|^\\.\\(?:svn\\|git\\)\\'"
-                "\\|^\\.ccls-cache\\'"
-                "\\|\\(?:\\.js\\)?\\.meta\\'"
-                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
-  (when-let (cmd (cond (IS-MAC "open")
-                       (IS-LINUX "xdg-open")))
-    (setq dired-guess-shell-alist-user
-          `(("\\.\\(?:docx\\|pdf\\|djvu\\|eps\\)\\'" ,cmd)
-            ("\\.\\(?:jpe?g\\|png\\|gif\\|xpm\\)\\'" ,cmd)
-            ("\\.\\(?:xcf\\)\\'" ,cmd)
-            ("\\.csv\\'" ,cmd)
-            ("\\.tex\\'" ,cmd)
-            ("\\.\\(?:mp4\\|mkv\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'" ,cmd)
-            ("\\.\\(?:mp3\\|flac\\)\\'" ,cmd)
-            ("\\.html?\\'" ,cmd)
-            ("\\.md\\'" ,cmd))))
-)
-
-(use-package dired-aux
-  :ensure nil
-  :after dired
-  :custom
-  (dired-create-destination-dirs 'always)
-  (dired-do-revert-buffer t)
-  (dired-vc-rename-file t))
-
-;; Dired fontlock
-(use-package diredfl
-  :hook (dired-mode . diredfl-mode))
-
-(use-package project
-  :ensure nil
-  :demand t
-  :commands (project-find-file
-             project-switch-to-buffer
-             project-switch-project
-             project-switch-project-open-file)
-  :config
-  (setq project-switch-commands 'project-find-file)
-  :general
-  (+leader-def
-    "p" '(:keymap project-prefix-map :wk "project")
-    "p!" #'project-async-shell-command
-    ))
-
-(setq eldoc-echo-area-use-multiline-p nil)
-(setq eldoc-idle-delay 0.6)
-
-(setq help-window-select t)
-(use-package helpful
-  :hook
-  (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
-  :bind
-  ([remap describe-command]  . helpful-command)
-  ([remap describe-function] . helpful-callable)
-  ([remap describe-key]      . helpful-key)
-  ([remap describe-symbol]   . helpful-symbol)
-  ([remap describe-variable] . helpful-variable)
-  :preface
-  (defun +helpful-switch-to-buffer (buffer-or-name)
-    "Switch to helpful BUFFER-OR-NAME.
-
-  The logic is simple, if we are currently in the helpful buffer,
-  reuse it's window, otherwise create new one."
-    (if (eq major-mode 'helpful-mode)
-        (switch-to-buffer buffer-or-name)
-      (pop-to-buffer buffer-or-name)))
-  :custom
-  (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
-  (helpful-max-buffers 1)
-  :config
-  (define-key helpful-mode-map [remap quit-window]
-              'kill-buffer-and-window)
-  (define-key help-mode-map [remap quit-window]
-              'kill-buffer-and-window)
-  :general
-  (+leader-def
-    :infix "h"
-    "a" #'describe-face
-    "c" #'helpful-macro
-    "f" #'helpful-callable
-    "F" #'helpful-function
-    "k" #'helpful-key
-    "o" #'helpful-symbol
-    "v" #'helpful-variable
-    "x" #'helpful-command))
 
 (use-package catppuccin-theme
   :init
@@ -443,21 +207,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (nerd-icons-scale-factor 1.0))
 
-;; Stretch cursor to the glyph width
-(setq x-stretch-cursor t)
-
-;; Remove visual indicators from non selected windows
-(setq-default cursor-in-non-selected-windows nil)
-
-;; No blinking cursor
-(blink-cursor-mode -1)
-
-;; Remember cursor position in files
-(use-package saveplace
-  :ensure nil
-  :hook
-  (on-first-file . save-place-mode))
-
 (use-package display-line-numbers
   :ensure nil
   :hook ((prog-mode conf-mode text-mode) . display-line-numbers-mode)
@@ -467,53 +216,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :init
   (dolist (mode '(org-mode-hook markdown-mode-hook))
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
-
-(setq
- ;; Fast scrolling
- fast-but-imprecise-scrolling t
- ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues
- auto-window-vscroll nil
- ;; Keep the point in the same position while scrolling
- scroll-preserve-screen-position t
- ;; Do not move cursor to the center when scrolling
- scroll-conservatively 101
- ;; Scroll at a margin
- scroll-margin 3)
-
-;; Horizontal scrolling
-(setq hscroll-step 1
-      hscroll-margin 2)
-
-;; Fluid scrolling
-(setq pixel-scroll-precision-use-momentum t)
-(pixel-scroll-precision-mode 1)
-
-;; Show current key-sequence in minibuffer
-(setq echo-keystrokes 0.02)
-
-;; Show recursion depth in minibuffer
-(minibuffer-depth-indicate-mode 1)
-
-;; Enable recursive calls to minibuffer
-(setq enable-recursive-minibuffers t)
-
-;; Use y or n instead of yes or no
-(setq use-short-answers t)
-
-;; Try to keep the cursor out of the read-only portions of the minibuffer.
-(setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
-(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
-
-;; Enable saving minibuffer history
-(use-package savehist
-  :ensure nil
-  :custom
-  (savehist-save-minibuffer-history t)
-  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
-  :config
-  (setq history-delete-duplicates t)
-  (savehist-mode)
-)
 
 ;; Show line, columns number in modeline
 (size-indication-mode 1)
@@ -592,6 +294,21 @@ Specific to the current window's mode line.")
 
 (use-package evil-anzu
   :after (evil anzu))
+
+(use-package project
+  :ensure nil
+  :demand t
+  :commands (project-find-file
+             project-switch-to-buffer
+             project-switch-project
+             project-switch-project-open-file)
+  :config
+  (setq project-switch-commands 'project-find-file)
+  :general
+  (+leader-def
+    "p" '(:keymap project-prefix-map :wk "project")
+    "p!" #'project-async-shell-command
+    ))
 
 ;; New frame initial buffer
 ;; (defun +set-frame-scratch-buffer (frame)
@@ -757,21 +474,31 @@ of the tab bar."
   (keymap-set transient-map "<escape>" 'transient-quit-one)
   (keymap-set transient-map "q" 'transient-quit-one))
 
-(use-package paren
-  :ensure nil
-  :hook
-  (on-first-buffer . show-paren-mode)
-  :init
-  (setq show-paren-delay 0.1
-        show-paren-highlight-openparen t
-        show-paren-when-point-inside-paren t
-        show-paren-when-point-in-periphery t))
+;; Show current key-sequence in minibuffer
+(setq echo-keystrokes 0.02)
 
-(use-package hl-todo
+;; Show recursion depth in minibuffer
+(minibuffer-depth-indicate-mode 1)
+
+;; Enable recursive calls to minibuffer
+(setq enable-recursive-minibuffers t)
+
+;; Use y or n instead of yes or no
+(setq use-short-answers t)
+
+;; Try to keep the cursor out of the read-only portions of the minibuffer.
+(setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
+(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+
+(use-package savehist
+  :ensure nil
   :custom
-  (hl-todo-highlight-punctuation ":")
-  :hook
-  ((prog-mode text-mode conf-mode) . hl-todo-mode))
+  (savehist-save-minibuffer-history t)
+  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
+  :config
+  (setq history-delete-duplicates t)
+  (savehist-mode)
+)
 
 (setq read-file-name-completion-ignore-case t
       read-buffer-completion-ignore-case t
@@ -783,6 +510,30 @@ of the tab bar."
   (completion-category-defaults nil)
   (completion-category-overrides '((file (styles basic orderless partial-completion))))
   )
+
+(use-package vertico
+  :custom
+  (read-extended-command-predicate #'command-completion-default-include-p) ;; hide commands that does not work
+  (vertico-resize nil)
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter)
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  :general
+  (+leader-def
+    "." '(vertico-repeat-select :wk "Resume previous search"))
+  :hook
+  (after-init . vertico-mode)
+  (rfn-eshadow-update-overlay . vertico-directory-tidy)
+  (minibuffer-setup . vertico-repeat-save))
+
+(use-package marginalia
+  :after vertico
+  :custom
+  (marginalia-align 'right)
+  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
+  :config
+  (marginalia-mode 1))
 
 (use-package consult
   :bind
@@ -919,35 +670,221 @@ targets."
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
 
-(use-package marginalia
-  :after vertico
-  :custom
-  (marginalia-align 'right)
-  (marginalia-annotators '(marginalia-annotators-heavy marginalia-annotators-light nil))
-  :config
-  (marginalia-mode 1))
-
-(use-package vertico
-  :custom
-  (read-extended-command-predicate #'command-completion-default-include-p) ;; hide commands that does not work
-  (vertico-resize nil)
-  :bind (:map vertico-map
-              ("RET" . vertico-directory-enter)
-              ("DEL" . vertico-directory-delete-char)
-              ("M-DEL" . vertico-directory-delete-word))
-  :general
-  (+leader-def
-    "." '(vertico-repeat-select :wk "Resume previous search"))
-  :hook
-  (after-init . vertico-mode)
-  (rfn-eshadow-update-overlay . vertico-directory-tidy)
-  (minibuffer-setup . vertico-repeat-save))
-
 ;; Why use anything but UTF-8?
 (prefer-coding-system 'utf-8)
 (set-charset-priority 'unicode)
 (set-default-coding-systems 'utf-8)
 (set-selection-coding-system 'utf-8)
+
+;; Move stuff to trash
+(setq delete-by-moving-to-trash t)
+
+;; Better unique buffer names for files with the same base name.
+(setq uniquify-buffer-name-style 'forward)
+
+(setq
+ ;; Disable lockfiles
+ create-lockfiles nil
+ ;; Disable making backup files
+ make-backup-files nil)
+
+;; But turn on auto-save, so we have a fallback in case of crashes or lost data.
+(setq auto-save-default t
+      auto-save-include-big-deletions t
+      auto-save-list-file-prefix (expand-file-name "auto-save/" user-emacs-directory)
+      tramp-auto-save-directory  (expand-file-name "tramp-auto-save/" user-emacs-directory)
+      auto-save-file-name-transforms
+      (list (list "\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
+                  ;; Prefix tramp autosaves to prevent conflicts with local ones
+                  (concat auto-save-list-file-prefix "tramp-\\2") t)
+            (list ".*" auto-save-list-file-prefix t)))
+
+;; Auto load files changed on disk
+(use-package autorevert
+  :ensure nil
+  :custom
+  (auto-revert-verbose nil)
+  (global-auto-revert-non-file-buffers t)
+  (auto-revert-interval 3)
+  :hook
+  (on-first-file . global-auto-revert-mode))
+
+;;  funtions put to custom lisp file
+(defun +delete-this-file (&optional forever)
+  "Delete the file associated with `current-buffer'.
+If FOREVER is non-nil, the file is deleted without being moved to trash."
+  (interactive "P")
+  (when-let ((file (or (buffer-file-name)
+                       (user-error "Current buffer is not visiting a file")))
+             ((y-or-n-p "Delete this file? ")))
+    (delete-file file (not forever))
+    (kill-buffer (current-buffer))))
+
+(defun +rename-this-file ()
+  "Rename the current buffer and file it is visiting."
+  (interactive)
+  (let ((filename (buffer-file-name)))
+    (if (not (and filename (file-exists-p filename)))
+        (message "Buffer is not visiting a file!")
+      (let ((new-name (read-file-name "New name: " filename)))
+        (cond
+         ((vc-backend filename) (vc-rename-file filename new-name))
+         (t
+          (rename-file filename new-name t)
+          (set-visited-file-name new-name t t)))))))
+
+;; Automatically make script executable
+(add-hook 'after-save-hook
+          'executable-make-buffer-file-executable-if-script-p)
+
+;; Guess the major mode after saving a file in `fundamental-mode' (adapted
+;; from Doom Emacs).
+(add-hook
+ 'after-save-hook
+ (defun +save--guess-file-mode-h ()
+   "Guess major mode when saving a file in `fundamental-mode'.
+    e.g. A shebang line or file path may exist now."
+   (when (eq major-mode 'fundamental-mode)
+     (let ((buffer (or (buffer-base-buffer) (current-buffer))))
+       (and (buffer-file-name buffer)
+            (eq buffer (window-buffer (selected-window)))
+            (set-auto-mode))))))
+
+;; Better handling for files with so long lines
+(use-package so-long
+  :ensure nil
+  :hook
+  (on-first-file . global-so-long-mode))
+
+;; Saving multiple files saves only in sub-directories of current project
+(setq save-some-buffers-default-predicate #'save-some-buffers-root)
+
+(setq
+ ;; Do not ask obvious questions, follow symlinks
+ vc-follow-symlinks t
+ ;; Display the true file name for symlinks
+ find-file-visit-truename t)
+
+;; Suppress large file opening confirmation
+(setq large-file-warning-threshold nil)
+
+(defun bury-or-kill ()
+  (if (eq (current-buffer) (get-buffer "*scratch*"))
+      (progn (bury-buffer)
+             nil) t))
+(add-hook 'kill-buffer-query-functions #'bury-or-kill)
+
+(use-package persistent-scratch
+  :config
+  (persistent-scratch-setup-default))
+
+(use-package recentf
+  :ensure nil
+  :init
+  (setq
+   recentf-max-saved-items 100
+   recentf-case-fold-search t
+   recentf-exclude
+   `(,(rx (* any)
+          (or
+           "elfeed-db"
+           "eln-cache"
+           "/cache/"
+           ".maildir/"
+           ".cache/")
+          (* any)
+          (? (or "html" "pdf" "tex" "epub")))
+     ,(rx "/"
+          (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
+          (* any))))
+  (recentf-mode 1))
+
+(use-package dired
+  :ensure nil
+  :commands dired
+  :custom
+  (dired-listing-switches "-ahl")
+  (dired-kill-when-opening-new-dired-buffer t)
+  (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'top)
+  (dired-auto-revert-buffer t)
+  (dired-dwim-target t)
+  (dired-create-destination-dirs 'ask))
+
+(use-package dired-x
+  :ensure nil
+  :hook (dired-mode . dired-omit-mode)
+  :config
+  (setq dired-clean-confirm-killing-deleted-buffers nil)
+  (setq dired-omit-verbose nil
+        dired-omit-files
+        (concat dired-omit-files
+                "\\|^\\.DS_Store\\'"
+                "\\|^\\.project\\(?:ile\\)?\\'"
+                "\\|^\\.\\(?:svn\\|git\\)\\'"
+                "\\|^\\.ccls-cache\\'"
+                "\\|\\(?:\\.js\\)?\\.meta\\'"
+                "\\|\\.\\(?:elc\\|o\\|pyo\\|swp\\|class\\)\\'"))
+  (when-let (cmd (cond (IS-MAC "open")
+                       (IS-LINUX "xdg-open")))
+    (setq dired-guess-shell-alist-user
+          `(("\\.\\(?:docx\\|pdf\\|djvu\\|eps\\)\\'" ,cmd)
+            ("\\.\\(?:jpe?g\\|png\\|gif\\|xpm\\)\\'" ,cmd)
+            ("\\.\\(?:xcf\\)\\'" ,cmd)
+            ("\\.csv\\'" ,cmd)
+            ("\\.tex\\'" ,cmd)
+            ("\\.\\(?:mp4\\|mkv\\|avi\\|flv\\|rm\\|rmvb\\|ogv\\)\\(?:\\.part\\)?\\'" ,cmd)
+            ("\\.\\(?:mp3\\|flac\\)\\'" ,cmd)
+            ("\\.html?\\'" ,cmd)
+            ("\\.md\\'" ,cmd))))
+)
+
+(use-package dired-aux
+  :ensure nil
+  :after dired
+  :custom
+  (dired-create-destination-dirs 'always)
+  (dired-do-revert-buffer t)
+  (dired-vc-rename-file t))
+
+;; Dired fontlock
+(use-package diredfl
+  :hook (dired-mode . diredfl-mode))
+
+(setq
+ ;; Fast scrolling
+ fast-but-imprecise-scrolling t
+ ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues
+ auto-window-vscroll nil
+ ;; Keep the point in the same position while scrolling
+ scroll-preserve-screen-position t
+ ;; Do not move cursor to the center when scrolling
+ scroll-conservatively 101
+ ;; Scroll at a margin
+ scroll-margin 3)
+
+;; Horizontal scrolling
+(setq hscroll-step 1
+      hscroll-margin 2)
+
+;; Fluid scrolling
+(setq pixel-scroll-precision-use-momentum t)
+(pixel-scroll-precision-mode 1)
+
+;; Stretch cursor to the glyph width
+(setq x-stretch-cursor t)
+
+;; Remove visual indicators from non selected windows
+(setq-default cursor-in-non-selected-windows nil)
+
+;; No blinking cursor
+(blink-cursor-mode -1)
+
+;; Remember cursor position in files
+(use-package saveplace
+  :ensure nil
+  :hook
+  (on-first-file . save-place-mode))
 
 ;; Use only spaces
 (setq-default indent-tabs-mode nil)
@@ -959,6 +896,12 @@ targets."
 (setq sentence-end-double-space nil)
 ;; Always add final newline
 (setq require-final-newline t)
+
+(use-package hl-todo
+  :custom
+  (hl-todo-highlight-punctuation ":")
+  :hook
+  ((prog-mode text-mode conf-mode) . hl-todo-mode))
 
 (setq-default truncate-lines t)
 (setq truncate-partial-width-windows nil)
@@ -1108,6 +1051,16 @@ targets."
    "}" 'lispyville-previous-closing)
 
   :ghook ('(emacs-lisp-mode-hook lisp-mode-hook) #'lispyville-mode))
+
+(use-package paren
+  :ensure nil
+  :hook
+  (on-first-buffer . show-paren-mode)
+  :init
+  (setq show-paren-delay 0.1
+        show-paren-highlight-openparen t
+        show-paren-when-point-inside-paren t
+        show-paren-when-point-in-periphery t))
 
 (use-package undo-fu
   :custom
@@ -1387,6 +1340,9 @@ window that already exists in that direction. It will split otherwise."
     "gw" #'browse-at-remote)
 )
 
+(setq eldoc-echo-area-use-multiline-p nil)
+(setq eldoc-idle-delay 0.6)
+
 (use-package treesit
   :ensure nil
   :init
@@ -1394,9 +1350,10 @@ window that already exists in that direction. It will split otherwise."
 )
 
 (use-package treesit-auto
+  :custom
+  (treesit-auto-install 'prompt)
   :config
-  (setq treesit-auto-install 'prompt)
-  ;; (treesit-auto-add-to-auto-mode-alist '(go gomod))
+  (treesit-auto-add-to-auto-mode-alist 'all)
   (global-treesit-auto-mode))
 
 (use-package evil-textobj-tree-sitter
@@ -1497,14 +1454,14 @@ window that already exists in that direction. It will split otherwise."
     :infix "c"
     "j" '(consult-eglot-symbols :wk "Find symbol")))
 
-;; (use-package lsp-mode
-;;   :commands (lsp lsp-deferred lsp-install-server)
-;;   :hook
-;;   (lsp-managed-mode . (lambda () (general-define-key
-;;                                   :states '(normal)
-;;                                   :keymaps 'local
-;;                                   "K" 'lsp-describe-thing-at-point)))
-;;   )
+(use-package lsp-mode
+  :commands (lsp lsp-deferred lsp-install-server)
+  :hook
+  (lsp-managed-mode . (lambda () (general-define-key
+                                  :states '(normal)
+                                  :keymaps 'local
+                                  "K" 'lsp-describe-thing-at-point)))
+  )
 
 (use-package editorconfig
   :general
@@ -2142,6 +2099,45 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
+
+(setq help-window-select t)
+(use-package helpful
+  :hook
+  (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
+  :bind
+  ([remap describe-command]  . helpful-command)
+  ([remap describe-function] . helpful-callable)
+  ([remap describe-key]      . helpful-key)
+  ([remap describe-symbol]   . helpful-symbol)
+  ([remap describe-variable] . helpful-variable)
+  :preface
+  (defun +helpful-switch-to-buffer (buffer-or-name)
+    "Switch to helpful BUFFER-OR-NAME.
+
+  The logic is simple, if we are currently in the helpful buffer,
+  reuse it's window, otherwise create new one."
+    (if (eq major-mode 'helpful-mode)
+        (switch-to-buffer buffer-or-name)
+      (pop-to-buffer buffer-or-name)))
+  :custom
+  (helpful-switch-buffer-function #'+helpful-switch-to-buffer)
+  (helpful-max-buffers 1)
+  :config
+  (define-key helpful-mode-map [remap quit-window]
+              'kill-buffer-and-window)
+  (define-key help-mode-map [remap quit-window]
+              'kill-buffer-and-window)
+  :general
+  (+leader-def
+    :infix "h"
+    "a" #'describe-face
+    "c" #'helpful-macro
+    "f" #'helpful-callable
+    "F" #'helpful-function
+    "k" #'helpful-key
+    "o" #'helpful-symbol
+    "v" #'helpful-variable
+    "x" #'helpful-command))
 
 (setq ediff-diff-options "-w" ; turn off whitespace checking
       ediff-split-window-function #'split-window-horizontally

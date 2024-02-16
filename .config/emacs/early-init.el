@@ -25,7 +25,7 @@
 
 ;; Suppress the vanilla startup screen completely. We've disabled it
 ;; with `inhibit-startup-screen', but it would still initialize anyway.
-(advice-add #'display-startup-screen :override #'ignore)
+;; (advice-add #'display-startup-screen :override #'ignore)
 
 ;; Set initial buffer to fundamental-mode for faster load
 (setq initial-major-mode 'fundamental-mode)
