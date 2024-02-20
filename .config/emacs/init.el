@@ -505,10 +505,20 @@ of the tab bar."
       completion-ignore-case t)
 
 (use-package orderless
-  :custom
-  (completion-styles '(orderless basic))
-  (completion-category-defaults nil)
-  (completion-category-overrides '((file (styles basic orderless partial-completion))))
+  :preface
+  (defun basic-remote-try-completion (string table pred point)
+    (and (vertico--remote-p string)
+         (completion-basic-try-completion string table pred point)))
+  (defun basic-remote-all-completions (string table pred point)
+    (and (vertico--remote-p string)
+         (completion-basic-all-completions string table pred point)))
+  :config
+  (add-to-list
+   'completion-styles-alist
+   '(basic-remote basic-remote-try-completion basic-remote-all-completions nil))
+  (setq completion-styles '(orderless basic))
+  (setq completion-category-defaults nil)
+  (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))))
   )
 
 (use-package vertico
@@ -1087,12 +1097,18 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (define-key yas-minor-mode-map (kbd "TAB") nil)
   (define-key yas-keymap [(tab)] nil)
   (define-key yas-keymap (kbd "TAB") nil)
-  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand)))
+  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
+)
 
 (use-package yasnippet-capf
   :after (yasnippet cape)
   :vc (:fetcher github :repo elken/yasnippet-capf)
+  ;; :hook
+  ;; (prog-mode . (lambda ()
+  ;;                (setq-local completion-at-point-functions )))
+
   ;; :init
+  ;; :config
   ;; (setq completion-at-point-functions
   ;;             (list #'yasnippet-capf))
   )
@@ -1103,7 +1119,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Remove ispell from default completion
 (setq text-mode-ispell-word-completion nil)
 
-(use-package cape)
+(use-package cape
+  :init
+  ;; (add-to-list 'completion-at-point-functions #'cape-dabbrev)
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'yasnippet-capf)
+)
+
 (use-package corfu
   :hook
   (on-first-input . global-corfu-mode)
@@ -1115,17 +1137,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (corfu-min-width 25)
   (corfu-preview-current nil)
   (corfu-preselect 'first)
-  (corfu-on-exact-match nil)
-  (corfu-cycle t)
+  (corfu-on-exact-match 'show)
   (global-corfu-modes '(prog-mode text-mode conf-mode))
+  (corfu-cycle t)
   :config
   (advice-add 'evil-escape-func :after 'corfu-quit)
-  (add-to-list 'savehist-additional-variables 'corfu-history)
-  ;; :general
-  ;; (:keymaps 'corfu-map
-  ;;           :predicate '(eq major-mode 'eshell-mode)
-  ;;           "RET" 'eshell-send-input)
-  )
+  (add-to-list 'savehist-additional-variables 'corfu-history))
 
 (use-package nerd-icons-corfu
   :after corfu
@@ -1801,8 +1818,8 @@ window that already exists in that direction. It will split otherwise."
   (shell-command-x-mode 1))
 
 (use-package bash-completion
-  :init
-  (setq bash-completion-use-separate-processes t)
+  :custom
+  (bash-completion-use-separate-processes t)
   :preface
   (defun eshell-bash-completion-capf-nonexclusive ()
     (let ((compl (bash-completion-dynamic-complete-nocomint
@@ -1811,7 +1828,7 @@ window that already exists in that direction. It will split otherwise."
       (when compl
         (append compl '(:exclusive no)))))
   :hook
-  (on-first-buffer . bash-completion-setup)
+  (on-first-buffer . bash-completion-setup) ;; shell-command completion setup
   (eshell-mode . (lambda ()
                    (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
   )
@@ -1874,8 +1891,6 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "oe"  #'eshell
     "oE"  #'+eshell-new)
-  ;; (:keymaps 'eshell-cmpl-mode-map
-  ;;           "TAB" #'+vertico-flat-completion-at-point)
   (:states '(normal visual)
            :keymaps 'eshell-mode-map
            "<return>" #'evil-insert-resume)
@@ -1913,26 +1928,19 @@ window that already exists in that direction. It will split otherwise."
     (pcase major-mode
       ('shell-mode (comint-send-input))
       ('eshell-mode (eshell-send-input)))
-  )
+    )
 
   (defun +eshell-new ()
     "Open a new instance of eshell."
     (interactive)
     (eshell 'N))
 
-  (defun +vertico-flat-completion-at-point ()
-    "Temporarily toggles vertico-flat-mode when using completion-at-point"
-    (interactive)
-    (vertico-flat-mode 1)
-    (completion-at-point)
-    (vertico-flat-mode -1))
-
   (defun +eshell-setup ()
     (set-window-fringes nil 0 0)
     (set-window-margins nil 1 nil)
     (setq-local hscroll-margin 0)
-    ;; (visual-line-mode +1)
     (set-display-table-slot standard-display-table 0 ?\ ))
+
   :custom
   (eshell-banner-message "")
   (eshell-scroll-to-bottom-on-input 'all)
@@ -2154,9 +2162,17 @@ window that already exists in that direction. It will split otherwise."
 (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h)
 
 (use-package deadgrep
+  :custom
+  (deadgrep-max-buffers 1)
+  (deadgrep-display-buffer-function 'switch-to-buffer)
   :general
   (+leader-def
-    "sg" #'deadgrep))
+    "sg" #'deadgrep)
+  (:states '(normal)
+           :keymaps '(deadgrep-mode-map deadgrep-edit-mode-map)
+           "<return>" #'deadgrep-visit-result-other-window))
+
+(use-package wgrep)
 
 (use-package exec-path-from-shell
   :config
