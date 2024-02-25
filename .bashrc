@@ -20,7 +20,7 @@ alias ls="ls --color"
 
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
-command -v pyenv >/dev/null && eval "$(pyenv init -)"
+command -v pyenv >/dev/null && eval "$(pyenv init -)" && eval "$(pyenv virtualenv-init -)"
 
 export PATH="$HOME/.rbenv/bin:$PATH"
 command -v rbenv >/dev/null && eval "$(rbenv init - bash)"
@@ -33,7 +33,7 @@ export SDKMAN_DIR="$HOME/.sdkman"
 
 [[ -r "$HOME/.cargo/env" ]] && . "$HOME/.cargo/env"
 
-command -v yarn >/dev/null && export PATH="$PATH:$(yarn global bin)"
+# command -v yarn >/dev/null && export PATH="$PATH:$(yarn global bin)"
 
 export PATH="$PATH:/home/aki/.local/share/coursier/bin"
 

@@ -295,21 +295,6 @@ Specific to the current window's mode line.")
 (use-package evil-anzu
   :after (evil anzu))
 
-(use-package project
-  :ensure nil
-  :demand t
-  :commands (project-find-file
-             project-switch-to-buffer
-             project-switch-project
-             project-switch-project-open-file)
-  :config
-  (setq project-switch-commands 'project-find-file)
-  :general
-  (+leader-def
-    "p" '(:keymap project-prefix-map :wk "project")
-    "p!" #'project-async-shell-command
-    ))
-
 ;; New frame initial buffer
 ;; (defun +set-frame-scratch-buffer (frame)
 ;;   (with-selected-frame frame
@@ -319,7 +304,7 @@ Specific to the current window's mode line.")
 (use-package tab-bar
   :ensure nil
   :custom
-  (tab-bar-new-tab-choice "*scratch*")
+  ;; (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-tab-select 'recent)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
   (tab-bar-close-button-show nil)
@@ -350,42 +335,6 @@ Specific to the current window's mode line.")
 This ensures that the last tab's face does not extend to the end
 of the tab bar."
     " ")
-  )
-
-(use-package tabspaces
-  :custom
-  (tabspaces-use-filtered-buffers-as-default t)
-  (tabspaces-default-tab "home")
-  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
-  (tabspaces-keymap-prefix nil)
-  (tabspaces-initialize-project-with-todo nil)
-  :general
-  (+leader-def
-    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
-    "<tab><tab>" #'tab-bar-switch-to-tab
-    "<tab>n" #'tab-bar-switch-to-next-tab
-    "<tab>p" #'tab-bar-switch-to-prev-tab)
-  (+leader-def
-    "pp" #'tabspaces-open-or-create-project-and-workspace)
-  :init
-  (tabspaces-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab)
-
-  (with-eval-after-load 'consult
-    (consult-customize consult--source-buffer :hidden t :default nil)
-
-    (defvar consult--source-workspace
-      (list :name     "Workspace Buffers"
-            :narrow   ?w
-            :history  'buffer-name-history
-            :category 'buffer
-            :state    #'consult--buffer-state
-            :default  t
-            :items    (lambda () (consult--buffer-query
-                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
-                                  :sort 'visibility
-                                  :as #'buffer-name))))
-    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
 
 ;; Frame title
@@ -474,6 +423,57 @@ of the tab bar."
   (keymap-set transient-map "<escape>" 'transient-quit-one)
   (keymap-set transient-map "q" 'transient-quit-one))
 
+(use-package project
+  :ensure nil
+  :demand t
+  :commands (project-find-file
+             project-switch-to-buffer
+             project-switch-project
+             project-switch-project-open-file)
+  :config
+  (setq project-switch-commands 'project-find-file)
+  :general
+  (+leader-def
+    "p" '(:keymap project-prefix-map :wk "project")
+    "p!" #'project-async-shell-command
+    ))
+
+(use-package tabspaces
+  :custom
+  (tabspaces-use-filtered-buffers-as-default t)
+  (tabspaces-default-tab "home")
+  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
+  (tabspaces-keymap-prefix nil)
+  (tabspaces-initialize-project-with-todo nil)
+  :general
+  (+leader-def
+    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
+  (+leader-def
+    "pp" #'tabspaces-open-or-create-project-and-workspace)
+  :init
+  (tabspaces-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab)
+
+  (with-eval-after-load 'consult
+    (consult-customize consult--source-buffer :hidden t :default nil)
+
+    (defvar consult--source-workspace
+      (list :name     "Workspace Buffers"
+            :narrow   ?w
+            :history  'buffer-name-history
+            :category 'buffer
+            :state    #'consult--buffer-state
+            :default  t
+            :items    (lambda () (consult--buffer-query
+                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
+                                  :sort 'visibility
+                                  :as #'buffer-name))))
+    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+  )
+
 ;; Show current key-sequence in minibuffer
 (setq echo-keystrokes 0.02)
 
@@ -494,7 +494,7 @@ of the tab bar."
   :ensure nil
   :custom
   (savehist-save-minibuffer-history t)
-  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring))
+  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring))
   :config
   (setq history-delete-duplicates t)
   (savehist-mode)
@@ -519,6 +519,7 @@ of the tab bar."
   (setq completion-styles '(orderless basic))
   (setq completion-category-defaults nil)
   (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))))
+  (setq orderless-matching-styles '(orderless-literal orderless-regexp))
   )
 
 (use-package vertico
@@ -1398,9 +1399,8 @@ window that already exists in that direction. It will split otherwise."
   (eglot-autoshutdown t)
   (eglot-ignored-server-capabilities '(:documentHighlightProvider))
   (eglot-extend-to-xref t)
-  (eglot-events-buffer-size 0)
-
   :init
+  (setq eglot-events-buffer-size 0)
   (setq eglot-workspace-configuration
         '((:solargraph . (:diagnostics t))
           (:gopls . (:staticcheck t :completeUnimported t))))
@@ -1492,9 +1492,9 @@ window that already exists in that direction. It will split otherwise."
   (+leader-def
     "cf" '(apheleia-format-buffer :wk "Format buffer"))
   :config
-  ;; (setf (alist-get 'erb-formatter apheleia-formatters)
-  ;;       '("erb-format" "--print-width=140" filepath))
-  ;; (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
+  (setf (alist-get 'erb-formatter apheleia-formatters)
+        '("erb-format" "--print-width=140" filepath))
+  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
       '(ruby-standard))
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
@@ -1550,6 +1550,10 @@ window that already exists in that direction. It will split otherwise."
   :hook
   (css-ts-mode . eglot-ensure)
   (css-ts-mode . apheleia-mode))
+
+(use-package emmet-mode
+  :hook
+  (web-mode . emmet-mode))
 
 (use-package jtsx
   :mode (("\\.jsx?\\'" . jtsx-jsx-mode)
@@ -1631,24 +1635,25 @@ window that already exists in that direction. It will split otherwise."
   :hook
   ((python-mode python-ts-mode) . pyvenv-mode))
 
-(use-package ruby-ts-mode
-  :ensure nil
-  :hook
-  (ruby-ts-mode . apheleia-mode)
-  (ruby-ts-mode . eglot-ensure)
-)
-
 (use-package inf-ruby
   :hook (compilation-filter . inf-ruby-auto-enter)
   :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode)
+  :custom
+  (inf-ruby-console-environment "development")
   :general
+  (:states '(normal visual insert)
+           :keymaps 'inf-ruby-mode-map
+           "M-r" #'consult-history)
   (+local-leader-def
     :keymaps 'ruby-ts-mode-map
-    "r" '(:ignore t :wk "run")
-    "rl" 'ruby-send-line
-    "rr" 'ruby-send-region
-    "rd" 'ruby-send-definition
-    "ro" 'inf-ruby-console-auto))
+    "s" '(:ignore t :wk "send")
+    "sl" #'ruby-send-line
+    "sr" #'ruby-send-region
+    "sR" #'ruby-send-region-and-go
+    "sd" #'ruby-send-definition
+    "sD" #'ruby-send-definition-and-go
+    "si" #'ruby-switch-to-inf
+    "so" #'inf-ruby-console-auto))
 
 (use-package ruby-end
   :after (ruby-mode ruby-ts-mode))
@@ -1669,18 +1674,6 @@ window that already exists in that direction. It will split otherwise."
     "ts" #'rspec-verify-single
     "te" #'rspec-toggle-example-pendingness))
 
-(use-package rake
-  :custom
-  (rake-completion-system 'default)
-  :general
-  (+local-leader-def
-    :keymaps '(ruby-ts-mode-map)
-    "k" '(nil :wk "rake")
-    "kk" #'rake
-    "kr" #'rake-rerun
-    "kR" #'rake-regenerate-cache
-    "kf" #'rake-find-task))
-
 (use-package bundler
   :general
   (+local-leader-def
@@ -1692,6 +1685,174 @@ window that already exists in that direction. It will split otherwise."
     "bu" #'bundle-update
     "be" #'bundle-exec
     "bo" #'bundle-open))
+
+(use-package rake
+  :custom
+  (rake-completion-system 'default)
+  :general
+  (+local-leader-def
+    :keymaps '(ruby-ts-mode-map)
+    "rk" #'rake))
+
+;; geneators only list
+;; find resource macro
+;; goto, gemfile,routes,seed,schema
+;; default task runner
+;; extract to module
+;; extract partial?
+
+(defvar rails-command-prefix "bundle exec rails")
+
+(defvar rails-generators
+  '(("assets" (("app/assets/"
+                "app/assets/\\(?:stylesheets\\|javascripts\\)/\\(.+?\\)\\..+$")))
+    ("controller" (("app/controllers/" "app/controllers/\\(.+\\)_controller\\.rb$")))
+    ("generator" (("lib/generator/" "lib/generators/\\(.+\\)$")))
+    ("helper" (("app/helpers/" "app/helpers/\\(.+\\)_helper.rb$")))
+    ("integration_test" (("test/integration/" "test/integration/\\(.+\\)_test\\.rb$")))
+    ("job" (("app/jobs/" "app/jobs/\\(.+\\)_job\\.rb$")))
+    ("mailer" (("app/mailers/" "app/mailers/\\(.+\\)\\.rb$")))
+    ("migration" (("db/migrate/" "db/migrate/[0-9]+_\\(.+\\)\\.rb$")))
+    ("model" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
+    ("resource" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
+    ("scaffold" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
+    ("task" (("lib/tasks/" "lib/tasks/\\(.+\\)\\.rake$")))))
+
+(defun rails-generate ()
+  "Execute Rails generate COMMAND with input completion."
+  (interactive)
+  (let ((default-directory (project-root (project-current t))))
+    (async-shell-command (rails-command-with-completion " generate "))))
+
+(defun rails-destroy ()
+  "Execute Rails destroy COMMAND with input completion."
+  (interactive)
+  (let ((default-directory (project-root (project-current t))))
+    (async-shell-command (rails-command-with-completion " destroy "))))
+
+(defun rails-command-with-completion (command)
+  "Build Rails command from COMMAND with input completion."
+  (let ((keymap (copy-keymap minibuffer-local-map))
+        (command-prefix (concat rails-command-prefix command)))
+    (define-key keymap (kbd "<tab>") 'rails--completion-in-region)
+    (concat command-prefix (read-from-minibuffer command-prefix nil keymap))))
+
+(defun rails--completion-in-region ()
+  "Apply Rails generators for text completion in region."
+  (interactive)
+  (let ((generators (--map (concat (car it) " ") rails-generators)))
+    (when (<= (minibuffer-prompt-end) (point))
+      (completion-in-region (minibuffer-prompt-end) (point-max)
+                            generators))))
+
+(defun rails-server ()
+  "Run rails server command."
+  (interactive)
+  (let ((default-directory (project-root (project-current t))))
+    (async-shell-command (concat rails-command-prefix " server"))))
+
+(defun rails-console ()
+  "Start a rails console at project root."
+  (interactive)
+  (inf-ruby-console-rails (project-root (project-current t))))
+
+(defun project-find-file-in-dir (dir)
+  "Visit a file (with completion) in the current project.
+The filename at point (determined by `thing-at-point'), if any,
+is available as part of \"future history\"."
+  (interactive)
+  (let* ((pr (project-current t))
+        (dirs (list (expand-file-name dir (project-root pr)))))
+    (project-find-file-in (thing-at-point 'filename) dirs pr)))
+
+(defun rails-find-controller ()
+  (interactive)
+  (project-find-file-in-dir "app/controllers/"))
+
+;; macro?
+(defun rails-find-model ()
+  (interactive)
+  (project-find-file-in-dir "app/models/"))
+
+(defun rails-find-view ()
+  (interactive)
+  (project-find-file-in-dir "app/views/"))
+
+(defun rails-find-helper ()
+  (interactive)
+  (project-find-file-in-dir "app/helpers/"))
+
+(defun rails-find-test ()
+  (interactive)
+  (project-find-file-in-dir "app/tests/"))
+
+(defun rails-find-javascript ()
+  (interactive)
+  (project-find-file-in-dir "app/javascript/"))
+
+(defun rails-find-job ()
+  (interactive)
+  (project-find-file-in-dir "app/jobs/"))
+
+(defun rails-find-mailer ()
+  (interactive)
+  (project-find-file-in-dir "app/mailers/"))
+
+;; non macro
+(defun rails-find-spec ()
+  (interactive)
+  (project-find-file-in-dir "app/spec/"))
+
+(defun rails-find-migration ()
+  (interactive)
+  (project-find-file-in-dir "db/migrate/"))
+
+(defun rails-find-stylesheet ()
+  (interactive)
+  (project-find-file-in-dir "app/assets/stylesheets/"))
+
+(defun rails-find-initializer ()
+  (interactive)
+  (project-find-file-in-dir "config/initializers/"))
+
+(defun rails-find-locale ()
+  (interactive)
+  (project-find-file-in-dir "config/locales/"))
+
+(defvar rails-command-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "a") 'rails-find-locale)
+    (define-key map (kbd "b") 'rails-find-job)
+    (define-key map (kbd "c") 'rails-find-controller)
+    (define-key map (kbd "r") 'rails-console)
+    (define-key map (kbd "d") 'rails-destroy)
+    (define-key map (kbd "g") 'rails-generate)
+    (define-key map (kbd "h") 'rails-find-helper)
+    (define-key map (kbd "i") 'rails-find-initializer)
+    (define-key map (kbd "j") 'rails-find-javascript)
+    (define-key map (kbd "m") 'rails-find-model)
+    (define-key map (kbd "n") 'rails-find-migration)
+    (define-key map (kbd "p") 'rails-find-spec)
+    (define-key map (kbd "s") 'rails-find-stylesheet)
+    (define-key map (kbd "t") 'rails-find-test)
+    (define-key map (kbd "u") 'rails-find-fixture)
+    (define-key map (kbd "v") 'rails-find-view)
+    (define-key map (kbd "w") 'rails-find-component)
+    (define-key map (kbd "@") 'rails-find-mailer)
+    map)
+  "Keymap after `rails-keymap-prefix'.")
+(fset 'rails-command-map rails-command-map)
+
+(use-package ruby-ts-mode
+  :ensure nil
+  :hook
+  (ruby-ts-mode . apheleia-mode)
+  (ruby-ts-mode . eglot-ensure)
+  :general
+  (+local-leader-def
+    :keymaps '(ruby-ts-mode-map inf-ruby-mode-map)
+    "r" '(:keymap rails-command-map :wk "rails"))
+  )
 
 (use-package elisp-mode
   :ensure nil
@@ -1779,7 +1940,7 @@ window that already exists in that direction. It will split otherwise."
 
 ;;;###autoload
 (defun async-shell-command-region (start end)
-  "Send region from START to END to async-shell-command and display the result."
+  "Send region from START to END to `async-shell-command'and display the result."
   (interactive "r")
   (unless (region-active-p)
     (user-error "No region"))
@@ -1794,8 +1955,34 @@ window that already exists in that direction. It will split otherwise."
   (let ((project (project-current)))
     (if project
         (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'async-shell-command))
+          (call-interactively #'async-shell-command))
       (call-interactively #'async-shell-command))))
+
+;;;###autoload
+(defun project-or-cwd-async-shell-command-from-history ()
+  "Run `async-shell-command' with a choice from its command history in
+current project's root directory."
+  (interactive)
+  (let ((project (project-current)))
+    (if project
+        (let ((default-directory (project-root (project-current t))))
+          (call-interactively #'async-shell-command-from-history))
+      (call-interactively #'async-shell-command-from-history))))
+
+;;;###autoload
+(defun async-shell-command-from-history ()
+  "Run `async-shell-command' with a choice from its command history."
+  (interactive)
+  (let* ((command (completing-read (if shell-command-prompt-show-cwd
+                                       (format-message "Async shell command in `%s': "
+                                                       (abbreviate-file-name default-directory))
+                                     "Async shell command: ")
+                                   shell-command-history nil nil nil 'shell-command-history))
+         ;; (final-command (if (string-blank-p command)
+         ;;                    (or (car shell-command-history) "")
+         ;;                  command))
+         )
+    (async-shell-command command)))
 
 (use-package compile
   :ensure nil
@@ -1814,8 +2001,16 @@ window that already exists in that direction. It will split otherwise."
   (shell-command-x-buffer-name-format "*shell:%a*")
   :bind
   ([remap shell-command] . project-or-cwd-async-shell-command)
+  ("M-r" . project-or-cwd-async-shell-command-from-history)
   :config
   (shell-command-x-mode 1))
+
+(defun +popup/quit-window ()
+  (interactive)
+  (if (eq popper-popup-status 'popup)
+      (popper-kill-latest-popup)
+    (quit-window)))
+(global-set-key [remap quit-window] #'+popup/quit-window)
 
 (use-package bash-completion
   :custom
