@@ -7,14 +7,19 @@
 
 (add-hook 'package-menu-mode-hook #'hl-line-mode)
 
-(setq package-archives '(("melpa" . "https://melpa.org/packages/")
-                         ("org" . "https://orgmode.org/elpa/")
-                         ("elpa" . "https://elpa.gnu.org/packages/")
-                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
+(setq package-archives
+      '(("gnu-elpa" . "https://elpa.gnu.org/packages/")
+        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+        ("melpa" . "https://melpa.org/packages/")))
 
-(setq package-install-upgrade-built-in nil)
+(setq package-archive-priorities
+      '(("gnu-elpa" . 3)
+        ("melpa" . 2)
+        ("nongnu" . 1)))
+
 (setq use-package-enable-imenu-support t)
 (setq use-package-always-ensure t)
+(setq use-package-compute-statistics t)
 
 (eval-when-compile
   (unless (package-installed-p 'vc-use-package)
@@ -304,7 +309,7 @@ Specific to the current window's mode line.")
 (use-package tab-bar
   :ensure nil
   :custom
-  ;; (tab-bar-new-tab-choice "*scratch*")
+  (tab-bar-new-tab-choice "*scratch*")
   (tab-bar-close-tab-select 'recent)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
   (tab-bar-close-button-show nil)
@@ -402,7 +407,6 @@ of the tab bar."
       help-mode
       lsp-help-mode
       helpful-mode
-      "\\*Org Select\\*"
       "\\*Capture\\*"
       "^CAPTURE-"
       "\\*xref\\*"
@@ -505,6 +509,7 @@ of the tab bar."
       completion-ignore-case t)
 
 (use-package orderless
+  :demand t
   :preface
   (defun basic-remote-try-completion (string table pred point)
     (and (vertico--remote-p string)
@@ -512,14 +517,25 @@ of the tab bar."
   (defun basic-remote-all-completions (string table pred point)
     (and (vertico--remote-p string)
          (completion-basic-all-completions string table pred point)))
+  (defun +orderless-dispatch-flex-first (_pattern index _total)
+    (and (eq index 0) 'orderless-flex))
+  (defun +lsp-mode-setup-completion ()
+    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+          '(orderless))
+    (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
+    ;; (setq-local completion-at-point-functions (list (cape-capf-buster #'lsp-completion-at-point)))
+    )
   :config
   (add-to-list
    'completion-styles-alist
    '(basic-remote basic-remote-try-completion basic-remote-all-completions nil))
   (setq completion-styles '(orderless basic))
   (setq completion-category-defaults nil)
-  (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))))
+  (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))
+                                        ))
   (setq orderless-matching-styles '(orderless-literal orderless-regexp))
+  :hook
+  (lsp-completion-mode . +lsp-mode-setup-completion)
   )
 
 (use-package vertico
@@ -938,6 +954,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-vsplit-window-right t)
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-symbol-word-search t)
+  (evil-goto-definition-functions '(evil-goto-definition-xref
+                                    evil-goto-definition-imenu
+                                    evil-goto-definition-semantic
+                                    evil-goto-definition-search))
   :general
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
@@ -1007,10 +1027,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (electric-pair-skip-whitespace nil)
   :hook
   ((prog-mode text-mode conf-mode) . electric-pair-mode)
-  (org-mode . (lambda ()
-                (setq-local electric-pair-inhibit-predicate
-                            `(lambda (c)
-                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  ;; (org-mode . (lambda ()
+  ;;               (setq-local electric-pair-inhibit-predicate
+  ;;                           `(lambda (c)
+  ;;                              (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
   :preface
   (defun +add-pairs (pairs)
     (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
@@ -1125,7 +1145,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   ;; (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'yasnippet-capf)
-)
+  )
 
 (use-package corfu
   :hook
@@ -1143,7 +1163,20 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (corfu-cycle t)
   :config
   (advice-add 'evil-escape-func :after 'corfu-quit)
-  (add-to-list 'savehist-additional-variables 'corfu-history))
+  (add-to-list 'savehist-additional-variables 'corfu-history)
+  (defun +corfu-combined-sort (candidates)
+    "Sort CANDIDATES using both display-sort-function and corfu-sort-function."
+    (let ((candidates
+           (let ((display-sort-func (corfu--metadata-get 'display-sort-function)))
+             (if display-sort-func
+                 (funcall display-sort-func candidates)
+               candidates))))
+      (if corfu-sort-function
+          (funcall corfu-sort-function candidates)
+        candidates)))
+
+  (setq corfu-sort-override-function #'+corfu-combined-sort)
+  )
 
 (use-package nerd-icons-corfu
   :after corfu
@@ -1158,11 +1191,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :config
   (global-git-commit-mode 1)
   (add-hook 'git-commit-setup-hook
-    (lambda ()
-      (when (and (bound-and-true-p evil-mode)
-                 (not (evil-emacs-state-p))
-                 (bobp) (eolp))
-        (evil-insert-state)))))
+            (lambda ()
+              (when (and (bound-and-true-p evil-mode)
+                         (not (evil-emacs-state-p))
+                         (bobp) (eolp))
+                (evil-insert-state)))))
 
 (use-package magit
   :defer .3
@@ -1188,104 +1221,104 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (magit-bury-buffer-function #'magit-mode-quit-window)
 
   :config
-  (add-hook 'magit-process-mode-hook #'goto-address-mode)
-  (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
+    (add-hook 'magit-process-mode-hook #'goto-address-mode)
+    (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
-  (defun +magit-display-buffer-fn (buffer)
-    "Same as `magit-display-buffer-traditional', except...
+    (defun +magit-display-buffer-fn (buffer)
+      "Same as `magit-display-buffer-traditional', except...
 
-- If opened from a commit window, it will open below it.
-- Magit process windows are always opened in small windows below the current.
-- Everything else will reuse the same window."
-    (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
-      (display-buffer
-       buffer (cond
-               ((and (eq buffer-mode 'magit-status-mode)
-                     (get-buffer-window buffer))
-                '(display-buffer-reuse-window))
-               ;; Any magit buffers opened from a commit window should open below
-               ;; it. Also open magit process windows below.
-               ((or (bound-and-true-p git-commit-mode)
-                    (eq buffer-mode 'magit-process-mode))
-                (let ((size (if (eq buffer-mode 'magit-process-mode)
-                                0.35
-                              0.7)))
-                  `(display-buffer-below-selected
-                    . ((window-height . ,(truncate (* (window-height) size)))))))
+  - If opened from a commit window, it will open below it.
+  - Magit process windows are always opened in small windows below the current.
+  - Everything else will reuse the same window."
+      (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
+        (display-buffer
+         buffer (cond
+                 ((and (eq buffer-mode 'magit-status-mode)
+                       (get-buffer-window buffer))
+                  '(display-buffer-reuse-window))
+                 ;; Any magit buffers opened from a commit window should open below
+                 ;; it. Also open magit process windows below.
+                 ((or (bound-and-true-p git-commit-mode)
+                      (eq buffer-mode 'magit-process-mode))
+                  (let ((size (if (eq buffer-mode 'magit-process-mode)
+                                  0.35
+                                0.7)))
+                    `(display-buffer-below-selected
+                      . ((window-height . ,(truncate (* (window-height) size)))))))
 
-               ;; Everything else should reuse the current window.
-               ((or (not (derived-mode-p 'magit-mode))
-                    (not (memq (with-current-buffer buffer major-mode)
-                               '(magit-process-mode
-                                 magit-revision-mode
-                                 magit-diff-mode
-                                 magit-stash-mode
-                                 magit-status-mode))))
-                '(display-buffer-same-window))
+                 ;; Everything else should reuse the current window.
+                 ((or (not (derived-mode-p 'magit-mode))
+                      (not (memq (with-current-buffer buffer major-mode)
+                                 '(magit-process-mode
+                                   magit-revision-mode
+                                   magit-diff-mode
+                                   magit-stash-mode
+                                   magit-status-mode))))
+                  '(display-buffer-same-window))
 
-               ('(+magit--display-buffer-in-direction))))))
+                 ('(+magit--display-buffer-in-direction))))))
 
-  (defvar +magit-open-windows-in-direction 'right)
+    (defvar +magit-open-windows-in-direction 'right)
 
-  (defun +magit--display-buffer-in-direction (buffer alist)
-    "`display-buffer-alist' handler that opens BUFFER in a direction.
+    (defun +magit--display-buffer-in-direction (buffer alist)
+      "`display-buffer-alist' handler that opens BUFFER in a direction.
 
-This differs from `display-buffer-in-direction' in one way: it will try to use a
-window that already exists in that direction. It will split otherwise."
-    (let ((direction (or (alist-get 'direction alist)
-                         +magit-open-windows-in-direction))
-          (origin-window (selected-window)))
-      (if-let (window (window-in-direction direction))
-          (unless magit-display-buffer-noselect
-            (select-window window))
-        (if-let (window (and (not (one-window-p))
-                             (window-in-direction
-                              (pcase direction
-                                (`right 'left)
-                                (`left 'right)
-                                ((or `up `above) 'down)
-                                ((or `down `below) 'up)))))
+  This differs from `display-buffer-in-direction' in one way: it will try to use a
+  window that already exists in that direction. It will split otherwise."
+      (let ((direction (or (alist-get 'direction alist)
+                           +magit-open-windows-in-direction))
+            (origin-window (selected-window)))
+        (if-let (window (window-in-direction direction))
             (unless magit-display-buffer-noselect
               (select-window window))
-          (let ((window (split-window nil nil direction)))
-            (when (and (not magit-display-buffer-noselect)
-                       (memq direction '(right down below)))
-              (select-window window))
-            (display-buffer-record-window 'reuse window buffer)
-            (set-window-buffer window buffer)
-            (set-window-parameter window 'quit-restore (list 'window 'window origin-window buffer))
-            (set-window-prev-buffers window nil))))
-      (unless magit-display-buffer-noselect
-        (switch-to-buffer buffer t t)
-        (selected-window))))
+          (if-let (window (and (not (one-window-p))
+                               (window-in-direction
+                                (pcase direction
+                                  (`right 'left)
+                                  (`left 'right)
+                                  ((or `up `above) 'down)
+                                  ((or `down `below) 'up)))))
+              (unless magit-display-buffer-noselect
+                (select-window window))
+            (let ((window (split-window nil nil direction)))
+              (when (and (not magit-display-buffer-noselect)
+                         (memq direction '(right down below)))
+                (select-window window))
+              (display-buffer-record-window 'reuse window buffer)
+              (set-window-buffer window buffer)
+              (set-window-parameter window 'quit-restore (list 'window 'window origin-window buffer))
+              (set-window-prev-buffers window nil))))
+        (unless magit-display-buffer-noselect
+          (switch-to-buffer buffer t t)
+          (selected-window))))
 
-  (setq transient-display-buffer-action '(display-buffer-below-selected)
-        magit-display-buffer-function #'+magit-display-buffer-fn
-        magit-bury-buffer-function #'magit-mode-quit-window)
+    (setq transient-display-buffer-action '(display-buffer-below-selected)
+          magit-display-buffer-function #'+magit-display-buffer-fn
+          magit-bury-buffer-function #'magit-mode-quit-window)
 
-  ;; for dotfiles
-  (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
-  (setq dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
-  (defun dotfiles-magit-status ()
-    "calls magit status on a git bare repo with set appropriate bare-git-dir and bare-work-tree"
-    (interactive)
-    (require 'magit-git)
-    (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
-      (call-interactively 'magit-status)))
+    ;; for dotfiles
+    (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
+    (setq dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
+    (defun dotfiles-magit-status ()
+      "calls magit status on a git bare repo with set appropriate bare-git-dir and bare-work-tree"
+      (interactive)
+      (require 'magit-git)
+      (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
+        (call-interactively 'magit-status)))
 
-  (defun +magit-process-environment (env)
-    "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
-  https://github.com/magit/magit/issues/460 (@cpitclaudel)."
-    (let ((default (file-name-as-directory (expand-file-name default-directory)))
-          (home (expand-file-name "~/")))
-      (when (string= default home)
-        (let ((gitdir (expand-file-name "~/.cfg")))
-          (push (format "GIT_WORK_TREE=%s" home) env)
-          (push (format "GIT_DIR=%s" gitdir) env))))
-    env)
+    (defun +magit-process-environment (env)
+      "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
+    https://github.com/magit/magit/issues/460 (@cpitclaudel)."
+      (let ((default (file-name-as-directory (expand-file-name default-directory)))
+            (home (expand-file-name "~/")))
+        (when (string= default home)
+          (let ((gitdir (expand-file-name "~/.cfg")))
+            (push (format "GIT_WORK_TREE=%s" home) env)
+            (push (format "GIT_DIR=%s" gitdir) env))))
+      env)
 
-  (advice-add 'magit-process-environment
-              :filter-return #'+magit-process-environment)
+    (advice-add 'magit-process-environment
+                :filter-return #'+magit-process-environment)
   )
 
 (use-package forge
@@ -1390,96 +1423,6 @@ window that already exists in that direction. It will split otherwise."
    "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
   )
 
-(use-package eglot
-  :ensure nil
-  :commands eglot eglot-ensure
-  :custom
-  (eglot-sync-connect 1)
-  (eglot-connect-timeout 10)
-  (eglot-autoshutdown t)
-  (eglot-ignored-server-capabilities '(:documentHighlightProvider))
-  (eglot-extend-to-xref t)
-  :init
-  (setq eglot-events-buffer-size 0)
-  (setq eglot-workspace-configuration
-        '((:solargraph . (:diagnostics t))
-          (:gopls . (:staticcheck t :completeUnimported t))))
-
-  (defun +eglot-organize-imports ()
-    (interactive)
-	  (eglot-code-actions nil nil "source.organizeImports" t))
-
-  (defvar +eglot--help-buffer nil)
-  (defun +eglot-describe-at-point ()
-    (interactive)
-    "Request documentation for the thing at point."
-    (eglot--dbind ((Hover) contents range)
-        (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
-                         (eglot--TextDocumentPositionParams))
-      (let ((blurb (and (not (seq-empty-p contents))
-                        (eglot--hover-info contents range)))
-            (hint (thing-at-point 'symbol)))
-        (if blurb
-            (with-current-buffer
-                (or (and (buffer-live-p +eglot--help-buffer)
-                         +eglot--help-buffer)
-                    (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
-              (with-help-window (current-buffer)
-                (rename-buffer (format "*eglot-help for %s*" hint))
-                (with-current-buffer standard-output (insert blurb))
-                (setq-local nobreak-char-display nil)))
-          (display-local-help))))
-    'deferred)
-
-  (defun +eglot-capf ()
-    (setq-local completion-at-point-functions
-                (list (cape-capf-super
-                       #'eglot-completion-at-point
-                       #'yasnippet-capf))))
-
-  (defun +eglot-eldoc ()
-    ;; Show flymake diagnostics first.
-    (setq eldoc-documentation-functions
-          (cons #'flymake-eldoc-function
-                (remove #'flymake-eldoc-function eldoc-documentation-functions)))
-    ;; Show all eldoc feedback.
-    (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
-  :hook
-  (eglot-managed-mode . (lambda () (general-define-key
-                                    :states '(normal)
-                                    :keymaps 'local
-                                    "K" '+eglot-describe-at-point)))
-  (eglot-managed-mode . +eglot-capf)
-  (eglot-managed-mode . +eglot-eldoc)
-  :general
-  (+leader-def
-    :keymaps 'eglot-mode-map
-    :infix "c"
-    "a" '(eglot-code-actions :wk "Code action")
-    "i" '(eglot-find-implementation :wk "Find implementation")
-    "k" '(+eglot-describe-at-point :wk "Show hover doc")
-    "o" '(+eglot-organize-imports :wk "Organize imports")
-    "q" '(eglot-shutdown :wk "Shutdown LSP")
-    "Q" '(eglot-reconnect :wk "Restart LSP")
-    "r" '(eglot-rename :wk "Rename"))
-  )
-
-(use-package consult-eglot
-  :general
-  (+leader-def
-    :keymaps 'eglot-mode-map
-    :infix "c"
-    "j" '(consult-eglot-symbols :wk "Find symbol")))
-
-(use-package lsp-mode
-  :commands (lsp lsp-deferred lsp-install-server)
-  :hook
-  (lsp-managed-mode . (lambda () (general-define-key
-                                  :states '(normal)
-                                  :keymaps 'local
-                                  "K" 'lsp-describe-thing-at-point)))
-  )
-
 (use-package editorconfig
   :general
   (+leader-def
@@ -1500,13 +1443,223 @@ window that already exists in that direction. It will split otherwise."
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   )
 
-(use-package flymake
-  :ensure nil
+;; (use-package eglot
+;;   :ensure nil
+;;   :commands eglot eglot-ensure
+;;   :custom
+;;   (eglot-sync-connect 1)
+;;   (eglot-connect-timeout 10)
+;;   (eglot-autoshutdown t)
+;;   (eglot-ignored-server-capabilities '(:documentHighlightProvider))
+;;   (eglot-extend-to-xref t)
+;;   :init
+;;   (setq eglot-stay-out-of '(eldoc))
+;;   ;; (fset #'jsonrpc--log-event #'ignore)
+;;   ;; (setf (plist-get eglot-events-buffer-config :size) 0)
+;;   (setq eglot-workspace-configuration
+;;         '(:solargraph (:diagnostics t)
+;;           :gopls      (:staticcheck t)))
+
+;;   ;; (setf (plist-get (plist-get eglot-workspace-configuration :gopls) :tags) "e2e")
+
+;;   (defun +eglot-organize-imports ()
+;;     (interactive)
+;; 	  (eglot-code-actions nil nil "source.organizeImports" t))
+
+;;   (defvar +eglot--help-buffer nil)
+;;   (defun +eglot-describe-at-point ()
+;;     (interactive)
+;;     "Request documentation for the thing at point."
+;;     (eglot--dbind ((Hover) contents range)
+;;         (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
+;;                          (eglot--TextDocumentPositionParams))
+;;       (let ((blurb (and (not (seq-empty-p contents))
+;;                         (eglot--hover-info contents range)))
+;;             (hint (thing-at-point 'symbol)))
+;;         (if blurb
+;;             (with-current-buffer
+;;                 (or (and (buffer-live-p +eglot--help-buffer)
+;;                          +eglot--help-buffer)
+;;                     (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
+;;               (with-help-window (current-buffer)
+;;                 (rename-buffer (format "*eglot-help for %s*" hint))
+;;                 (with-current-buffer standard-output (insert blurb))
+;;                 (setq-local nobreak-char-display nil)))
+;;           (display-local-help))))
+;;     'deferred)
+
+;;   (defun +eglot-capf ()
+;;     (setq-local completion-at-point-functions
+;;                 (list (cape-capf-super
+;;                        #'eglot-completion-at-point
+;;                        #'yasnippet-capf))))
+
+;;   (defun +eglot-eldoc ()
+;;     ;; Show flymake diagnostics first.
+;;     (setq eldoc-documentation-functions
+;;           (cons #'flymake-eldoc-function
+;;                 (remove #'flymake-eldoc-function eldoc-documentation-functions)))
+;;     ;; Show all eldoc feedback.
+;;     (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
+;;   :hook
+;;   (eglot-managed-mode . (lambda () (general-define-key
+;;                                     :states '(normal)
+;;                                     :keymaps 'local
+;;                                     "K" '+eglot-describe-at-point)))
+;;   (eglot-managed-mode . +eglot-capf)
+;;   (eglot-managed-mode . +eglot-eldoc)
+;;   :general
+;;   (+leader-def
+;;     :keymaps 'eglot-mode-map
+;;     :infix "c"
+;;     "a" '(eglot-code-actions :wk "Code action")
+;;     "i" '(eglot-find-implementation :wk "Find implementation")
+;;     "k" '(+eglot-describe-at-point :wk "Show hover doc")
+;;     "o" '(+eglot-organize-imports :wk "Organize imports")
+;;     "q" '(eglot-shutdown :wk "Shutdown LSP")
+;;     "Q" '(eglot-reconnect :wk "Restart LSP")
+;;     "r" '(eglot-rename :wk "Rename"))
+;;   )
+
+;; (use-package eglot-booster
+;;   :vc (:fetcher github :repo jdtsmith/eglot-booster)
+;;   :after eglot
+;; 	:config
+;;   (eglot-booster-mode))
+
+;; (use-package consult-eglot
+;;   :general
+;;   (+leader-def
+;;     :keymaps 'eglot-mode-map
+;;     :infix "c"
+;;     "j" '(consult-eglot-symbols :wk "Find symbol")))
+
+(setq xref-prompt-for-identifier nil)
+
+(use-package lsp-mode
+  :commands (lsp lsp-deferred lsp-install-server)
+  :preface
+  (defun +update-completions-list ()
+    (progn
+      (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+      (setq-local completion-at-point-functions
+                  (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
+  :config
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
+  (lsp-register-custom-settings
+   '(("gopls.completeUnimported" t t)
+     ("gopls.staticcheck" t t)))
+
+  (defun lsp-booster--advice-json-parse (old-fn &rest args)
+    "Try to parse bytecode instead of json."
+    (or
+     (when (equal (following-char) ?#)
+       (let ((bytecode (read (current-buffer))))
+         (when (byte-code-function-p bytecode)
+           (funcall bytecode))))
+     (apply old-fn args)))
+  (advice-add (if (progn (require 'json)
+                         (fboundp 'json-parse-buffer))
+                  'json-parse-buffer
+                'json-read)
+              :around
+              #'lsp-booster--advice-json-parse)
+
+  (defun lsp-booster--advice-final-command (old-fn cmd &optional test?)
+    "Prepend emacs-lsp-booster command to lsp CMD."
+    (let ((orig-result (funcall old-fn cmd test?)))
+      (if (and (not test?)                             ;; for check lsp-server-present?
+               (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
+               lsp-use-plists
+               (not (functionp 'json-rpc-connection))  ;; native json-rpc
+               (executable-find "emacs-lsp-booster"))
+          (progn
+            (message "Using emacs-lsp-booster for %s!" orig-result)
+            (cons "emacs-lsp-booster" orig-result))
+        orig-result)))
+  (advice-add 'lsp-resolve-final-command :around #'lsp-booster--advice-final-command)
+  :custom
+  (lsp-keymap-prefix nil)
+  (lsp-completion-provider :none)
+  (lsp-headerline-breadcrumb-enable nil)
+  (lsp-keep-workspace-alive nil)
+  (lsp-enable-symbol-highlighting nil)
+  (lsp-enable-text-document-color nil)
+  (lsp-signature-auto-activate nil)
+  (lsp-signature-render-documentation nil)
+  (lsp-modeline-code-action-fallback-icon "󰌶")
+  (lsp-auto-execute-action nil)
+  (lsp-eldoc-enable-hover nil)
+  (lsp-disabled-clients '(rubocop-ls))
+  (lsp-kotlin-compiler-jvm-target "2.1")
+  (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
+  (lsp-clients-typescript-prefer-use-project-ts-server t)
+  (lsp-javascript-implicit-project-config-check-js t)
+  (lsp-javascript-suggest-complete-js-docs nil)
+  (lsp-pylsp-plugins-ruff-enabled t)
+  ;; (lsp-clients-typescript-preferences '(:includeCompletionsForImportStatements nil))
+  ;; (lsp-solargraph-server-command '("solargraph" "socket"))
+  ;; (lsp-log-io t)
   :hook
-  (flymake-project-diagnostics-mode . hl-line-mode)
+  (lsp-managed-mode . (lambda () (general-define-key
+                                  :states '(normal)
+                                  :keymaps 'local
+                                  "K" 'lsp-describe-thing-at-point)))
+  (lsp-completion-mode . +update-completions-list)
   :general
   (+leader-def
-    "cx" '(flymake-show-project-diagnostics :wk "Show project diagnostics")))
+    :keymaps 'lsp-mode-map
+    :infix "c"
+    "a" '(lsp-execute-code-action :wk "Code action")
+    "i" '(lsp-find-implementation :wk "Find implementation")
+    "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
+    "l" '(lsp-avy-lens :wk "Click lens")
+    "o" '(lsp-organize-imports :wk "Organize imports")
+    "Q" '(lsp-workspace-restart :wk "Restart workspace")
+    "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
+    "r" '(lsp-rename :wk "Rename")
+    )
+  )
+
+(use-package consult-lsp
+  :general
+  (+leader-def :keymaps 'lsp-mode-map
+    "cj" '(consult-lsp-symbols :wk "Workspace symbols")
+    "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
+
+(use-package flycheck
+  :preface
+  (defun +flycheck-eldoc (callback &rest _ignored)
+    "Print flycheck messages at point by calling CALLBACK."
+    (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
+      (mapc
+       (lambda (err)
+         (funcall callback
+                  (format "%s: %s"
+                          (let ((level (flycheck-error-level err)))
+                            (pcase level
+                              ('info (propertize "I" 'face 'flycheck-error-list-info))
+                              ('error (propertize "E" 'face 'flycheck-error-list-error))
+                              ('warning (propertize "W" 'face 'flycheck-error-list-warning))
+                              (_ level)))
+                          (flycheck-error-message err))
+                  :thing (or (flycheck-error-id err)
+                             (flycheck-error-group err))
+                  :face 'font-lock-doc-face))
+       flycheck-errors)))
+
+  :custom
+  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
+  (flycheck-checkers nil)
+  (flycheck-display-errors-function nil)
+  (flycheck-help-echo-function nil)
+  (flycheck-buffer-switch-check-intermediate-buffers t)
+  (flycheck-emacs-lisp-load-path 'inherit)
+  (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
+  :hook
+  (flycheck-mode . (lambda ()
+                     (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc 0 t)))
+  )
 
 (use-package go-ts-mode
   :ensure nil
@@ -1515,12 +1668,14 @@ window that already exists in that direction. It will split otherwise."
   (go-ts-mode-indent-offset 4)
   :init
   (defun +go-mode-setup ()
-    (add-hook 'before-save-hook '+eglot-organize-imports nil t)
+    ;; (add-hook 'before-save-hook '+eglot-organize-imports nil t)
+    (add-hook 'before-save-hook 'lsp-organize-imports nil t)
     (+add-pairs '((?` . ?`))))
   :hook
   (go-ts-mode . apheleia-mode)
   (go-ts-mode . +go-mode-setup)
-  (go-ts-mode . eglot-ensure)
+  ;; (go-ts-mode . eglot-ensure)
+  (go-ts-mode . lsp-deferred)
   )
 
 (use-package gotest
@@ -1540,15 +1695,17 @@ window that already exists in that direction. It will split otherwise."
   :mode "\\.rs\\'"
   :ensure nil
   :hook
-  (rust-ts-mode . apheleia-mode)
-  (rust-ts-mode . eglot-ensure))
+  ;; (rust-ts-mode . eglot-ensure)
+  (rust-ts-mode . lsp-deferred)
+  (rust-ts-mode . apheleia-mode))
 
 (use-package css-mode
   :ensure nil
   :custom
   (css-indent-offset 2)
   :hook
-  (css-ts-mode . eglot-ensure)
+  ;; (css-ts-mode . eglot-ensure)
+  (css-ts-mode . lsp-deferred)
   (css-ts-mode . apheleia-mode))
 
 (use-package emmet-mode
@@ -1564,9 +1721,11 @@ window that already exists in that direction. It will split otherwise."
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
   :hook
-  (jtsx-tsx-mode . eglot-ensure)
+  ;; (jtsx-tsx-mode . eglot-ensure)
+  (jtsx-tsx-mode . lsp-deferred)
   (jtsx-tsx-mode . apheleia-mode)
-  (jtsx-jsx-mode . eglot-ensure)
+  ;; (jtsx-jsx-mode . eglot-ensure)
+  (jtsx-jsx-mode . lsp-deferred)
   (jtsx-jsx-mode . apheleia-mode)
   ;; (jtsx-jsx-mode . (lambda ()
   ;;                    (yas-activate-extra-mode 'js-mode)
@@ -1609,9 +1768,14 @@ window that already exists in that direction. It will split otherwise."
          (html-ts-mode . auto-rename-tag-mode)
          (jtsx-tsx-mode . auto-rename-tag-mode)))
 
-(use-package lsp-pyright
+(use-package python-ts-mode
+  :ensure nil
+  :preface
+  (defun +python-mode-setup ()
+    (add-hook 'before-save-hook 'lsp-format-buffer nil t))
   :hook
-  ((python-mode python-ts-mode) . eglot-ensure))
+  (python-ts-mode . lsp-deferred)
+  (python-ts-mode . +python-mode-setup))
 
 (use-package pytest
   :vc (:fetcher github :repo ionrock/pytest-el)
@@ -1627,6 +1791,8 @@ window that already exists in that direction. It will split otherwise."
 
 (use-package auto-virtualenv
   :hook
+  ;; (window-configuration-change . auto-virtualenv-set-virtualenv)
+  ;; (focus-in . auto-virtualenv-set-virtualenv)
   ((python-mode python-ts-mode) . auto-virtualenv-set-virtualenv))
 
 (use-package pyvenv
@@ -1824,7 +1990,6 @@ is available as part of \"future history\"."
     (define-key map (kbd "a") 'rails-find-locale)
     (define-key map (kbd "b") 'rails-find-job)
     (define-key map (kbd "c") 'rails-find-controller)
-    (define-key map (kbd "r") 'rails-console)
     (define-key map (kbd "d") 'rails-destroy)
     (define-key map (kbd "g") 'rails-generate)
     (define-key map (kbd "h") 'rails-find-helper)
@@ -1833,6 +1998,8 @@ is available as part of \"future history\"."
     (define-key map (kbd "m") 'rails-find-model)
     (define-key map (kbd "n") 'rails-find-migration)
     (define-key map (kbd "p") 'rails-find-spec)
+    (define-key map (kbd "r") 'rails-console)
+    (define-key map (kbd "R") 'rails-server)
     (define-key map (kbd "s") 'rails-find-stylesheet)
     (define-key map (kbd "t") 'rails-find-test)
     (define-key map (kbd "u") 'rails-find-fixture)
@@ -1847,10 +2014,11 @@ is available as part of \"future history\"."
   :ensure nil
   :hook
   (ruby-ts-mode . apheleia-mode)
-  (ruby-ts-mode . eglot-ensure)
+  ;; (ruby-ts-mode . eglot-ensure)
+  (ruby-ts-mode . lsp-deferred)
   :general
   (+local-leader-def
-    :keymaps '(ruby-ts-mode-map inf-ruby-mode-map)
+    :keymaps '(ruby-ts-mode-map inf-ruby-mode-map erb-mode-map)
     "r" '(:keymap rails-command-map :wk "rails"))
   )
 
@@ -1995,7 +2163,6 @@ current project's root directory."
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
 (use-package shell-command-x
-  :defer .3
   :custom
   (shell-command-x-buffer-name-async-format "*shell:%a*")
   (shell-command-x-buffer-name-format "*shell:%a*")
@@ -2150,7 +2317,7 @@ current project's root directory."
   (eshell-mode . +eshell-setup))
 
 (use-package org
-  :ensure nil
+  :defer .3
   :custom
   (org-directory "~/Dropbox/org/")
   (org-hide-emphasis-markers t)
@@ -2168,14 +2335,14 @@ current project's root directory."
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   ;; (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
-  (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch)
+  (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
   (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
-  (set-face-attribute 'org-code nil  :inherit '(shadow fixed-pitch))
-  (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-  (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
+  ;; (set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
+  ;; (set-face-attribute 'org-code nil :inherit '(shadow fixed-pitch))
+  ;; (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
+  ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-  (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
+  ;; (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
   ;; (set-face-attribute 'org-column nil :background nil)
   ;; (set-face-attribute 'org-column-title nil :background nil)
 
@@ -2192,8 +2359,7 @@ current project's root directory."
     "l" #'org-insert-link)
   :hook
   (org-mode . org-indent-mode)
-  (org-mode . variable-pitch-mode)
-)
+  (org-mode . variable-pitch-mode))
 
 (use-package evil-org
   :after (org evil)
@@ -2304,6 +2470,7 @@ current project's root directory."
   :hook (org-mode . org-auto-tangle-mode))
 
 (setq help-window-select t)
+(setq echo-keystrokes-help nil)
 (use-package helpful
   :hook
   (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
@@ -2367,8 +2534,6 @@ current project's root directory."
            :keymaps '(deadgrep-mode-map deadgrep-edit-mode-map)
            "<return>" #'deadgrep-visit-result-other-window))
 
-(use-package wgrep)
-
 (use-package exec-path-from-shell
   :config
   (setq exec-path-from-shell-arguments '("-l"))
@@ -2419,21 +2584,19 @@ current project's root directory."
 ;;         (lambda ()
 ;;           (auth-source-pick-first-password :host "api.openai.com"))))
 
-(use-package verb
-  :custom
-  (verb-auto-kill-response-buffers t)
-  (verb-json-use-mode 'json-ts-mode)
-  :config
-  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
-  :general
-  (+leader-def
-   :keymaps 'org-mode-map
-   "v" '(:ignore t :wk "verb")
-   "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
-   "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
-
-(use-package impostman
-  :commands (impostman-import-file impostman-import-string))
+;; (use-package verb
+;;   :after org
+;;   :custom
+;;   (verb-auto-kill-response-buffers t)
+;;   (verb-json-use-mode 'json-ts-mode)
+;;   :config
+;;   (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
+;;   :general
+;;   (+leader-def
+;;    :keymaps 'org-mode-map
+;;    "v" '(:ignore t :wk "verb")
+;;    "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
+;;    "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
 
 (use-package elfeed
   :commands elfeed

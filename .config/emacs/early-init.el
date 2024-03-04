@@ -82,6 +82,6 @@
 (setq redisplay-skip-fontification-on-input t)
 
 ;; ;; Improve `lsp-mode' performances
-;; (setenv "LSP_USE_PLISTS" "true")
+(setenv "LSP_USE_PLISTS" "true")
 
 ;;; early-init.el ends here
