@@ -2457,8 +2457,7 @@ current project's root directory."
     'org-babel-load-languages
     '((emacs-lisp . t)
       (shell . t)
-      (js . t)
-      (verb . t)))
+      (js . t)))
   (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
   (add-to-list 'org-structure-template-alist '("js" . "src js"))
   (add-to-list 'org-structure-template-alist '("py" . "src python"))
@@ -2584,19 +2583,22 @@ current project's root directory."
 ;;         (lambda ()
 ;;           (auth-source-pick-first-password :host "api.openai.com"))))
 
-;; (use-package verb
-;;   :after org
-;;   :custom
-;;   (verb-auto-kill-response-buffers t)
-;;   (verb-json-use-mode 'json-ts-mode)
-;;   :config
-;;   (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
-;;   :general
-;;   (+leader-def
-;;    :keymaps 'org-mode-map
-;;    "v" '(:ignore t :wk "verb")
-;;    "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
-;;    "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
+(use-package verb
+  :after org
+  :custom
+  (verb-auto-kill-response-buffers t)
+  (verb-json-use-mode 'json-ts-mode)
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages
+                               (append org-babel-load-languages
+                                       '((verb     . t))))
+  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
+  :general
+  (+leader-def
+    :keymaps 'org-mode-map
+    "v" '(:ignore t :wk "verb")
+    "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
+    "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
 
 (use-package elfeed
   :commands elfeed
