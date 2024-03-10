@@ -79,8 +79,8 @@
     "bz"  '(bury-buffer :wk "Bury buffer")
 
     "c"  '(nil :wk "code")
-    "cc" '(compile :wk "Compile") ;; TODO: project or cwd
-    "cC" '(recompile :wk "Recompile") ;; TODO: project or cwd
+    "cc" '(project-or-cwd-compile :wk "Compile")
+    "cC" '(recompile :wk "Recompile")
     "cd" '(xref-find-definitions :wk "Go to definitions")
     "cD" '(xref-find-definitions-other-window :wk "Go to definitions other window")
     "cR" '(xref-find-references :wk "Find references")
@@ -2116,6 +2116,17 @@ is available as part of \"future history\"."
     (async-shell-command cmd)))
 
 ;;;###autoload
+(defun project-or-cwd-compile ()
+  "Run `compile' in the current project's root directory."
+  (declare (interactive-only compile))
+  (interactive)
+  (let ((project (project-current)))
+    (if project
+        (let ((default-directory (project-root (project-current t))))
+          (call-interactively #'project-compile))
+      (call-interactively #'compile))))
+
+;;;###autoload
 (defun project-or-cwd-async-shell-command ()
   "Run `async-shell-command' in the current project's root directory."
   (declare (interactive-only async-shell-command))
@@ -2125,6 +2136,14 @@ is available as part of \"future history\"."
         (let ((default-directory (project-root (project-current t))))
           (call-interactively #'async-shell-command))
       (call-interactively #'async-shell-command))))
+
+(defun project-compilation-buffer-name (compilation-mode)
+  "Meant to be used for `compilation-buffer-name-function`.
+Argument COMPILATION-MODE is the name of the major mode used for the
+compilation buffer."
+  (concat "*" (downcase compilation-mode) "*"
+          (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
+(setq project-compilation-buffer-name-function 'project-compilation-buffer-name)
 
 ;;;###autoload
 (defun project-or-cwd-async-shell-command-from-history ()
@@ -2163,6 +2182,7 @@ current project's root directory."
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
 (use-package shell-command-x
+  :demand t
   :custom
   (shell-command-x-buffer-name-async-format "*shell:%a*")
   (shell-command-x-buffer-name-format "*shell:%a*")
