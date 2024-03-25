@@ -19,14 +19,6 @@
 (setq inhibit-startup-screen t
       inhibit-startup-echo-area-message user-login-name)
 
-;; Remove "For information about GNU Emacs..." message at startup.
-;; It's redundant with our dashboard and incurs a premature redraw.
-;; (advice-add #'display-startup-echo-area-message :override #'ignore)
-
-;; Suppress the vanilla startup screen completely. We've disabled it
-;; with `inhibit-startup-screen', but it would still initialize anyway.
-;; (advice-add #'display-startup-screen :override #'ignore)
-
 ;; Set initial buffer to fundamental-mode for faster load
 (setq initial-major-mode 'fundamental-mode)
 ;; (setq initial-scratch-message nil)

@@ -313,14 +313,20 @@ Specific to the current window's mode line.")
   (tab-bar-close-tab-select 'recent)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
   (tab-bar-close-button-show nil)
-  (tab-bar-new-button-show nil)
   (tab-bar-auto-width nil)
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-format '(tab-bar-format-tabs
                     +tab-bar-suffix
-                    tab-bar-format-add-tab))
+                    tab-bar-format-align-right
+                    ;; tab-bar-format-global
+                    ))
   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
   :config
+  ;; (add-to-list 'global-mode-string
+  ;;              '(:eval
+  ;;                (let ((branch (magit-get-current-branch)))
+  ;;                  (when branch
+  ;;                    (format " %s" branch)))))
   (tab-bar-mode 1)
   (defun +tab-bar-tab-name-format (tab i)
     (let ((current-p (eq (car tab) 'current-tab)))
@@ -370,10 +376,15 @@ of the tab bar."
 (winner-mode 1)
 
 (use-package ace-window
+  :custom-face
+  (aw-leading-char-face
+   ((t (:inherit ace-jump-face-foreground :height 3.0))))
   :custom
   (aw-scope 'frame)
+  (aw-background nil)
   (aw-dispatch-always t)
-  (aw-minibuffer-flag t))
+  ;; (aw-minibuffer-flag t)
+  )
 
 (use-package popper
   :defer .3
@@ -385,37 +396,38 @@ of the tab bar."
   (setq popper-window-height 0.40)
   (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
-    '("\\*Messages\\*"
-      "\\*Warnings\\*"
-      "Output\\*$"
-      "\\*Async Shell Command\\*$"
-      compilation-mode
-      "\\*Go Test\\*$"
-      "\\*eshell"
-      "-eshell\\*$"
-      "\\*shell\\*"
-      shell-mode
-      "\\*term\\*"
-      term-mode
-      "-eat\\*$"
-      "\\*eat"
-      "\\*rake-compilation\\*"
-      "\\*rspec-compilation\\*"
-      "\\*Flymake "
-      "\\*Flycheck errors\\*"
-      "\\*Org Select\\*"
-      help-mode
-      lsp-help-mode
-      helpful-mode
-      "\\*Capture\\*"
-      "^CAPTURE-"
-      "\\*xref\\*"
-      "\\*eldoc\\*"
-      "\\magit-process:"
-      inf-ruby-mode
-      sbt-mode
-      forge-post-mode
-      ))
+        '("\\*Messages\\*"
+          "\\*Warnings\\*"
+          "Output\\*$"
+          "\\*Async Shell Command\\*$"
+          compilation-mode
+          "\\*Go Test\\*$"
+          "\\*eshell"
+          "-eshell\\*$"
+          "\\*shell\\*"
+          shell-mode
+          "\\*term\\*"
+          term-mode
+          "-eat\\*$"
+          "\\*eat"
+          "\\*rake-compilation\\*"
+          "\\*rspec-compilation\\*"
+          "\\*Flymake "
+          "\\*Flycheck errors\\*"
+          "\\*Org Select\\*"
+          help-mode
+          lsp-help-mode
+          helpful-mode
+          "\\*Capture\\*"
+          "^CAPTURE-"
+          "\\*xref\\*"
+          "\\*eldoc\\*"
+          "\\magit-process:"
+          inf-ruby-mode
+          sbt-mode
+          forge-post-mode
+          "\\*Embark Export:"
+          ))
   (popper-mode +1)
   (popper-echo-mode +1))
 
@@ -576,12 +588,17 @@ of the tab bar."
   ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
   ([remap yank-pop]                      . consult-yank-pop)
   ([remap project-switch-to-buffer]      . consult-project-buffer)
+  :preface
+  (defun consult-ripgrep-in-directory (dir)
+    (interactive "DRipgrep in: ")
+    (consult-ripgrep dir))
   :general
   (+leader-def
     "sb"  #'consult-line
     "sB"  #'consult-line-multi
     "sf"  #'consult-find
     "sp"  #'consult-ripgrep
+    "sP"  #'consult-ripgrep-in-directory
     "hI"  #'consult-info)
   :bind
   (:map minibuffer-local-map
@@ -597,7 +614,7 @@ of the tab bar."
                      #'consult-completion-in-region
                    #'completion--in-region)
                  args)))
-  )
+)
 
 (use-package consult-dir
   :bind (("C-x C-d" . consult-dir)
@@ -614,16 +631,16 @@ any directory proferred by `consult-dir'."
       (cond
        ((and (not regexp) (featurep 'consult-dir))
         (let* ((consult-dir--source-eshell `(:name "Eshell"
-                                             :narrow ?e
-                                             :category file
-                                             :face consult-file
-                                             :items ,eshell-dirs))
+                                                   :narrow ?e
+                                                   :category file
+                                                   :face consult-file
+                                                   :items ,eshell-dirs))
                (consult-dir-sources (cons consult-dir--source-eshell
                                           consult-dir-sources)))
           (eshell/cd (substring-no-properties
                       (consult-dir--pick "Switch directory: ")))))
        (t (eshell/cd (if regexp (eshell-find-previous-directory regexp)
-                            (completing-read "cd: " eshell-dirs)))))))
+                       (completing-read "cd: " eshell-dirs)))))))
   :general
   (:states '(normal visual insert)
            :keymaps 'eshell-mode-map
@@ -632,6 +649,8 @@ any directory proferred by `consult-dir'."
 
 (use-package embark
   :commands (embark-act embark-dwim)
+  :bind
+  ([remap describe-bindings] . embark-bindings)
   :config
   (defun embark-which-key-indicator ()
     "An embark indicator that displays keymaps using which-key.
@@ -677,7 +696,7 @@ targets."
          (interactive)
          (with-demoted-errors "%s"
            (let ((aw-dispatch-always t))
-             (aw-switch-to-window (aw-select nil))
+             (aw-switch-to-window (aw-show-dispatch-help))
              (call-interactively (symbol-function ',fn)))))))
 
   (general-define-key
@@ -706,8 +725,8 @@ targets."
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
 
-;; Better unique buffer names for files with the same base name.
-(setq uniquify-buffer-name-style 'forward)
+;; TODO: Better unique buffer names for files with the same base name.
+;; (setq uniquify-buffer-name-style 'forward)
 
 (setq
  ;; Disable lockfiles
@@ -1027,10 +1046,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (electric-pair-skip-whitespace nil)
   :hook
   ((prog-mode text-mode conf-mode) . electric-pair-mode)
-  ;; (org-mode . (lambda ()
-  ;;               (setq-local electric-pair-inhibit-predicate
-  ;;                           `(lambda (c)
-  ;;                              (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  (org-mode . (lambda ()
+                (setq-local electric-pair-inhibit-predicate
+                            `(lambda (c)
+                               (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
   :preface
   (defun +add-pairs (pairs)
     (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
@@ -1142,10 +1161,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package cape
   :init
-  ;; (add-to-list 'completion-at-point-functions #'cape-dabbrev)
   (add-to-list 'completion-at-point-functions #'cape-file)
-  (add-to-list 'completion-at-point-functions #'yasnippet-capf)
-  )
+  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
 (use-package corfu
   :hook
@@ -1187,7 +1204,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :after magit
   :custom
   (git-commit-summary-max-length 72)
-  (git-commit-style-convention-checks '(overlong-summary-line non-empty-second-line))
+  (git-commit-style-convention-checks '(overlong-summary-line))
   :config
   (global-git-commit-mode 1)
   (add-hook 'git-commit-setup-hook
@@ -1201,7 +1218,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :defer .3
   :general
   (+leader-def :infix "g"
-    "b" #'magit-branch
+    "b" #'magit-branch-checkout
     "B" #'magit-blame-addition
     "c" #'magit-init
     "C" #'magit-clone
@@ -1443,97 +1460,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   )
 
-;; (use-package eglot
-;;   :ensure nil
-;;   :commands eglot eglot-ensure
-;;   :custom
-;;   (eglot-sync-connect 1)
-;;   (eglot-connect-timeout 10)
-;;   (eglot-autoshutdown t)
-;;   (eglot-ignored-server-capabilities '(:documentHighlightProvider))
-;;   (eglot-extend-to-xref t)
-;;   :init
-;;   (setq eglot-stay-out-of '(eldoc))
-;;   ;; (fset #'jsonrpc--log-event #'ignore)
-;;   ;; (setf (plist-get eglot-events-buffer-config :size) 0)
-;;   (setq eglot-workspace-configuration
-;;         '(:solargraph (:diagnostics t)
-;;           :gopls      (:staticcheck t)))
-
-;;   ;; (setf (plist-get (plist-get eglot-workspace-configuration :gopls) :tags) "e2e")
-
-;;   (defun +eglot-organize-imports ()
-;;     (interactive)
-;; 	  (eglot-code-actions nil nil "source.organizeImports" t))
-
-;;   (defvar +eglot--help-buffer nil)
-;;   (defun +eglot-describe-at-point ()
-;;     (interactive)
-;;     "Request documentation for the thing at point."
-;;     (eglot--dbind ((Hover) contents range)
-;;         (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
-;;                          (eglot--TextDocumentPositionParams))
-;;       (let ((blurb (and (not (seq-empty-p contents))
-;;                         (eglot--hover-info contents range)))
-;;             (hint (thing-at-point 'symbol)))
-;;         (if blurb
-;;             (with-current-buffer
-;;                 (or (and (buffer-live-p +eglot--help-buffer)
-;;                          +eglot--help-buffer)
-;;                     (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
-;;               (with-help-window (current-buffer)
-;;                 (rename-buffer (format "*eglot-help for %s*" hint))
-;;                 (with-current-buffer standard-output (insert blurb))
-;;                 (setq-local nobreak-char-display nil)))
-;;           (display-local-help))))
-;;     'deferred)
-
-;;   (defun +eglot-capf ()
-;;     (setq-local completion-at-point-functions
-;;                 (list (cape-capf-super
-;;                        #'eglot-completion-at-point
-;;                        #'yasnippet-capf))))
-
-;;   (defun +eglot-eldoc ()
-;;     ;; Show flymake diagnostics first.
-;;     (setq eldoc-documentation-functions
-;;           (cons #'flymake-eldoc-function
-;;                 (remove #'flymake-eldoc-function eldoc-documentation-functions)))
-;;     ;; Show all eldoc feedback.
-;;     (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
-;;   :hook
-;;   (eglot-managed-mode . (lambda () (general-define-key
-;;                                     :states '(normal)
-;;                                     :keymaps 'local
-;;                                     "K" '+eglot-describe-at-point)))
-;;   (eglot-managed-mode . +eglot-capf)
-;;   (eglot-managed-mode . +eglot-eldoc)
-;;   :general
-;;   (+leader-def
-;;     :keymaps 'eglot-mode-map
-;;     :infix "c"
-;;     "a" '(eglot-code-actions :wk "Code action")
-;;     "i" '(eglot-find-implementation :wk "Find implementation")
-;;     "k" '(+eglot-describe-at-point :wk "Show hover doc")
-;;     "o" '(+eglot-organize-imports :wk "Organize imports")
-;;     "q" '(eglot-shutdown :wk "Shutdown LSP")
-;;     "Q" '(eglot-reconnect :wk "Restart LSP")
-;;     "r" '(eglot-rename :wk "Rename"))
-;;   )
-
-;; (use-package eglot-booster
-;;   :vc (:fetcher github :repo jdtsmith/eglot-booster)
-;;   :after eglot
-;; 	:config
-;;   (eglot-booster-mode))
-
-;; (use-package consult-eglot
-;;   :general
-;;   (+leader-def
-;;     :keymaps 'eglot-mode-map
-;;     :infix "c"
-;;     "j" '(consult-eglot-symbols :wk "Find symbol")))
-
 (setq xref-prompt-for-identifier nil)
 
 (use-package lsp-mode
@@ -1598,8 +1524,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (lsp-javascript-suggest-complete-js-docs nil)
   (lsp-pylsp-plugins-ruff-enabled t)
   ;; (lsp-clients-typescript-preferences '(:includeCompletionsForImportStatements nil))
-  ;; (lsp-solargraph-server-command '("solargraph" "socket"))
-  ;; (lsp-log-io t)
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
@@ -1668,13 +1592,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (go-ts-mode-indent-offset 4)
   :init
   (defun +go-mode-setup ()
-    ;; (add-hook 'before-save-hook '+eglot-organize-imports nil t)
     (add-hook 'before-save-hook 'lsp-organize-imports nil t)
     (+add-pairs '((?` . ?`))))
   :hook
   (go-ts-mode . apheleia-mode)
   (go-ts-mode . +go-mode-setup)
-  ;; (go-ts-mode . eglot-ensure)
   (go-ts-mode . lsp-deferred)
   )
 
@@ -1695,7 +1617,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :mode "\\.rs\\'"
   :ensure nil
   :hook
-  ;; (rust-ts-mode . eglot-ensure)
   (rust-ts-mode . lsp-deferred)
   (rust-ts-mode . apheleia-mode))
 
@@ -1704,7 +1625,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (css-indent-offset 2)
   :hook
-  ;; (css-ts-mode . eglot-ensure)
   (css-ts-mode . lsp-deferred)
   (css-ts-mode . apheleia-mode))
 
@@ -1721,10 +1641,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
   :hook
-  ;; (jtsx-tsx-mode . eglot-ensure)
   (jtsx-tsx-mode . lsp-deferred)
   (jtsx-tsx-mode . apheleia-mode)
-  ;; (jtsx-jsx-mode . eglot-ensure)
   (jtsx-jsx-mode . lsp-deferred)
   (jtsx-jsx-mode . apheleia-mode)
   ;; (jtsx-jsx-mode . (lambda ()
@@ -1791,8 +1709,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package auto-virtualenv
   :hook
-  ;; (window-configuration-change . auto-virtualenv-set-virtualenv)
-  ;; (focus-in . auto-virtualenv-set-virtualenv)
   ((python-mode python-ts-mode) . auto-virtualenv-set-virtualenv))
 
 (use-package pyvenv
@@ -2116,17 +2032,6 @@ is available as part of \"future history\"."
     (async-shell-command cmd)))
 
 ;;;###autoload
-(defun project-or-cwd-compile ()
-  "Run `compile' in the current project's root directory."
-  (declare (interactive-only compile))
-  (interactive)
-  (let ((project (project-current)))
-    (if project
-        (let ((default-directory (project-root (project-current t))))
-          (call-interactively #'project-compile))
-      (call-interactively #'compile))))
-
-;;;###autoload
 (defun project-or-cwd-async-shell-command ()
   "Run `async-shell-command' in the current project's root directory."
   (declare (interactive-only async-shell-command))
@@ -2137,13 +2042,6 @@ is available as part of \"future history\"."
           (call-interactively #'async-shell-command))
       (call-interactively #'async-shell-command))))
 
-(defun project-compilation-buffer-name (compilation-mode)
-  "Meant to be used for `compilation-buffer-name-function`.
-Argument COMPILATION-MODE is the name of the major mode used for the
-compilation buffer."
-  (concat "*" (downcase compilation-mode) "*"
-          (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
-(setq project-compilation-buffer-name-function 'project-compilation-buffer-name)
 
 ;;;###autoload
 (defun project-or-cwd-async-shell-command-from-history ()
@@ -2165,20 +2063,35 @@ current project's root directory."
                                                        (abbreviate-file-name default-directory))
                                      "Async shell command: ")
                                    shell-command-history nil nil nil 'shell-command-history))
-         ;; (final-command (if (string-blank-p command)
-         ;;                    (or (car shell-command-history) "")
-         ;;                  command))
          )
     (async-shell-command command)))
 
 (use-package compile
   :ensure nil
+  :preface
+  (defun project-or-cwd-compile ()
+    "Run `compile' in the current project's root directory."
+    (declare (interactive-only compile))
+    (interactive)
+    (let ((project (project-current)))
+      (if project
+          (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'project-compile))
+        (call-interactively #'compile))))
+
   :custom
   (compile-command "make ")
   (compilation-always-kill t)
   (compilation-ask-about-save nil)
   (compilation-scroll-output 'first-error)
   :config
+  (defun project-compilation-buffer-name (compilation-mode)
+    "Meant to be used for `compilation-buffer-name-function`.
+Argument COMPILATION-MODE is the name of the major mode used for the
+compilation buffer."
+    (concat "*" (downcase compilation-mode) "*"
+            (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
+  (setq project-compilation-buffer-name-function 'project-compilation-buffer-name)
   (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
 
 (use-package shell-command-x
@@ -2416,19 +2329,11 @@ current project's root directory."
   (org-agenda-confirm-kill nil)
   (org-agenda-window-setup 'only-window)
   (org-agenda-restore-windows-after-quit t)
-  ;; (org-agenda-custom-commands
-  ;;  '(("g" "Groceries" todo ""
-  ;;     ((org-agenda-files
-  ;;       `(,(expand-file-name "groceries.org" org-directory)))))))
   (org-capture-templates
    `(("t" "Tasks" entry (file "tasks.org")
       "* TODO %?")
-     ;; ("g" "Groceries" entry (file+olp "groceries.org" "Groceries")
-     ;;  "* [ ] %?")
      ))
   :general
-  ;; (+leader-def
-  ;;   "ng"  '((lambda () (interactive) (org-agenda nil "g")) :wk "Groceries"))
   (:keymaps 'org-agenda-mode-map
             "q" 'org-agenda-exit)
   :hook
@@ -2542,16 +2447,7 @@ current project's root directory."
 (add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
 (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h)
 
-(use-package deadgrep
-  :custom
-  (deadgrep-max-buffers 1)
-  (deadgrep-display-buffer-function 'switch-to-buffer)
-  :general
-  (+leader-def
-    "sg" #'deadgrep)
-  (:states '(normal)
-           :keymaps '(deadgrep-mode-map deadgrep-edit-mode-map)
-           "<return>" #'deadgrep-visit-result-other-window))
+
 
 (use-package exec-path-from-shell
   :config
@@ -2576,15 +2472,6 @@ current project's root directory."
     "od" #'docker)
   )
 
-;; (use-package kubel
-;;   :commands kubel
-;;   :general
-;;   (+leader-def
-;;     "ok" #'kubel))
-
-;; (use-package kubel-evil
-;;   :after kubel)
-
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")
 
@@ -2593,15 +2480,6 @@ current project's root directory."
   :general
   (+leader-def
     "sk" 'devdocs-lookup))
-
-;; (use-package chatgpt-shell
-;;   :general
-;;   (+leader-def
-;;     "og" #'chatgpt-shell)
-;;   :config
-;;   (setq chatgpt-shell-openai-key
-;;         (lambda ()
-;;           (auth-source-pick-first-password :host "api.openai.com"))))
 
 (use-package verb
   :after org
