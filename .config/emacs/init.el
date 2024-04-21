@@ -190,9 +190,14 @@
   (load-theme 'catppuccin t))
 
 ;; Set default fonts
-(set-face-attribute 'default nil :font "monospace" :height 100)
+(set-face-attribute 'default nil :font "monospace" :height 108)
 (set-face-attribute 'variable-pitch nil :family "Inter" :height 1.1)
 (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
+(set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
+(set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
+(set-face-attribute 'mode-line nil :family (face-attribute 'variable-pitch :family))
+(set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family))
+
 
 ;; Set thai font
 (set-fontset-font t 'thai "SF Thonburi")
@@ -223,22 +228,26 @@
     (add-hook mode (lambda () (display-line-numbers-mode 0)))))
 
 ;; Show line, columns number in modeline
-(size-indication-mode 1)
 (line-number-mode 1)
 (column-number-mode 1)
 
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
-  (doom-modeline-buffer-file-name-style 'buffer)
+  ;; (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
+  (doom-modeline-check-simple-format t)
   (doom-modeline-vcs-max-length 20)
   (doom-modeline-env-version nil)
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
   :config
+  (doom-modeline-def-modeline 'main
+    '(eldoc bar vcs workspace-name window-number modals matches follow buffer-info remote-host buffer-position selection-info word-count parrot)
+    '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time))
+
   (defun +modeline-flymake-counter (type)
     "Compute number of diagnostics in buffer with TYPE's severity.
 TYPE is usually keyword `:error', `:warning' or `:note'."
@@ -279,15 +288,16 @@ TYPE is usually keyword `:error', `:warning' or `:note'."
       `(:eval
         (when (and (bound-and-true-p flymake-mode)
                    (mode-line-window-selected-p))
-           ;; See the calls to the macro `+modeline-flymake-type'
+          ;; See the calls to the macro `+modeline-flymake-type'
           '(:eval (s-join (propertize "/" 'face 'shadow)
                           (remove nil (list (+modeline-flymake-error)
                                             (+modeline-flymake-warning)
                                             (+modeline-flymake-note)))))
-           ))
+          ))
     "Mode line construct displaying `flymake-mode-line-format'.
 Specific to the current window's mode line.")
   (add-to-list 'mode-line-misc-info +modeline-flymake)
+
   :hook
   (after-init . doom-modeline-mode))
 
@@ -317,7 +327,7 @@ Specific to the current window's mode line.")
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-format '(tab-bar-format-tabs
                     +tab-bar-suffix
-                    tab-bar-format-align-right
+                    ;; tab-bar-format-align-right
                     ;; tab-bar-format-global
                     ))
   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
@@ -328,17 +338,18 @@ Specific to the current window's mode line.")
   ;;                  (when branch
   ;;                    (format " %s" branch)))))
   (tab-bar-mode 1)
+
   (defun +tab-bar-tab-name-format (tab i)
     (let ((current-p (eq (car tab) 'current-tab)))
       (propertize
        (concat
         (propertize " " 'display '(space :width (8)))
         (alist-get 'name tab)
-        (or (and tab-bar-close-button-show
-                 (not (eq tab-bar-close-button-show
-                          (if current-p 'non-selected 'selected)))
-                 tab-bar-close-button)
-            "")
+        ;; (or (and tab-bar-close-button-show
+        ;;          (not (eq tab-bar-close-button-show
+        ;;                   (if current-p 'non-selected 'selected)))
+        ;;          tab-bar-close-button)
+        ;;     "")
         (propertize " " 'display '(space :width (8))))
        'face (funcall tab-bar-tab-face-function tab))))
   (defun +tab-bar-suffix ()
@@ -382,9 +393,7 @@ of the tab bar."
   :custom
   (aw-scope 'frame)
   (aw-background nil)
-  (aw-dispatch-always t)
-  ;; (aw-minibuffer-flag t)
-  )
+  (aw-dispatch-always t))
 
 (use-package popper
   :defer .3
@@ -410,10 +419,9 @@ of the tab bar."
           term-mode
           "-eat\\*$"
           "\\*eat"
+          "\\*Flycheck errors\\*"
           "\\*rake-compilation\\*"
           "\\*rspec-compilation\\*"
-          "\\*Flymake "
-          "\\*Flycheck errors\\*"
           "\\*Org Select\\*"
           help-mode
           lsp-help-mode
@@ -725,8 +733,8 @@ targets."
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
 
-;; TODO: Better unique buffer names for files with the same base name.
-;; (setq uniquify-buffer-name-style 'forward)
+;; Better unique buffer names for files with the same base name.
+(setq uniquify-buffer-name-style 'forward)
 
 (setq
  ;; Disable lockfiles
@@ -1476,34 +1484,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)))
 
-  (defun lsp-booster--advice-json-parse (old-fn &rest args)
-    "Try to parse bytecode instead of json."
-    (or
-     (when (equal (following-char) ?#)
-       (let ((bytecode (read (current-buffer))))
-         (when (byte-code-function-p bytecode)
-           (funcall bytecode))))
-     (apply old-fn args)))
-  (advice-add (if (progn (require 'json)
-                         (fboundp 'json-parse-buffer))
-                  'json-parse-buffer
-                'json-read)
-              :around
-              #'lsp-booster--advice-json-parse)
-
-  (defun lsp-booster--advice-final-command (old-fn cmd &optional test?)
-    "Prepend emacs-lsp-booster command to lsp CMD."
-    (let ((orig-result (funcall old-fn cmd test?)))
-      (if (and (not test?)                             ;; for check lsp-server-present?
-               (not (file-remote-p default-directory)) ;; see lsp-resolve-final-command, it would add extra shell wrapper
-               lsp-use-plists
-               (not (functionp 'json-rpc-connection))  ;; native json-rpc
-               (executable-find "emacs-lsp-booster"))
-          (progn
-            (message "Using emacs-lsp-booster for %s!" orig-result)
-            (cons "emacs-lsp-booster" orig-result))
-        orig-result)))
-  (advice-add 'lsp-resolve-final-command :around #'lsp-booster--advice-final-command)
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
@@ -2498,25 +2478,43 @@ compilation buffer."
     "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
     "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
 
-(use-package elfeed
-  :commands elfeed
-  :general
-  (+leader-def
-    "or" #'elfeed)
-  :custom
-  (elfeed-feeds
-   '("https://codeopinion.com/feed"
-     "https://juacompe.medium.com/feed"
-     "https://bitfieldconsulting.com/golang?format=rss"
-     "https://go.dev/blog/feed.atom"
-     "https://particular.net/feed.xml"
-     "https://www.ardanlabs.com/blog/index.xml"
-     "https://www.somkiat.cc/feed"
-     "https://weerasak.dev/feed.xml"
-     "https://engineering.grab.com/feed.xml"
-     )))
+;; (use-package elfeed
+;;   :commands elfeed
+;;   :general
+;;   (+leader-def
+;;     "or" #'elfeed)
+;;   :custom
+;;   (elfeed-feeds
+;;    '("https://codeopinion.com/feed"
+;;      "https://juacompe.medium.com/feed"
+;;      "https://bitfieldconsulting.com/golang?format=rss"
+;;      "https://go.dev/blog/feed.atom"
+;;      "https://particular.net/feed.xml"
+;;      "https://www.ardanlabs.com/blog/index.xml"
+;;      "https://www.somkiat.cc/feed"
+;;      "https://weerasak.dev/feed.xml"
+;;      "https://engineering.grab.com/feed.xml"
+;;      )))
 
 ;; Save custom vars to separate file from init.el.
 (setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(package-vc-selected-packages
+   '((pytest :vc-backend Git :url "https://github.com/ionrock/pytest-el")
+     (yasnippet-capf :vc-backend Git :url
+                     "https://github.com/elken/yasnippet-capf")
+     (on :vc-backend Git :url "https://github.com/ajgrf/on.el")
+     (vc-use-package :vc-backend Git :url
+                     "https://github.com/slotThe/vc-use-package"))))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
