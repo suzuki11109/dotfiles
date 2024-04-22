@@ -234,7 +234,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
-  ;; (doom-modeline-buffer-file-name-style 'buffer)
+  (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
@@ -245,7 +245,7 @@
   (doom-modeline-buffer-encoding 'nondefault)
   :config
   (doom-modeline-def-modeline 'main
-    '(eldoc bar vcs workspace-name window-number modals matches follow buffer-info remote-host buffer-position selection-info word-count parrot)
+    '(matches eldoc bar vcs workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
     '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time))
 
   (defun +modeline-flymake-counter (type)
@@ -2500,21 +2500,3 @@ compilation buffer."
 (setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
 (when (file-exists-p custom-file)
   (load custom-file))
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(package-vc-selected-packages
-   '((pytest :vc-backend Git :url "https://github.com/ionrock/pytest-el")
-     (yasnippet-capf :vc-backend Git :url
-                     "https://github.com/elken/yasnippet-capf")
-     (on :vc-backend Git :url "https://github.com/ajgrf/on.el")
-     (vc-use-package :vc-backend Git :url
-                     "https://github.com/slotThe/vc-use-package"))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )

@@ -3,8 +3,8 @@
 #+AUTO_TANGLE: t
 
 * Todolist
+** learn diff diff without creating files
 ** kele
-** learn diff
 ** org-roam
 ** plantuml
 ** extract rails commands to module
@@ -361,7 +361,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
-  ;; (doom-modeline-buffer-file-name-style 'buffer)
+  (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
@@ -372,7 +372,7 @@
   (doom-modeline-buffer-encoding 'nondefault)
   :config
   (doom-modeline-def-modeline 'main
-    '(eldoc bar vcs workspace-name window-number modals matches follow buffer-info remote-host buffer-position selection-info word-count parrot)
+    '(matches eldoc bar vcs workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
     '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time))
 
   (defun +modeline-flymake-counter (type)
