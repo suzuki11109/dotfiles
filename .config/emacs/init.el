@@ -292,7 +292,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
-  (doom-modeline-buffer-file-name-style 'buffer)
+  ;; (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
@@ -303,8 +303,12 @@
   (doom-modeline-buffer-encoding 'nondefault)
   :config
   (doom-modeline-def-modeline 'main
-    '(matches eldoc bar vcs workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
-    '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time))
+    '(matches eldoc bar workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
+    '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time " "))
+
+  (doom-modeline-def-modeline 'vcs
+    '(matches bar window-number modals buffer-info remote-host selection-info parrot)
+    '(compilation misc-info battery irc mu4e gnus github debug minor-modes buffer-encoding major-mode process time))
 
   (defun +modeline-flymake-counter (type)
     "Compute number of diagnostics in buffer with TYPE's severity.
@@ -359,14 +363,14 @@ Specific to the current window's mode line.")
   ;; (after-init . doom-modeline-mode))
   (elpaca-after-init . doom-modeline-mode))
 
-  ;; Show search count in modeline
-  (use-package anzu
-    :after (evil)
-    :config
-    (global-anzu-mode 1))
+;; Show search count in modeline
+(use-package anzu
+  :after (evil)
+  :config
+  (global-anzu-mode 1))
 
-  (use-package evil-anzu
-    :after (evil anzu))
+(use-package evil-anzu
+  :after (evil anzu))
 
 
 
