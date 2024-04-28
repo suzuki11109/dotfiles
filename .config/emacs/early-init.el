@@ -35,12 +35,12 @@
 (push '(fullscreen . maximized) default-frame-alist)
 
 ;; Profile emacs startup
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs loaded in %s with %d garbage collections."
-                     (format "%.2f seconds"
-                             (float-time (time-subtract (current-time) before-init-time)))
-                     gcs-done)))
+;; (add-hook 'emacs-startup-hook
+;;           (lambda ()
+;;             (message "Emacs loaded in %s with %d garbage collections."
+;;                      (format "%.2f seconds"
+;;                              (float-time (time-subtract (current-time) before-init-time)))
+;;                      gcs-done)))
 
 ;; Case-insensitive pass over `auto-mode-alist' is time wasted.
 (setq auto-mode-case-fold nil)
@@ -76,4 +76,5 @@
 ;; ;; Improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
 
+(setq package-enable-at-startup nil)
 ;;; early-init.el ends here

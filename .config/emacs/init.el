@@ -5,32 +5,87 @@
 ;; Do not wast time checking the modification time of each file
 (setq load-prefer-newer t)
 
-(add-hook 'package-menu-mode-hook #'hl-line-mode)
-
-(setq package-archives
-      '(("gnu-elpa" . "https://elpa.gnu.org/packages/")
-        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-        ("melpa" . "https://melpa.org/packages/")))
-
-(setq package-archive-priorities
-      '(("gnu-elpa" . 3)
-        ("melpa" . 2)
-        ("nongnu" . 1)))
-
-(setq use-package-enable-imenu-support t)
-(setq use-package-always-ensure t)
-(setq use-package-compute-statistics t)
-
-(eval-when-compile
-  (unless (package-installed-p 'vc-use-package)
-    (package-vc-install "https://github.com/slotThe/vc-use-package"))
-  (require 'vc-use-package))
-
-(use-package on
-  :vc (:fetcher github :repo ajgrf/on.el))
-
 (defconst IS-MAC      (eq system-type 'darwin))
 (defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+
+(add-hook 'package-menu-mode-hook #'hl-line-mode)
+
+;; (setq package-archives
+;;       '(("gnu-elpa" . "https://elpa.gnu.org/packages/")
+;;         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+;;         ("melpa" . "https://melpa.org/packages/")))
+
+;; (setq package-archive-priorities
+;;       '(("gnu-elpa" . 3)
+;;         ("melpa" . 2)
+;;         ("nongnu" . 1)))
+
+(setq use-package-enable-imenu-support t)
+;; (setq use-package-always-ensure t)
+;; (setq use-package-compute-statistics t)
+
+;; (eval-when-compile
+;;   (unless (package-installed-p 'vc-use-package)
+;;     (package-vc-install "https://github.com/slotThe/vc-use-package"))
+;;   (require 'vc-use-package))
+
+(defvar elpaca-installer-version 0.7)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (< emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                 ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                 ,@(when-let ((depth (plist-get order :depth)))
+                                                     (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                 ,(plist-get order :repo) ,repo))))
+                 ((zerop (call-process "git" nil buffer t "checkout"
+                                       (or (plist-get order :ref) "--"))))
+                 (emacs (concat invocation-directory invocation-name))
+                 ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                       "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                 ((require 'elpaca))
+                 ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (load "./elpaca-autoloads")))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+
+;; Install use-package support
+(elpaca elpaca-use-package
+  (elpaca-use-package-mode)
+  (setq elpaca-use-package-by-default t))
+
+;; Load general first for :general
+(use-package general :ensure (:wait t) :demand t)
+
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
+(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
+
+;; (when (file-exists-p custom-file)
+;;   (load custom-file))
+
+(use-package on
+  ;; :vc (:fetcher github :repo ajgrf/on.el))
+  :ensure (on :host github :repo "ajgrf/on.el"))
 
 (use-package gcmh
   :init
@@ -44,6 +99,7 @@
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package general
+  :ensure nil
   :config
   (general-auto-unbind-keys)
 
@@ -189,19 +245,21 @@
   (setq catppuccin-height-title-3 1.1)
   (load-theme 'catppuccin t))
 
-;; Set default fonts
-(set-face-attribute 'default nil :font "monospace" :height 108)
-(set-face-attribute 'variable-pitch nil :family "Inter" :height 1.1)
-(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 0.9)
-(set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
-(set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
-(set-face-attribute 'mode-line nil :family (face-attribute 'variable-pitch :family))
-(set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family))
-
-
 ;; Set thai font
 (set-fontset-font t 'thai "SF Thonburi")
 (set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
+
+;; Set default fonts
+(set-face-attribute 'default nil :font "monospace" :height 108)
+(set-face-attribute 'variable-pitch nil :family "Inter" :height 1.0)
+(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0)
+
+(add-hook 'elpaca-after-init-hook (lambda ()
+  (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
+  (set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
+  (set-face-attribute 'mode-line nil :family (face-attribute 'variable-pitch :family))
+  (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family))
+  ))
 
 (use-package default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
@@ -297,18 +355,20 @@ TYPE is usually keyword `:error', `:warning' or `:note'."
     "Mode line construct displaying `flymake-mode-line-format'.
 Specific to the current window's mode line.")
   (add-to-list 'mode-line-misc-info +modeline-flymake)
-
   :hook
-  (after-init . doom-modeline-mode))
+  ;; (after-init . doom-modeline-mode))
+  (elpaca-after-init . doom-modeline-mode))
 
-;; Show search count in modeline
-(use-package anzu
-  :after (evil)
-  :config
-  (global-anzu-mode 1))
+  ;; Show search count in modeline
+  (use-package anzu
+    :after (evil)
+    :config
+    (global-anzu-mode 1))
 
-(use-package evil-anzu
-  :after (evil anzu))
+  (use-package evil-anzu
+    :after (evil anzu))
+
+
 
 ;; New frame initial buffer
 ;; (defun +set-frame-scratch-buffer (frame)
@@ -338,6 +398,7 @@ Specific to the current window's mode line.")
   ;;                  (when branch
   ;;                    (format " %s" branch)))))
   (tab-bar-mode 1)
+
 
   (defun +tab-bar-tab-name-format (tab i)
     (let ((current-p (eq (car tab) 'current-tab)))
@@ -570,7 +631,8 @@ of the tab bar."
   (+leader-def
     "." '(vertico-repeat-select :wk "Resume previous search"))
   :hook
-  (after-init . vertico-mode)
+  ;; (after-init . vertico-mode)
+  (elpaca-after-init . vertico-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   (minibuffer-setup . vertico-repeat-save))
 
@@ -1150,7 +1212,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package yasnippet-capf
   :after (yasnippet cape)
-  :vc (:fetcher github :repo elken/yasnippet-capf)
+  :ensure (:host github :repo "elken/yasnippet-capf")
+  ;; :vc (:fetcher github :repo elken/yasnippet-capf)
   ;; :hook
   ;; (prog-mode . (lambda ()
   ;;                (setq-local completion-at-point-functions )))
@@ -1465,7 +1528,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
       '(ruby-standard))
-  (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
+  (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
+  ;; (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   )
 
 (setq xref-prompt-for-identifier nil)
@@ -1493,7 +1557,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (lsp-enable-text-document-color nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
-  (lsp-modeline-code-action-fallback-icon "󰌶")
+  ;; (lsp-modeline-code-action-fallback-icon "󰌶")
   (lsp-auto-execute-action nil)
   (lsp-eldoc-enable-hover nil)
   (lsp-disabled-clients '(rubocop-ls))
@@ -1676,7 +1740,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (python-ts-mode . +python-mode-setup))
 
 (use-package pytest
-  :vc (:fetcher github :repo ionrock/pytest-el)
+  ;; :vc (:fetcher github :repo ionrock/pytest-el)
+  :ensure (:host github :repo "ionrock/pytest-el")
   :general
   (+local-leader-def
     :keymaps '(python-ts-mode-map)
@@ -1951,12 +2016,32 @@ is available as part of \"future history\"."
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
   :hook
   (markdown-mode . variable-pitch-mode)
+  (markdown-mode . apheleia-mode)
   :config
+
   (set-face-attribute 'markdown-code-face nil :inherit 'fixed-pitch)
+  (set-face-attribute 'markdown-inline-code-face nil :inherit 'fixed-pitch)
+  (set-face-attribute 'markdown-table-face nil :inherit 'org-table)
+  (set-face-attribute 'markdown-code-face nil :inherit 'org-block)
+
+  (set-face-attribute 'markdown-html-tag-delimiter-face nil :family (face-attribute 'fixed-pitch :family))
+  (set-face-attribute 'markdown-html-tag-name-face nil :family (face-attribute 'fixed-pitch :family))
+  (set-face-attribute 'markdown-html-entity-face nil :family (face-attribute 'fixed-pitch :family))
+  (set-face-attribute 'markdown-html-attr-name-face nil :family (face-attribute 'fixed-pitch :family))
+  (set-face-attribute 'markdown-html-attr-value-face nil :family (face-attribute 'fixed-pitch :family))
+
   :custom
+  (markdown-command "multimarkdown")
+  (markdown-asymmetric-header t)
+  (markdown-header-scaling t)
+  (markdown-enable-highlighting-syntax t)
   (markdown-enable-math t)
+  (markdown-fontify-whole-heading-line t)
   (markdown-fontify-code-blocks-natively t)
-  (markdown-gfm-additional-languages '("sh")))
+  (markdown-gfm-additional-languages '("sh"))
+  (markdown-italic-underscore t)
+  (markdown-hide-urls t)
+  (markdown-make-gfm-checkboxes-buttons t))
 
 (use-package yaml-ts-mode
   :ensure nil
@@ -2247,19 +2332,16 @@ compilation buffer."
   (require 'org-indent)
 
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-  ;; (set-face-attribute 'org-indent nil :inherit '(org-hide fixed-pitch))
-  (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
-  (set-face-attribute 'org-table nil :inherit 'fixed-pitch)
-  ;; (set-face-attribute 'org-formula nil :inherit 'fixed-pitch)
-  ;; (set-face-attribute 'org-code nil :inherit '(shadow fixed-pitch))
-  ;; (set-face-attribute 'org-verbatim nil :inherit '(shadow fixed-pitch))
-  ;; (set-face-attribute 'org-special-keyword nil :inherit '(font-lock-comment-face fixed-pitch))
-  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-  ;; (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch)
-  ;; (set-face-attribute 'org-column nil :background nil)
-  ;; (set-face-attribute 'org-column-title nil :background nil)
+  (dolist (face '(org-table org-list-dt org-tag org-quote
+                            org-code org-link org-todo org-formula
+                            org-verbatim org-checkbox
+                            org-cite org-date org-hide))
+    (set-face-attribute face nil :inherit 'fixed-pitch))
 
-  (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
+  (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
+  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+
+  ;; (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
   :general
   (+local-leader-def
     :keymaps '(org-mode-map)
@@ -2276,12 +2358,19 @@ compilation buffer."
 
 (use-package evil-org
   :after (org evil)
-  :hook (org-mode . evil-org-mode)
-  :hook (org-agenda-mode . evil-org-mode)
-  :config
-  (evil-org-set-key-theme '(navigation insert textobjects additional todo heading))
-  (require 'evil-org-agenda)
-  (evil-org-agenda-set-keys))
+  :init
+  (setf evil-org-key-theme '(textobjects insert navigation additional todo))
+  :hook
+  (org-mode . (lambda ()
+    (evil-org-mode)
+    (evil-define-key 'normal 'evil-org-mode
+        (kbd "<C-return>") 'org-insert-heading-after-current
+        (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
+    ))
+  :hook
+  (org-agenda-mode . (lambda ()
+    (require 'evil-org-agenda)
+    (evil-org-agenda-set-keys))))
 
 (use-package org-appear
   :hook (org-mode . org-appear-mode))
@@ -2478,6 +2567,11 @@ compilation buffer."
     "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
     "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
 
+(defun download-file (url)
+  "Download file from URL."
+  (interactive "sEnter URL: ")
+  (url-copy-file url (read-file-name "Save as: ")))
+
 ;; (use-package elfeed
 ;;   :commands elfeed
 ;;   :general
@@ -2496,7 +2590,4 @@ compilation buffer."
 ;;      "https://engineering.grab.com/feed.xml"
 ;;      )))
 
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(when (file-exists-p custom-file)
-  (load custom-file))
+
