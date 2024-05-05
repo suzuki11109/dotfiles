@@ -8,22 +8,23 @@
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (defvar +file-name-handler-alist file-name-handler-alist)
 (setq file-name-handler-alist nil)
-(add-hook 'after-init-hook
+(add-hook 'elpaca-after-init-hook
           (lambda ()
             (setq file-name-handler-alist +file-name-handler-alist)))
-
-;; Resizing the Emacs frame  appears to impact startup time dramatically.
-(setq frame-inhibit-implied-resize t)
 
 ;; Reduce *Message* noise at startup.
 (setq inhibit-startup-screen t
       inhibit-startup-echo-area-message user-login-name)
 
 ;; Set initial buffer to fundamental-mode for faster load
+(setq inhibit-default-init t)
 (setq initial-major-mode 'fundamental-mode)
-;; (setq initial-scratch-message nil)
+
+;; Disable package.el support
+(setq package-enable-at-startup nil)
 
 ;; Remove some unneeded UI elements
+(setq use-dialog-box nil)
 (push '(tool-bar-lines . 0)   default-frame-alist)
 (push '(menu-bar-lines . 0)   default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
@@ -31,16 +32,25 @@
       menu-bar-mode nil
       scroll-bar-mode nil)
 
+;; Resizing the Emacs frame  appears to impact startup time dramatically.
+(setq frame-inhibit-implied-resize t)
+
+;; Ignore X resources
+(advice-add #'x-apply-session-resources :override #'ignore)
+
 ;; Maximize frame by default
 (push '(fullscreen . maximized) default-frame-alist)
 
+
 ;; Profile emacs startup
-;; (add-hook 'emacs-startup-hook
-;;           (lambda ()
-;;             (message "Emacs loaded in %s with %d garbage collections."
-;;                      (format "%.2f seconds"
-;;                              (float-time (time-subtract (current-time) before-init-time)))
-;;                      gcs-done)))
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s with %d garbage collections."
+                     (format "%.03f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
+
+;;; early-init.el ends here
 
 ;; Case-insensitive pass over `auto-mode-alist' is time wasted.
 (setq auto-mode-case-fold nil)
@@ -56,7 +66,8 @@
 (setq highlight-nonselected-windows nil)
 
 ;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
-(setq idle-update-delay 1.0)
+(setq idle-update-delay 1.0
+      jit-lock-defer-time 0)
 
 ;; Don't ping things that look like domain names.
 (setq ffap-machine-p-known 'reject)
@@ -67,6 +78,9 @@
 ;; This timeout adds latency to frame operations
 (setq pgtk-wait-for-event-timeout 0.001)
 
+;; Accelerate scrolling with the trade-off of sometimes delayed accurate fontification
+(setq fast-but-imprecise-scrolling t)
+
 ;; Increase single chunk bytes to read from subprocess (default 4096)
 (setq read-process-output-max (* 3 1024 1024)) ;; 3mb
 
@@ -75,6 +89,3 @@
 
 ;; ;; Improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
-
-(setq package-enable-at-startup nil)
-;;; early-init.el ends here

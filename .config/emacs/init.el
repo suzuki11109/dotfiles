@@ -1,33 +1,14 @@
-;; Make native compilation silent
-(when (native-comp-available-p)
-  (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
-
-;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer t)
-
 (defconst IS-MAC      (eq system-type 'darwin))
 (defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 
-(add-hook 'package-menu-mode-hook #'hl-line-mode)
-
-;; (setq package-archives
-;;       '(("gnu-elpa" . "https://elpa.gnu.org/packages/")
-;;         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-;;         ("melpa" . "https://melpa.org/packages/")))
-
-;; (setq package-archive-priorities
-;;       '(("gnu-elpa" . 3)
-;;         ("melpa" . 2)
-;;         ("nongnu" . 1)))
+(defmacro quiet! (&rest forms)
+  "Run FORMS without making any noise."
+  `(if init-file-debug
+       (progn ,@forms)
+     (let ((message-log-max nil))
+       (with-temp-message (or (current-message) "") ,@forms))))
 
 (setq use-package-enable-imenu-support t)
-;; (setq use-package-always-ensure t)
-;; (setq use-package-compute-statistics t)
-
-;; (eval-when-compile
-;;   (unless (package-installed-p 'vc-use-package)
-;;     (package-vc-install "https://github.com/slotThe/vc-use-package"))
-;;   (require 'vc-use-package))
 
 (defvar elpaca-installer-version 0.7)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
@@ -74,35 +55,10 @@
   (setq elpaca-use-package-by-default t))
 
 ;; Load general first for :general
-(use-package general :ensure (:wait t) :demand t)
-
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
-
-;; (when (file-exists-p custom-file)
-;;   (load custom-file))
-
-(use-package on
-  ;; :vc (:fetcher github :repo ajgrf/on.el))
-  :ensure (on :host github :repo "ajgrf/on.el"))
-
-(use-package gcmh
-  :init
-  (setq gcmh-idle-delay 'auto
-        gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold (* 16 1024 1024))
-  :hook
-  (on-first-buffer . gcmh-mode))
-
-;; Escape once
-(global-set-key (kbd "<escape>") 'keyboard-escape-quit)
-
 (use-package general
-  :ensure nil
+  :ensure (:wait t)
+  :demand t
   :config
-  (general-auto-unbind-keys)
-
   (general-create-definer +leader-def
     :states '(visual normal motion)
     :keymaps 'override
@@ -112,14 +68,52 @@
     :states '(visual normal motion)
     :keymaps 'local
     :prefix "SPC m")
+  )
+
+;; Make native compilation silent
+(when (native-comp-available-p)
+  (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
+
+;; Do not wast time checking the modification time of each file
+(setq load-prefer-newer t)
+
+(use-package on
+  :ensure (on :host github :repo "ajgrf/on.el"))
+
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
+(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
+
+;; (when (file-exists-p custom-file)
+;;   (load custom-file))
+
+(use-package gcmh
+  :init
+  (setq gcmh-idle-delay 'auto
+        gcmh-auto-idle-delay-factor 10
+        gcmh-high-cons-threshold (* 16 1024 1024))
+  :hook
+  (elpaca-after-init . gcmh-mode)
+  ;; :config
+  ;; (gcmh-mode 1)
+  )
+
+(use-package general
+  :ensure nil
+  :after evil
+  :config
+  ;; Escape once
+  (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
   (+leader-def
     "SPC" '(execute-extended-command :wk "M-x")
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
-    "!"   #'project-or-cwd-async-shell-command
+    "!"   #'+async-shell-command
     "|"   #'async-shell-command-region
+
+    "<tab>"   '(nil :wk "workspaces")
 
     "b"   '(nil :wk "buffer")
     "bb"  '(switch-to-buffer :wk "Switch buffer")
@@ -158,6 +152,7 @@
     "fR"  '(+rename-this-file :wk "Rename/move file")
     "fs"  '(save-buffer :wk "Save file")
     "fS"  '(write-file :wk "Save as ...")
+    "fW"  '((lambda () (interactive) (dired "~/Downloads")) :wk "Go to download directory")
     "fy"  '((lambda () (interactive) (kill-new (buffer-file-name)) (message "Copied %s to clipboard" (buffer-file-name))) :wk "Yank buffer file name")
     "fz"  '((lambda () (interactive) (find-file "~/.zshrc")) :wk "Edit zsh config")
 
@@ -226,7 +221,6 @@
   )
 
 (use-package which-key
-  :defer .3
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
@@ -238,23 +232,24 @@
                                      '((("" . "\\`+?evil[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "◂\\1"))
                                        (("" . "\\`+?projectile-rails[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "rails-\\1"))
                                        (("" . "\\`+?projectile[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "‹\\1")))))
-  (which-key-mode +1))
+  :hook
+  (on-first-input . which-key-mode))
 
 (use-package catppuccin-theme
   :init
   (setq catppuccin-height-title-3 1.1)
   (load-theme 'catppuccin t))
 
-;; Set thai font
-(set-fontset-font t 'thai "SF Thonburi")
-(set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
+(add-hook 'on-init-ui-hook (lambda ()
+  ;; Set thai font
+  (set-fontset-font t 'thai "SF Thonburi")
+  (set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
 
-;; Set default fonts
-(set-face-attribute 'default nil :font "monospace" :height 108)
-(set-face-attribute 'variable-pitch nil :family "Inter" :height 1.0)
-(set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0)
+  ;; Set default fonts
+  (set-face-attribute 'default nil :font "monospace" :height 108)
+  (set-face-attribute 'variable-pitch nil :family "Inter" :height 1.0)
+  (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0)
 
-(add-hook 'elpaca-after-init-hook (lambda ()
   (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
   (set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
   (set-face-attribute 'mode-line nil :family (face-attribute 'variable-pitch :family))
@@ -268,8 +263,8 @@
   ("M-=" 'default-text-scale-increase))
 
 (use-package nerd-icons
-  :demand t
-  :general
+  :defer t
+  :general-config
   (+leader-def
     "in" '(nerd-icons-insert :wk "Nerd icons"))
   :custom
@@ -278,12 +273,10 @@
 (use-package display-line-numbers
   :ensure nil
   :hook ((prog-mode conf-mode text-mode) . display-line-numbers-mode)
+  :hook ((org-mode markdown-mode) . (lambda () (display-line-numbers-mode 0)))
   :custom
   (display-line-numbers-type 'relative)
-  (display-line-numbers-widen t)
-  :init
-  (dolist (mode '(org-mode-hook markdown-mode-hook))
-    (add-hook mode (lambda () (display-line-numbers-mode 0)))))
+  (display-line-numbers-widen t))
 
 ;; Show line, columns number in modeline
 (line-number-mode 1)
@@ -292,7 +285,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
-  ;; (doom-modeline-buffer-file-name-style 'buffer)
+  (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
@@ -360,8 +353,7 @@ TYPE is usually keyword `:error', `:warning' or `:note'."
 Specific to the current window's mode line.")
   (add-to-list 'mode-line-misc-info +modeline-flymake)
   :hook
-  ;; (after-init . doom-modeline-mode))
-  (elpaca-after-init . doom-modeline-mode))
+  (on-init-ui . doom-modeline-mode))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -372,57 +364,12 @@ Specific to the current window's mode line.")
 (use-package evil-anzu
   :after (evil anzu))
 
-
-
-;; New frame initial buffer
-;; (defun +set-frame-scratch-buffer (frame)
-;;   (with-selected-frame frame
-;;     (switch-to-buffer "*scratch*")))
-;; (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
-
-(use-package tab-bar
-  :ensure nil
-  :custom
-  (tab-bar-new-tab-choice "*scratch*")
-  (tab-bar-close-tab-select 'recent)
-  (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
-  (tab-bar-close-button-show nil)
-  (tab-bar-auto-width nil)
-  (tab-bar-new-tab-to 'rightmost)
-  (tab-bar-format '(tab-bar-format-tabs
-                    +tab-bar-suffix
-                    ;; tab-bar-format-align-right
-                    ;; tab-bar-format-global
-                    ))
-  (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
-  :config
-  ;; (add-to-list 'global-mode-string
-  ;;              '(:eval
-  ;;                (let ((branch (magit-get-current-branch)))
-  ;;                  (when branch
-  ;;                    (format " %s" branch)))))
-  (tab-bar-mode 1)
-
-
-  (defun +tab-bar-tab-name-format (tab i)
-    (let ((current-p (eq (car tab) 'current-tab)))
-      (propertize
-       (concat
-        (propertize " " 'display '(space :width (8)))
-        (alist-get 'name tab)
-        ;; (or (and tab-bar-close-button-show
-        ;;          (not (eq tab-bar-close-button-show
-        ;;                   (if current-p 'non-selected 'selected)))
-        ;;          tab-bar-close-button)
-        ;;     "")
-        (propertize " " 'display '(space :width (8))))
-       'face (funcall tab-bar-tab-face-function tab))))
-  (defun +tab-bar-suffix ()
-    "Add empty space.
-This ensures that the last tab's face does not extend to the end
-of the tab bar."
-    " ")
-  )
+;; (use-package dashboard
+;;   :hook
+;;   (elpaca-after-init . dashboard-insert-startupify-lists)
+;;   (elpaca-after-init . dashboard-initialize)
+;;   :config
+;;   (dashboard-setup-startup-hook))
 
 ;; Frame title
 (setq frame-title-format
@@ -437,7 +384,6 @@ of the tab bar."
 (setq frame-resize-pixelwise t)
 
 ;; Always prompt in minibuffer (no GUI)
-(setq use-dialog-box nil)
 (when (bound-and-true-p tooltip-mode)
   (tooltip-mode -1))
 
@@ -452,6 +398,7 @@ of the tab bar."
 (winner-mode 1)
 
 (use-package ace-window
+  :defer t
   :custom-face
   (aw-leading-char-face
    ((t (:inherit ace-jump-face-foreground :height 3.0))))
@@ -461,8 +408,8 @@ of the tab bar."
   (aw-dispatch-always t))
 
 (use-package popper
-  :defer .3
-  :general
+  ;; :defer .3
+  :general-config
   ("C-`" 'popper-toggle)
   ("C-\\"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
@@ -501,8 +448,10 @@ of the tab bar."
           forge-post-mode
           "\\*Embark Export:"
           ))
-  (popper-mode +1)
-  (popper-echo-mode +1))
+  :hook
+  (on-first-buffer . popper-mode)
+  (on-first-buffer . popper-echo-mode)
+  )
 
 (use-package transient
   :ensure nil
@@ -514,37 +463,91 @@ of the tab bar."
 
 (use-package project
   :ensure nil
-  :demand t
   :commands (project-find-file
              project-switch-to-buffer
              project-switch-project
              project-switch-project-open-file)
-  :config
-  (setq project-switch-commands 'project-find-file)
+  :custom
+  (project-switch-commands 'project-find-file)
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
     "p!" #'project-async-shell-command
     ))
 
+;; New frame initial buffer
+;; (defun +set-frame-scratch-buffer (frame)
+;;   (with-selected-frame frame
+;;     (switch-to-buffer "*scratch*")))
+;; (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
+
+  ;; (add-to-list 'global-mode-string
+  ;;              '(:eval
+  ;;                (let ((branch (magit-get-current-branch)))
+  ;;                  (when branch
+  ;;                    (format " %s" branch)))))
+
+(use-package tab-bar
+  :ensure nil
+  :commands (tab-bar-mode)
+  :custom
+  (tab-bar-close-tab-select 'recent)
+  (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
+  (tab-bar-close-button-show nil)
+  (tab-bar-auto-width nil)
+  (tab-bar-new-tab-to 'rightmost)
+  (tab-bar-format '(tab-bar-format-tabs
+                    #'+tab-bar-suffix
+                    ;; tab-bar-format-align-right
+                    ;; tab-bar-format-global
+                    ))
+  (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
+  :config
+  (defun +tab-bar-tab-name-format (tab i)
+    (let ((current-p (eq (car tab) 'current-tab)))
+      (propertize
+       (concat
+        (propertize " " 'display '(space :width (8)))
+        (alist-get 'name tab)
+        ;; (or (and tab-bar-close-button-show
+        ;;          (not (eq tab-bar-close-button-show
+        ;;                   (if current-p 'non-selected 'selected)))
+        ;;          tab-bar-close-button)
+        ;;     "")
+        (propertize " " 'display '(space :width (8))))
+       'face (funcall tab-bar-tab-face-function tab))))
+  (defun +tab-bar-suffix ()
+    "Add empty space.
+This ensures that the last tab's face does not extend to the end
+of the tab bar."
+    " ")
+  )
+
 (use-package tabspaces
   :custom
+  (tab-bar-new-tab-choice "*scratch*")
   (tabspaces-use-filtered-buffers-as-default t)
-  (tabspaces-default-tab "home")
-  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
-  (tabspaces-keymap-prefix nil)
+  (tabspaces-default-tab "scratch")
+  (tabspaces-include-buffers '("*dashboard*" "*scratch*" "*Messages*"))
   (tabspaces-initialize-project-with-todo nil)
-  :general
+  ;;(tabspaces-keymap-prefix "SPC <tab>")
+  :general-config
   (+leader-def
-    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
+    "<tab>b" #'tabspaces-switch-to-buffer
+    "<tab>k" #'tabspaces-kill-buffers-close-workspace
     "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>s" #'tabspaces-switch-or-create-workspace
+    "<tab>t" #'tabspaces-switch-buffer-and-tab
     "<tab>n" #'tab-bar-switch-to-next-tab
     "<tab>p" #'tab-bar-switch-to-prev-tab)
   (+leader-def
     "pp" #'tabspaces-open-or-create-project-and-workspace)
-  :init
-  (tabspaces-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab)
+  :hook
+  (on-init-ui . tabspaces-mode)
+  :config
+  ;; (tabspaces-mode 1)
+  (tab-bar-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -584,8 +587,8 @@ of the tab bar."
   :custom
   (savehist-save-minibuffer-history t)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring))
+  (history-delete-duplicates t)
   :config
-  (setq history-delete-duplicates t)
   (savehist-mode)
 )
 
@@ -594,6 +597,7 @@ of the tab bar."
       completion-ignore-case t)
 
 (use-package orderless
+  :after vertico
   :demand t
   :preface
   (defun basic-remote-try-completion (string table pred point)
@@ -631,12 +635,11 @@ of the tab bar."
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
-  :general
+  :general-config
   (+leader-def
     "." '(vertico-repeat-select :wk "Resume previous search"))
   :hook
-  ;; (after-init . vertico-mode)
-  (elpaca-after-init . vertico-mode)
+  (on-first-input . vertico-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   (minibuffer-setup . vertico-repeat-save))
 
@@ -649,6 +652,8 @@ of the tab bar."
   (marginalia-mode 1))
 
 (use-package consult
+  :after vertico
+  :demand t
   :bind
   ([remap bookmark-jump]                 . consult-bookmark)
   ([remap evil-show-marks]               . consult-mark)
@@ -662,33 +667,28 @@ of the tab bar."
   ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
   ([remap yank-pop]                      . consult-yank-pop)
   ([remap project-switch-to-buffer]      . consult-project-buffer)
-  :preface
-  (defun consult-ripgrep-in-directory (dir)
-    (interactive "DRipgrep in: ")
-    (consult-ripgrep dir))
-  :general
+  :bind
+  (:map minibuffer-local-map
+        ("M-r" . consult-history))
+  :general-config
   (+leader-def
     "sb"  #'consult-line
     "sB"  #'consult-line-multi
     "sf"  #'consult-find
     "sp"  #'consult-ripgrep
-    "sP"  #'consult-ripgrep-in-directory
     "hI"  #'consult-info)
-  :bind
-  (:map minibuffer-local-map
-        ("M-r" . consult-history))
   :custom
   (xref-show-xrefs-function #'consult-xref)
   (xref-show-definitions-function #'consult-xref)
   (consult-narrow-key "<")
-  :init
+  :config
   (setq completion-in-region-function
         (lambda (&rest args)
           (apply (if vertico-mode
                      #'consult-completion-in-region
                    #'completion--in-region)
                  args)))
-)
+  )
 
 (use-package consult-dir
   :bind (("C-x C-d" . consult-dir)
@@ -715,10 +715,10 @@ any directory proferred by `consult-dir'."
                       (consult-dir--pick "Switch directory: ")))))
        (t (eshell/cd (if regexp (eshell-find-previous-directory regexp)
                        (completing-read "cd: " eshell-dirs)))))))
-  :general
-  (:states '(normal visual insert)
-           :keymaps 'eshell-mode-map
-           "M-C-t" #'eshell/z)
+  ;; :general
+  ;; (:states '(normal visual insert)
+  ;;          :keymaps 'eshell-mode-map
+  ;;          "M-C-t" #'eshell/z)
   )
 
 (use-package embark
@@ -809,15 +809,21 @@ targets."
  make-backup-files nil)
 
 ;; But turn on auto-save, so we have a fallback in case of crashes or lost data.
-(setq auto-save-default t
-      auto-save-include-big-deletions t
-      auto-save-list-file-prefix (expand-file-name "auto-save/" user-emacs-directory)
-      tramp-auto-save-directory  (expand-file-name "tramp-auto-save/" user-emacs-directory)
-      auto-save-file-name-transforms
-      (list (list "\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
-                  ;; Prefix tramp autosaves to prevent conflicts with local ones
-                  (concat auto-save-list-file-prefix "tramp-\\2") t)
-            (list ".*" auto-save-list-file-prefix t)))
+(use-package files
+  :ensure nil
+  :hook
+  (on-first-file . auto-save-visited-mode)
+  :init
+  (setq auto-save-default t
+        auto-save-include-big-deletions t
+        auto-save-list-file-prefix (expand-file-name "auto-save/" user-emacs-directory)
+        tramp-auto-save-directory  (expand-file-name "tramp-auto-save/" user-emacs-directory)
+        auto-save-file-name-transforms
+        (list (list "\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
+                    ;; Prefix tramp autosaves to prevent conflicts with local ones
+                    (concat auto-save-list-file-prefix "tramp-\\2") t)
+              (list ".*" auto-save-list-file-prefix t)))
+  )
 
 ;; Auto load files changed on disk
 (use-package autorevert
@@ -830,6 +836,8 @@ targets."
   (on-first-file . global-auto-revert-mode))
 
 ;;  funtions put to custom lisp file
+
+;;;###autoload
 (defun +delete-this-file (&optional forever)
   "Delete the file associated with `current-buffer'.
 If FOREVER is non-nil, the file is deleted without being moved to trash."
@@ -840,6 +848,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     (delete-file file (not forever))
     (kill-buffer (current-buffer))))
 
+;;;###autoload
 (defun +rename-this-file ()
   "Rename the current buffer and file it is visiting."
   (interactive)
@@ -895,15 +904,18 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (add-hook 'kill-buffer-query-functions #'bury-or-kill)
 
 (use-package persistent-scratch
-  :config
-  (persistent-scratch-setup-default))
+  :hook
+  (on-init-ui . persistent-scratch-setup-default))
 
 (use-package recentf
   :ensure nil
+  :defer 1
   :init
   (setq
-   recentf-max-saved-items 100
-   recentf-case-fold-search t
+   recentf-filename-handlers '(abbreviate-file-name)
+   recentf-max-menu-items 0
+   recentf-max-saved-items 300
+   recentf-auto-cleanup 'never
    recentf-exclude
    `(,(rx (* any)
           (or
@@ -917,7 +929,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
      ,(rx "/"
           (or "rsync" "ssh" "tmp" "yadm" "sudoedit" "sudo")
           (* any))))
-  (recentf-mode 1))
+  :config
+  (quiet! (recentf-mode 1)))
 
 (use-package dired
   :ensure nil
@@ -957,7 +970,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
             ("\\.\\(?:mp3\\|flac\\)\\'" ,cmd)
             ("\\.html?\\'" ,cmd)
             ("\\.md\\'" ,cmd))))
-)
+  )
 
 (use-package dired-aux
   :ensure nil
@@ -965,31 +978,49 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (dired-create-destination-dirs 'always)
   (dired-do-revert-buffer t)
-  (dired-vc-rename-file t))
+  (dired-vc-rename-file t)
+  :config
+  (setf (alist-get "\\.tar\\.gz\\'" dired-compress-file-suffixes)
+        '("" "tar -xzf %i --one-top-level")))
 
 ;; Dired fontlock
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
-(setq
+;;(setq
  ;; Fast scrolling
- fast-but-imprecise-scrolling t
+ ;; fast-but-imprecise-scrolling t
  ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues
- auto-window-vscroll nil
+ ;; auto-window-vscroll nil
  ;; Keep the point in the same position while scrolling
- scroll-preserve-screen-position t
+ ;; scroll-preserve-screen-position t
  ;; Do not move cursor to the center when scrolling
- scroll-conservatively 101
+ ;; scroll-conservatively 101
  ;; Scroll at a margin
- scroll-margin 3)
+ ;; scroll-margin 3
+ ;; )
 
 ;; Horizontal scrolling
-(setq hscroll-step 1
-      hscroll-margin 2)
+;; (setq hscroll-step 1
+;;       hscroll-margin 2)
 
 ;; Fluid scrolling
-(setq pixel-scroll-precision-use-momentum t)
-(pixel-scroll-precision-mode 1)
+;; (setq pixel-scroll-precision-use-momentum t)
+;; (pixel-scroll-precision-mode 1)
+
+(use-package pixel-scroll
+  :ensure nil
+  :init
+  (setq auto-window-vscroll nil)
+  (setq hscroll-margin 5)
+  (setq hscroll-step 5)
+  (setq scroll-margin 3)
+  (setq scroll-preserve-screen-position t)
+
+  (setq-default scroll-down-aggressively 0.01)
+  (setq-default scroll-up-aggressively 0.01)
+  :hook
+  ((prog-mode text-mode conf-mode) . pixel-scroll-precision-mode))
 
 ;; Stretch cursor to the glyph width
 (setq x-stretch-cursor t)
@@ -1025,8 +1056,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (setq-default truncate-lines t)
 (setq truncate-partial-width-windows nil)
+
 ;; Wrap long lines
-(global-visual-line-mode 1)
+(use-package visual-line-mode
+  :ensure nil
+  :hook
+  (on-first-buffer . global-visual-line-mode))
 
 (setq
  ;; Cull duplicates in the kill ring to reduce bloat and make the kill ring easier to peruse
@@ -1035,10 +1070,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
  save-interprogram-paste-before-kill t)
 
 (use-package evil
-  :defer .3
-  :init
-  (setq evil-want-keybinding nil)
+  :defer .2
+  ;; :init
+  ;; (setq evil-want-keybinding nil)
   :custom
+  (evil-want-keybinding nil)
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
   (evil-want-C-u-scroll t)
@@ -1051,7 +1087,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                                     evil-goto-definition-imenu
                                     evil-goto-definition-semantic
                                     evil-goto-definition-search))
-  :general
+  :general-config
   (+leader-def
     "w" '(:keymap evil-window-map :wk "window"))
   (:states 'motion
@@ -1071,19 +1107,20 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
   (evil-set-undo-system 'undo-fu)
   (evil-select-search-module 'evil-search-module 'evil-search)
-  (evil-mode 1))
+  (evil-mode 1)
+)
 
 (use-package evil-collection
   :after evil magit forge
   :custom
   (evil-collection-key-blacklist '("C-y"))
   :config
-  (evil-collection-init))
+  (evil-collection-init)
+  )
 
 (use-package evil-nerd-commenter
   :after evil
-  :commands evilnc-comment-operator
-  :general
+  :general-config
   (:states '(normal visual)
            "gc" #'evilnc-comment-operator))
 
@@ -1107,8 +1144,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-goggles-mode 1))
 
 (use-package avy
-  :commands evil-avy-goto-char-2
-  :general
+  :after evil
+  :general-config
   (:states '(normal)
            "s" #'evil-avy-goto-char-2)
   :custom
@@ -1200,12 +1237,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package yasnippet
   :after corfu
-  :init
-  (setq yas-verbosity 2)
-  :general
+  :general-config
   (+leader-def
     "is" '(yas-insert-snippet :wk "Snippet"))
   :config
+  (setq yas-verbosity 2)
   (yas-global-mode +1)
   (define-key yas-minor-mode-map [(tab)] nil)
   (define-key yas-minor-mode-map (kbd "TAB") nil)
@@ -1235,7 +1271,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq text-mode-ispell-word-completion nil)
 
 (use-package cape
-  :init
+  :after corfu
+  :config
   (add-to-list 'completion-at-point-functions #'cape-file)
   (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
@@ -1291,7 +1328,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package magit
   :defer .3
-  :general
+  :general-config
   (+leader-def :infix "g"
     "b" #'magit-branch-checkout
     "B" #'magit-blame-addition
@@ -1313,118 +1350,117 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (magit-bury-buffer-function #'magit-mode-quit-window)
 
   :config
-    (add-hook 'magit-process-mode-hook #'goto-address-mode)
-    (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
+  (add-hook 'magit-process-mode-hook #'goto-address-mode)
+  (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
-    (defun +magit-display-buffer-fn (buffer)
-      "Same as `magit-display-buffer-traditional', except...
+  (defun +magit-display-buffer-fn (buffer)
+    "Same as `magit-display-buffer-traditional', except...
 
   - If opened from a commit window, it will open below it.
   - Magit process windows are always opened in small windows below the current.
   - Everything else will reuse the same window."
-      (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
-        (display-buffer
-         buffer (cond
-                 ((and (eq buffer-mode 'magit-status-mode)
-                       (get-buffer-window buffer))
-                  '(display-buffer-reuse-window))
-                 ;; Any magit buffers opened from a commit window should open below
-                 ;; it. Also open magit process windows below.
-                 ((or (bound-and-true-p git-commit-mode)
-                      (eq buffer-mode 'magit-process-mode))
-                  (let ((size (if (eq buffer-mode 'magit-process-mode)
-                                  0.35
-                                0.7)))
-                    `(display-buffer-below-selected
-                      . ((window-height . ,(truncate (* (window-height) size)))))))
+    (let ((buffer-mode (buffer-local-value 'major-mode buffer)))
+      (display-buffer
+       buffer (cond
+               ((and (eq buffer-mode 'magit-status-mode)
+                     (get-buffer-window buffer))
+                '(display-buffer-reuse-window))
+               ;; Any magit buffers opened from a commit window should open below
+               ;; it. Also open magit process windows below.
+               ((or (bound-and-true-p git-commit-mode)
+                    (eq buffer-mode 'magit-process-mode))
+                (let ((size (if (eq buffer-mode 'magit-process-mode)
+                                0.35
+                              0.7)))
+                  `(display-buffer-below-selected
+                    . ((window-height . ,(truncate (* (window-height) size)))))))
 
-                 ;; Everything else should reuse the current window.
-                 ((or (not (derived-mode-p 'magit-mode))
-                      (not (memq (with-current-buffer buffer major-mode)
-                                 '(magit-process-mode
-                                   magit-revision-mode
-                                   magit-diff-mode
-                                   magit-stash-mode
-                                   magit-status-mode))))
-                  '(display-buffer-same-window))
+               ;; Everything else should reuse the current window.
+               ((or (not (derived-mode-p 'magit-mode))
+                    (not (memq (with-current-buffer buffer major-mode)
+                               '(magit-process-mode
+                                 magit-revision-mode
+                                 magit-diff-mode
+                                 magit-stash-mode
+                                 magit-status-mode))))
+                '(display-buffer-same-window))
 
-                 ('(+magit--display-buffer-in-direction))))))
+               ('(+magit--display-buffer-in-direction))))))
 
-    (defvar +magit-open-windows-in-direction 'right)
+  (defvar +magit-open-windows-in-direction 'right)
 
-    (defun +magit--display-buffer-in-direction (buffer alist)
-      "`display-buffer-alist' handler that opens BUFFER in a direction.
+  (defun +magit--display-buffer-in-direction (buffer alist)
+    "`display-buffer-alist' handler that opens BUFFER in a direction.
 
   This differs from `display-buffer-in-direction' in one way: it will try to use a
   window that already exists in that direction. It will split otherwise."
-      (let ((direction (or (alist-get 'direction alist)
-                           +magit-open-windows-in-direction))
-            (origin-window (selected-window)))
-        (if-let (window (window-in-direction direction))
+    (let ((direction (or (alist-get 'direction alist)
+                         +magit-open-windows-in-direction))
+          (origin-window (selected-window)))
+      (if-let (window (window-in-direction direction))
+          (unless magit-display-buffer-noselect
+            (select-window window))
+        (if-let (window (and (not (one-window-p))
+                             (window-in-direction
+                              (pcase direction
+                                (`right 'left)
+                                (`left 'right)
+                                ((or `up `above) 'down)
+                                ((or `down `below) 'up)))))
             (unless magit-display-buffer-noselect
               (select-window window))
-          (if-let (window (and (not (one-window-p))
-                               (window-in-direction
-                                (pcase direction
-                                  (`right 'left)
-                                  (`left 'right)
-                                  ((or `up `above) 'down)
-                                  ((or `down `below) 'up)))))
-              (unless magit-display-buffer-noselect
-                (select-window window))
-            (let ((window (split-window nil nil direction)))
-              (when (and (not magit-display-buffer-noselect)
-                         (memq direction '(right down below)))
-                (select-window window))
-              (display-buffer-record-window 'reuse window buffer)
-              (set-window-buffer window buffer)
-              (set-window-parameter window 'quit-restore (list 'window 'window origin-window buffer))
-              (set-window-prev-buffers window nil))))
-        (unless magit-display-buffer-noselect
-          (switch-to-buffer buffer t t)
-          (selected-window))))
+          (let ((window (split-window nil nil direction)))
+            (when (and (not magit-display-buffer-noselect)
+                       (memq direction '(right down below)))
+              (select-window window))
+            (display-buffer-record-window 'reuse window buffer)
+            (set-window-buffer window buffer)
+            (set-window-parameter window 'quit-restore (list 'window 'window origin-window buffer))
+            (set-window-prev-buffers window nil))))
+      (unless magit-display-buffer-noselect
+        (switch-to-buffer buffer t t)
+        (selected-window))))
 
-    (setq transient-display-buffer-action '(display-buffer-below-selected)
-          magit-display-buffer-function #'+magit-display-buffer-fn
-          magit-bury-buffer-function #'magit-mode-quit-window)
+  (setq transient-display-buffer-action '(display-buffer-below-selected)
+        magit-display-buffer-function #'+magit-display-buffer-fn
+        magit-bury-buffer-function #'magit-mode-quit-window)
 
-    ;; for dotfiles
-    (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
-    (setq dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
-    (defun dotfiles-magit-status ()
-      "calls magit status on a git bare repo with set appropriate bare-git-dir and bare-work-tree"
-      (interactive)
-      (require 'magit-git)
-      (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
-        (call-interactively 'magit-status)))
+  ;; for dotfiles
+  (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
+  (setq dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
+  (defun dotfiles-magit-status ()
+    "calls magit status on a git bare repo with set appropriate bare-git-dir and bare-work-tree"
+    (interactive)
+    (require 'magit-git)
+    (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
+      (call-interactively 'magit-status)))
 
-    (defun +magit-process-environment (env)
-      "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
+  (defun +magit-process-environment (env)
+    "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
     https://github.com/magit/magit/issues/460 (@cpitclaudel)."
-      (let ((default (file-name-as-directory (expand-file-name default-directory)))
-            (home (expand-file-name "~/")))
-        (when (string= default home)
-          (let ((gitdir (expand-file-name "~/.cfg")))
-            (push (format "GIT_WORK_TREE=%s" home) env)
-            (push (format "GIT_DIR=%s" gitdir) env))))
-      env)
+    (let ((default (file-name-as-directory (expand-file-name default-directory)))
+          (home (expand-file-name "~/")))
+      (when (string= default home)
+        (let ((gitdir (expand-file-name "~/.cfg")))
+          (push (format "GIT_WORK_TREE=%s" home) env)
+          (push (format "GIT_DIR=%s" gitdir) env))))
+    env)
 
-    (advice-add 'magit-process-environment
-                :filter-return #'+magit-process-environment)
+  (advice-add 'magit-process-environment
+              :filter-return #'+magit-process-environment)
   )
 
 (use-package forge
   :after magit
-  :demand t
   :custom
   (forge-add-default-bindings nil)
   :config
   (transient-append-suffix 'forge-dispatch "c f"
     '("c m" "merge pull request" forge-merge))
-  :general
-  (+leader-def
-    :keymaps '(magit-mode-map)
-    "gw" 'forge-browse)
+  :general-config
+  ;; (+leader-def
+  ;;   :keymaps '(magit-mode-map)
+  ;;   "gw" 'forge-browse)
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
     "q" #'kill-current-buffer)
@@ -1432,8 +1468,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package smerge-mode
   :ensure nil
-  :commands +smerge-hydra/body
-  :general
+  :after magit
+  ;; :commands +smerge-hydra/body
+  :general-config
   (+leader-def
     "gm" '(+smerge-hydra/body :wk "smerge"))
   :config
@@ -1516,14 +1553,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package editorconfig
-  :general
+  :general-config
   (+leader-def
     "fc" #'editorconfig-find-current-editorconfig)
   :hook (on-first-file . editorconfig-mode))
 
 (use-package apheleia
   :commands apheleia-mode
-  :general
+  :general-config
   (+leader-def
     "cf" '(apheleia-format-buffer :wk "Format buffer"))
   :config
@@ -1532,7 +1569,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
       '(ruby-standard))
-  (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
+  ;; (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
   ;; (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
   )
 
@@ -1578,7 +1615,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                                   :keymaps 'local
                                   "K" 'lsp-describe-thing-at-point)))
   (lsp-completion-mode . +update-completions-list)
-  :general
+  :general-config
   (+leader-def
     :keymaps 'lsp-mode-map
     :infix "c"
@@ -1594,13 +1631,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package consult-lsp
-  :general
+  :after (consult lsp-mode)
+  :general-config
   (+leader-def :keymaps 'lsp-mode-map
     "cj" '(consult-lsp-symbols :wk "Workspace symbols")
     "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
 
 (use-package flycheck
-  :preface
+  :config
   (defun +flycheck-eldoc (callback &rest _ignored)
     "Print flycheck messages at point by calling CALLBACK."
     (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
@@ -1638,7 +1676,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :mode "\\.go\\'"
   :custom
   (go-ts-mode-indent-offset 4)
-  :init
+  :preface
   (defun +go-mode-setup ()
     (add-hook 'before-save-hook 'lsp-organize-imports nil t)
     (+add-pairs '((?` . ?`))))
@@ -1649,7 +1687,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package gotest
-  :general
+  :after go-ts-mode
+  :general-config
   (+local-leader-def
     :keymaps 'go-ts-mode-map
     "b" '(:ignore t :wk "build")
@@ -1705,8 +1744,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   )
 
 (use-package web-mode
-  ;; :defer .5
-  ;; :demand t
   :custom
   (web-mode-enable-html-entities-fontification t)
   (web-mode-markup-indent-offset 2)
@@ -1745,8 +1782,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package pytest
   ;; :vc (:fetcher github :repo ionrock/pytest-el)
+  :after python-ts-mode
   :ensure (:host github :repo "ionrock/pytest-el")
-  :general
+  :general-config
   (+local-leader-def
     :keymaps '(python-ts-mode-map)
     "t" '(nil :wk "test")
@@ -1771,7 +1809,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :hook ((ruby-mode ruby-ts-mode) . inf-ruby-minor-mode)
   :custom
   (inf-ruby-console-environment "development")
-  :general
+  :general-config
   (:states '(normal visual insert)
            :keymaps 'inf-ruby-mode-map
            "M-r" #'consult-history)
@@ -1791,7 +1829,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package rspec-mode
   :mode ("/\\.rspec\\'" . text-mode)
-  :general
+  :general-config
   (+local-leader-def
     :keymaps '(rspec-mode-map)
     "t" '(nil :wk "test")
@@ -1806,7 +1844,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "te" #'rspec-toggle-example-pendingness))
 
 (use-package bundler
-  :general
+  :after ruby-ts-mode
+  :general-config
   (+local-leader-def
     :keymaps '(ruby-ts-mode-map)
     "b" '(nil :wk "bundle")
@@ -1818,9 +1857,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "bo" #'bundle-open))
 
 (use-package rake
+  :after ruby-ts-mode
   :custom
   (rake-completion-system 'default)
-  :general
+  :general-config
   (+local-leader-def
     :keymaps '(ruby-ts-mode-map)
     "rk" #'rake))
@@ -1981,7 +2021,7 @@ is available as part of \"future history\"."
   (ruby-ts-mode . apheleia-mode)
   ;; (ruby-ts-mode . eglot-ensure)
   (ruby-ts-mode . lsp-deferred)
-  :general
+  :general-config
   (+local-leader-def
     :keymaps '(ruby-ts-mode-map inf-ruby-mode-map erb-mode-map)
     "r" '(:keymap rails-command-map :wk "rails"))
@@ -1991,7 +2031,7 @@ is available as part of \"future history\"."
   :ensure nil
   :hook
   (emacs-lisp-mode . apheleia-mode)
-  :general
+  :general-config
   (+local-leader-def
     :keymaps '(emacs-lisp-mode-map lisp-interaction-mode-map ielm-map lisp-mode-map racket-mode-map scheme-mode-map)
     "p" #'check-parens)
@@ -2016,12 +2056,14 @@ is available as part of \"future history\"."
   :hook
   (emacs-lisp-mode . eros-mode))
 
+(use-package edit-indirect)
 (use-package markdown-mode
   :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
   :hook
   (markdown-mode . variable-pitch-mode)
   (markdown-mode . apheleia-mode)
   :config
+  ;; (add-to-list 'org-src-lang-modes '("md" . markdown))
 
   (set-face-attribute 'markdown-code-face nil :inherit 'fixed-pitch)
   (set-face-attribute 'markdown-inline-code-face nil :inherit 'fixed-pitch)
@@ -2033,7 +2075,14 @@ is available as part of \"future history\"."
   (set-face-attribute 'markdown-html-entity-face nil :family (face-attribute 'fixed-pitch :family))
   (set-face-attribute 'markdown-html-attr-name-face nil :family (face-attribute 'fixed-pitch :family))
   (set-face-attribute 'markdown-html-attr-value-face nil :family (face-attribute 'fixed-pitch :family))
-
+  :general-config
+  (+local-leader-def
+    :keymaps '(markdown-mode-map)
+    "'" #'markdown-edit-code-block
+    "o" #'markdown-open
+    "p" #'markdown-preview
+    "e" #'markdown-export
+    )
   :custom
   (markdown-command "multimarkdown")
   (markdown-asymmetric-header t)
@@ -2045,7 +2094,18 @@ is available as part of \"future history\"."
   (markdown-gfm-additional-languages '("sh"))
   (markdown-italic-underscore t)
   (markdown-hide-urls t)
-  (markdown-make-gfm-checkboxes-buttons t))
+  (markdown-make-gfm-checkboxes-buttons t)
+  (markdown-content-type "application/xhtml+xml")
+  (markdown-css-paths
+        '("https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.min.css"
+          "https://cdn.jsdelivr.net/gh/highlightjs/cdn-release/build/styles/github.min.css"))
+  (markdown-xhtml-header-content
+        (concat "<meta name='viewport' content='width=device-width, initial-scale=1, shrink-to-fit=no'>"
+                "<style> body { box-sizing: border-box; max-width: 740px; width: 100%; margin: 40px auto; padding: 0 10px; } </style>"
+                "<script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
+                "<script src='https://cdn.jsdelivr.net/gh/highlightjs/cdn-release/build/highlight.min.js'></script>"
+                "<script>document.addEventListener('DOMContentLoaded', () => { document.body.classList.add('markdown-body'); document.querySelectorAll('pre[lang] > code').forEach((code) => { code.classList.add(code.parentElement.lang); }); document.querySelectorAll('pre > code').forEach((code) => { hljs.highlightBlock(code); }); });</script>"))
+  )
 
 (use-package yaml-ts-mode
   :ensure nil
@@ -2086,7 +2146,6 @@ is available as part of \"future history\"."
   :hook
   (csv-mode . csv-align-mode))
 
-(setq ansi-color-for-comint-mode t)
 ;; If a shell command never outputs anything, don't show it.
 (customize-set-variable 'async-shell-command-display-buffer nil)
 (customize-set-variable 'shell-command-prompt-show-cwd t)
@@ -2101,8 +2160,8 @@ is available as part of \"future history\"."
     (async-shell-command cmd)))
 
 ;;;###autoload
-(defun project-or-cwd-async-shell-command ()
-  "Run `async-shell-command' in the current project's root directory."
+(defun project-or-cwd-async-shell-command (&optional dir)
+  "Run `async-shell-command' in the current project's root directory or in the current directory."
   (declare (interactive-only async-shell-command))
   (interactive)
   (let ((project (project-current)))
@@ -2111,6 +2170,12 @@ is available as part of \"future history\"."
           (call-interactively #'async-shell-command))
       (call-interactively #'async-shell-command))))
 
+;;;###autoload
+(defun async-shell-command-in-directory (dir)
+  "Run `async-shell-command' in the selected directory."
+  (interactive "DAsync shell command in: ")
+  (let ((default-directory dir))
+    (call-interactively #'async-shell-command)))
 
 ;;;###autoload
 (defun project-or-cwd-async-shell-command-from-history ()
@@ -2135,6 +2200,20 @@ current project's root directory."
          )
     (async-shell-command command)))
 
+;;;###autoload
+(defun +async-shell-command (&optional p)
+  "Run `async-shell-command' in the current project's root directory or in current directory."
+  (interactive "P")
+  (if p
+      (call-interactively #'async-shell-command-in-directory)
+    (project-or-cwd-async-shell-command)))
+
+;; (defun my-make-compile-command ()
+;;   (interactive)
+;;   (let ((command (read-string "Compile in sfsd: " "make ")))
+;;     (set (make-local-variable 'compile-command) command)
+;;     (compile command)))
+
 (use-package compile
   :ensure nil
   :preface
@@ -2150,6 +2229,7 @@ current project's root directory."
 
   :custom
   (compile-command "make ")
+  (compilation-read-command nil)
   (compilation-always-kill t)
   (compilation-ask-about-save nil)
   (compilation-scroll-output 'first-error)
@@ -2161,9 +2241,19 @@ compilation buffer."
     (concat "*" (downcase compilation-mode) "*"
             (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
   (setq project-compilation-buffer-name-function 'project-compilation-buffer-name)
-  (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter))
+
+  ;; (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+  )
+
+(use-package ansi-color
+  :ensure nil
+  :init
+  (setq ansi-color-for-comint-mode t)
+  :hook
+  (compilation-filter-hook . ansi-color-compilation-filter))
 
 (use-package shell-command-x
+  :defer .3
   :demand t
   :custom
   (shell-command-x-buffer-name-async-format "*shell:%a*")
@@ -2184,7 +2274,7 @@ compilation buffer."
 (use-package bash-completion
   :custom
   (bash-completion-use-separate-processes t)
-  :preface
+  :config
   (defun eshell-bash-completion-capf-nonexclusive ()
     (let ((compl (bash-completion-dynamic-complete-nocomint
                   (save-excursion (eshell-bol) (point))
@@ -2212,13 +2302,13 @@ compilation buffer."
       (if (and eat-buffer (not current-prefix-arg))
           (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
         (eat))))
-
   :config
   (evil-set-initial-state 'eat-mode 'insert)
   :general
   (+leader-def
     "ot" #'eat
     "pt" #'project-eat)
+  :general-config
   (:states '(normal visual)
            :keymaps 'eat-mode-map
            "<return>" #'evil-insert-resume)
@@ -2255,6 +2345,7 @@ compilation buffer."
   (+leader-def
     "oe"  #'eshell
     "oE"  #'+eshell-new)
+  :general-config
   (:states '(normal visual)
            :keymaps 'eshell-mode-map
            "<return>" #'evil-insert-resume)
@@ -2319,7 +2410,7 @@ compilation buffer."
   (eshell-mode . +eshell-setup))
 
 (use-package org
-  :defer .3
+  ;; :defer .3
   :custom
   (org-directory "~/Dropbox/org/")
   (org-hide-emphasis-markers t)
@@ -2334,7 +2425,6 @@ compilation buffer."
   (org-confirm-babel-evaluate nil)
   :config
   (require 'org-indent)
-
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
   (dolist (face '(org-table org-list-dt org-tag org-quote
                             org-code org-link org-todo org-formula
@@ -2346,7 +2436,7 @@ compilation buffer."
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
 
   ;; (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
-  :general
+  :general-config
   (+local-leader-def
     :keymaps '(org-mode-map)
     "'" #'org-edit-special
@@ -2368,7 +2458,8 @@ compilation buffer."
   (org-mode . (lambda ()
     (evil-org-mode)
     (evil-define-key 'normal 'evil-org-mode
-        (kbd "<C-return>") 'org-insert-heading-after-current
+        ;; (kbd "<C-return>") 'org-insert-heading-after-current
+        (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading)
         (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
     ))
   :hook
@@ -2383,7 +2474,8 @@ compilation buffer."
   :custom
   (org-superstar-special-todo-items t)
   (org-superstar-remove-leading-stars t)
-  :hook (org-mode . org-superstar-mode))
+  :hook
+  (org-mode . org-superstar-mode))
 
 (use-package org-agenda
   :ensure nil
@@ -2406,7 +2498,7 @@ compilation buffer."
    `(("t" "Tasks" entry (file "tasks.org")
       "* TODO %?")
      ))
-  :general
+  :general-config
   (:keymaps 'org-agenda-mode-map
             "q" 'org-agenda-exit)
   :hook
@@ -2520,8 +2612,6 @@ compilation buffer."
 (add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
 (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h)
 
-
-
 (use-package exec-path-from-shell
   :config
   (setq exec-path-from-shell-arguments '("-l"))
@@ -2530,7 +2620,8 @@ compilation buffer."
   (exec-path-from-shell-initialize))
 
 (use-package envrc
-  :hook (on-first-file . envrc-global-mode))
+  :commands (envrc-global-mode)
+  :hook (on-first-buffer . envrc-global-mode))
 
 (use-package docker
   :init
@@ -2593,5 +2684,3 @@ compilation buffer."
 ;;      "https://weerasak.dev/feed.xml"
 ;;      "https://engineering.grab.com/feed.xml"
 ;;      )))
-
-
