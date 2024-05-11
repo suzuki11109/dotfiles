@@ -290,6 +290,7 @@
   (doom-modeline-env-version nil)
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
+  (doom-modeline-indent-info t)
   :config
   (line-number-mode 1)
   (column-number-mode 1)
@@ -725,10 +726,6 @@ any directory proferred by `consult-dir'."
                       (consult-dir--pick "Switch directory: ")))))
        (t (eshell/cd (if regexp (eshell-find-previous-directory regexp)
                        (completing-read "cd: " eshell-dirs)))))))
-  ;; :general
-  ;; (:states '(normal visual insert)
-  ;;          :keymaps 'eshell-mode-map
-  ;;          "M-C-t" #'eshell/z)
   )
 
 (use-package embark
@@ -821,8 +818,6 @@ targets."
 ;; But turn on auto-save, so we have a fallback in case of crashes or lost data.
 (use-package files
   :ensure nil
-  :hook
-  (on-first-file . auto-save-visited-mode)
   :init
   (setq auto-save-default t
         auto-save-include-big-deletions t
@@ -1029,7 +1024,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Use only spaces
 (setq-default indent-tabs-mode nil)
 ;; Tab width 8 is too long
-(setq-default tab-width 4)
+(setq-default tab-width 2)
 ;; Delete trailing whitespaces on save
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
 ;; Use single space between sentences
@@ -1580,7 +1575,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (lsp-enable-text-document-color nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
-  ;; (lsp-modeline-code-action-fallback-icon "󰌶")
   (lsp-auto-execute-action nil)
   (lsp-eldoc-enable-hover nil)
   (lsp-disabled-clients '(rubocop-ls))
@@ -1660,6 +1654,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (go-ts-mode-indent-offset 4)
   :preface
   (defun +go-mode-setup ()
+    (setq tab-width 4)
     (add-hook 'before-save-hook 'lsp-organize-imports nil t)
     (+add-pairs '((?` . ?`))))
   :hook
@@ -1698,31 +1693,38 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (css-ts-mode . apheleia-mode))
 
 (use-package emmet-mode
+  :custom
+  (emmet-indentation 2)
+  :config
+  (add-to-list 'emmet-jsx-major-modes 'jtsx-tsx-mode)
+  (add-to-list 'emmet-jsx-major-modes 'jtsx-jsx-mode)
   :hook
+  ((jtsx-tsx-mode jtsx-jsx-mode) . emmet-mode)
   (web-mode . emmet-mode))
 
 (use-package jtsx
   :mode (("\\.jsx?\\'" . jtsx-jsx-mode)
-         ("\\.tsx?\\'" . jtsx-tsx-mode))
+         ("\\.tsx\\'" . jtsx-tsx-mode)
+         ("\\.ts\\'" . jtsx-typescript-mode))
   :commands jtsx-install-treesit-language
   :custom
   (js-chain-indent t)
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
+  ;; :general-config
+  ;; (:states '(motion)
+  ;;          "%" 'jtsx-)
   :hook
-  (jtsx-tsx-mode . lsp-deferred)
-  (jtsx-tsx-mode . apheleia-mode)
-  (jtsx-jsx-mode . lsp-deferred)
-  (jtsx-jsx-mode . apheleia-mode)
+  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
+                                                          (+add-pairs '((?` . ?`)))))
+  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . lsp-deferred)
+  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . apheleia-mode)
   ;; (jtsx-jsx-mode . (lambda ()
-  ;;                    (yas-activate-extra-mode 'js-mode)
-  ;;                    (yas-activate-extra-mode '+web-react-mode)))
+  ;;                    (yas-activate-extra-mode 'js-ts-mode))
+  ;;                    ;; (yas-activate-extra-mode '+web-react-mode))
+  ;;                )
   ;; (jtsx-tsx-mode . (lambda ()
   ;;                    (yas-activate-extra-mode 'typescript-tsx-mode)))
-  (jtsx-jsx-mode . (lambda ()
-                     (+add-pairs '((?` . ?`)))))
-  (jtsx-tsx-mode . (lambda ()
-                     (+add-pairs '((?` . ?`)))))
   )
 
 (use-package web-mode
@@ -1746,7 +1748,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'web-mode-engines-alist '("phoenix" . "\\.[lh]eex\\'"))
   :hook
   (web-mode . apheleia-mode)
-)
+  )
 
 (use-package auto-rename-tag
   :hook ((jtsx-jsx-mode . auto-rename-tag-mode)
@@ -2429,8 +2431,6 @@ current project's root directory."
     "ee"  'eval-last-sexp
     "er"  'eval-region
     "l" #'org-insert-link)
-  ;; (:keymaps 'org-mode-map
-  ;;           "C-<return>" #'org-insert-heading-after-current)
   :hook
   (org-mode . org-indent-mode)
   (org-mode . variable-pitch-mode))
