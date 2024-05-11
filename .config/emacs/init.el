@@ -93,10 +93,7 @@
         gcmh-auto-idle-delay-factor 10
         gcmh-high-cons-threshold (* 16 1024 1024))
   :hook
-  (elpaca-after-init . gcmh-mode)
-  ;; :config
-  ;; (gcmh-mode 1)
-  )
+  (elpaca-after-init . gcmh-mode))
 
 (use-package general
   :ensure nil
@@ -179,7 +176,10 @@
     "kl"  #'list-bookmarks
     "kd"  #'bookmark-delete
 
-    ;; "l"  '(nil :wk "package")
+    "l"  '(nil :wk "package")
+    "ll"  #'elpaca-manager
+    "lU"  #'elpaca-update-all
+    "ld"  #'elpaca-delete
 
     "m"   '(nil :wk "mode-specific")
 
@@ -278,10 +278,6 @@
   (display-line-numbers-type 'relative)
   (display-line-numbers-widen t))
 
-;; Show line, columns number in modeline
-(line-number-mode 1)
-(column-number-mode 1)
-
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
@@ -295,6 +291,9 @@
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
   :config
+  (line-number-mode 1)
+  (column-number-mode 1)
+
   (doom-modeline-def-modeline 'main
     '(matches eldoc bar workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
     '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time " "))
@@ -303,55 +302,55 @@
     '(matches bar window-number modals buffer-info remote-host selection-info parrot)
     '(compilation misc-info battery irc mu4e gnus github debug minor-modes buffer-encoding major-mode process time))
 
-  (defun +modeline-flymake-counter (type)
-    "Compute number of diagnostics in buffer with TYPE's severity.
-TYPE is usually keyword `:error', `:warning' or `:note'."
-    (let ((count 0))
-      (dolist (d (flymake--project-diagnostics))
-        (when (= (flymake--severity type)
-                 (flymake--severity (flymake-diagnostic-type d)))
-          (cl-incf count)))
-      (when (cl-plusp count)
-        (number-to-string count))))
+;;   (defun +modeline-flymake-counter (type)
+;;     "Compute number of diagnostics in buffer with TYPE's severity.
+;; TYPE is usually keyword `:error', `:warning' or `:note'."
+;;     (let ((count 0))
+;;       (dolist (d (flymake--project-diagnostics))
+;;         (when (= (flymake--severity type)
+;;                  (flymake--severity (flymake-diagnostic-type d)))
+;;           (cl-incf count)))
+;;       (when (cl-plusp count)
+;;         (number-to-string count))))
 
-  (defvar +modeline-flymake-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map [mode-line down-mouse-1] 'flymake-show-project-diagnostics)
-      map)
-    "Keymap to display on Flymake indicator.")
+;;   (defvar +modeline-flymake-map
+;;     (let ((map (make-sparse-keymap)))
+;;       (define-key map [mode-line down-mouse-1] 'flymake-show-project-diagnostics)
+;;       map)
+;;     "Keymap to display on Flymake indicator.")
 
-  (defmacro +modeline-flymake-type (type &optional face)
-    "Return function that handles Flymake TYPE with stylistic INDICATOR and FACE."
-    `(defun ,(intern (format "+modeline-flymake-%s" type)) ()
-       (when-let ((count (+modeline-flymake-counter
-                          ,(intern (format ":%s" type)))))
-         (concat
-          (propertize count
-                      'face ',(or face type)
-                      'mouse-face 'mode-line-highlight
-                      ;; FIXME 2023-07-03: Clicking on the text with
-                      ;; this buffer and a single warning present, the
-                      ;; diagnostics take up the entire frame.  Why?
-                      'local-map +modeline-flymake-map
-                      'help-echo "mouse-1: projects diagnostics")))))
+;;   (defmacro +modeline-flymake-type (type &optional face)
+;;     "Return function that handles Flymake TYPE with stylistic INDICATOR and FACE."
+;;     `(defun ,(intern (format "+modeline-flymake-%s" type)) ()
+;;        (when-let ((count (+modeline-flymake-counter
+;;                           ,(intern (format ":%s" type)))))
+;;          (concat
+;;           (propertize count
+;;                       'face ',(or face type)
+;;                       'mouse-face 'mode-line-highlight
+;;                       ;; FIXME 2023-07-03: Clicking on the text with
+;;                       ;; this buffer and a single warning present, the
+;;                       ;; diagnostics take up the entire frame.  Why?
+;;                       'local-map +modeline-flymake-map
+;;                       'help-echo "mouse-1: projects diagnostics")))))
 
-  (+modeline-flymake-type error)
-  (+modeline-flymake-type warning)
-  (+modeline-flymake-type note success)
+;;   (+modeline-flymake-type error)
+;;   (+modeline-flymake-type warning)
+;;   (+modeline-flymake-type note success)
 
-  (defvar-local +modeline-flymake
-      `(:eval
-        (when (and (bound-and-true-p flymake-mode)
-                   (mode-line-window-selected-p))
-          ;; See the calls to the macro `+modeline-flymake-type'
-          '(:eval (s-join (propertize "/" 'face 'shadow)
-                          (remove nil (list (+modeline-flymake-error)
-                                            (+modeline-flymake-warning)
-                                            (+modeline-flymake-note)))))
-          ))
-    "Mode line construct displaying `flymake-mode-line-format'.
-Specific to the current window's mode line.")
-  (add-to-list 'mode-line-misc-info +modeline-flymake)
+;;   (defvar-local +modeline-flymake
+;;       `(:eval
+;;         (when (and (bound-and-true-p flymake-mode)
+;;                    (mode-line-window-selected-p))
+;;           ;; See the calls to the macro `+modeline-flymake-type'
+;;           '(:eval (s-join (propertize "/" 'face 'shadow)
+;;                           (remove nil (list (+modeline-flymake-error)
+;;                                             (+modeline-flymake-warning)
+;;                                             (+modeline-flymake-note)))))
+;;           ))
+;;     "Mode line construct displaying `flymake-mode-line-format'.
+;; Specific to the current window's mode line.")
+;;   (add-to-list 'mode-line-misc-info +modeline-flymake)
   :hook
   (on-init-ui . doom-modeline-mode))
 
@@ -414,6 +413,14 @@ Specific to the current window's mode line.")
   ("C-\\"  'popper-cycle)
   ("C-~" 'popper-toggle-type)
   :config
+  (defun +popup/quit-window ()
+    (interactive)
+    (if (eq popper-popup-status 'popup)
+        (popper-kill-latest-popup)
+      (quit-window)))
+
+  (global-set-key [remap quit-window] #'+popup/quit-window)
+
   (setq popper-window-height 0.40)
   (setq popper-group-function #'popper-group-by-project)
   (setq popper-reference-buffers
@@ -468,7 +475,7 @@ Specific to the current window's mode line.")
              project-switch-project
              project-switch-project-open-file)
   :custom
-  (project-switch-commands 'project-find-file)
+  (project-switch-commands 'project-dired)
   :general
   (+leader-def
     "p" '(:keymap project-prefix-map :wk "project")
@@ -530,9 +537,9 @@ of the tab bar."
   (tabspaces-default-tab "scratch")
   (tabspaces-include-buffers '("*dashboard*" "*scratch*" "*Messages*"))
   (tabspaces-initialize-project-with-todo nil)
-  ;;(tabspaces-keymap-prefix "SPC <tab>")
   :general-config
   (+leader-def
+    "<tab>1" #'tab-bar-switch-to-default-tab
     "<tab>b" #'tabspaces-switch-to-buffer
     "<tab>k" #'tabspaces-kill-buffers-close-workspace
     "<tab><tab>" #'tab-bar-switch-to-tab
@@ -545,7 +552,6 @@ of the tab bar."
   :hook
   (on-init-ui . tabspaces-mode)
   :config
-  ;; (tabspaces-mode 1)
   (tab-bar-mode 1)
   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
 
@@ -564,6 +570,10 @@ of the tab bar."
                                   :sort 'visibility
                                   :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+
+  (defun tab-bar-switch-to-default-tab ()
+    (interactive)
+    (tab-bar-switch-to-tab tabspaces-default-tab))
   )
 
 ;; Show current key-sequence in minibuffer
@@ -987,27 +997,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
 
-;;(setq
- ;; Fast scrolling
- ;; fast-but-imprecise-scrolling t
- ;; Do not adjust window-vscroll to view tall lines. Fixes some lag issues
- ;; auto-window-vscroll nil
- ;; Keep the point in the same position while scrolling
- ;; scroll-preserve-screen-position t
- ;; Do not move cursor to the center when scrolling
- ;; scroll-conservatively 101
- ;; Scroll at a margin
- ;; scroll-margin 3
- ;; )
-
-;; Horizontal scrolling
-;; (setq hscroll-step 1
-;;       hscroll-margin 2)
-
-;; Fluid scrolling
-;; (setq pixel-scroll-precision-use-momentum t)
-;; (pixel-scroll-precision-mode 1)
-
 (use-package pixel-scroll
   :ensure nil
   :init
@@ -1252,17 +1241,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package yasnippet-capf
   :after (yasnippet cape)
-  :ensure (:host github :repo "elken/yasnippet-capf")
-  ;; :vc (:fetcher github :repo elken/yasnippet-capf)
-  ;; :hook
-  ;; (prog-mode . (lambda ()
-  ;;                (setq-local completion-at-point-functions )))
-
-  ;; :init
-  ;; :config
-  ;; (setq completion-at-point-functions
-  ;;             (list #'yasnippet-capf))
-  )
+  :ensure (:host github :repo "elken/yasnippet-capf"))
 
 ;; Hitting TAB behavior
 (setq tab-always-indent nil)
@@ -1271,10 +1250,10 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq text-mode-ispell-word-completion nil)
 
 (use-package cape
-  :after corfu
-  :config
-  (add-to-list 'completion-at-point-functions #'cape-file)
-  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+   :after corfu
+   :config
+   (add-to-list 'completion-at-point-functions #'cape-file)
+   (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
 (use-package corfu
   :hook
@@ -1282,16 +1261,20 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (on-first-input . corfu-history-mode)
   :custom
   (corfu-auto t)
-  (corfu-auto-prefix 2)
   (corfu-auto-delay 0.1)
-  (corfu-min-width 25)
+  (corfu-auto-prefix 2)
+  (corfu-cycle t)
+  (corfu-max-width 120)
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
   (global-corfu-modes '(prog-mode text-mode conf-mode))
-  (corfu-cycle t)
+  :general-config
+  (:keymaps 'corfu-map
+            "<tab>" 'corfu-insert)
   :config
-  (advice-add 'evil-escape-func :after 'corfu-quit)
+  (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
+
   (add-to-list 'savehist-additional-variables 'corfu-history)
   (defun +corfu-combined-sort (candidates)
     "Sort CANDIDATES using both display-sort-function and corfu-sort-function."
@@ -1569,8 +1552,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
       '(ruby-standard))
-  ;; (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
-  ;; (add-to-list 'apheleia-mode-alist '(emacs-lisp-mode . lisp-indent))
+  (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
   )
 
 (setq xref-prompt-for-identifier nil)
@@ -2107,10 +2089,16 @@ is available as part of \"future history\"."
                 "<script>document.addEventListener('DOMContentLoaded', () => { document.body.classList.add('markdown-body'); document.querySelectorAll('pre[lang] > code').forEach((code) => { code.classList.add(code.parentElement.lang); }); document.querySelectorAll('pre > code').forEach((code) => { hljs.highlightBlock(code); }); });</script>"))
   )
 
+(use-package dockerfile-ts-mode
+  :ensure nil
+  ;; :mode "\\Dockerfile\\'"
+  :hook
+  (dockerfile-ts-mode . lsp-deferred))
+
 (use-package yaml-ts-mode
   :ensure nil
   :mode "\\.ya?ml\\'"
-  :init
+  :config
   (setq yaml-ts-mode--syntax-table
     (let ((table (make-syntax-table)))
         (modify-syntax-entry ?#  "<"  table)
@@ -2146,74 +2134,6 @@ is available as part of \"future history\"."
   :hook
   (csv-mode . csv-align-mode))
 
-;; If a shell command never outputs anything, don't show it.
-(customize-set-variable 'async-shell-command-display-buffer nil)
-(customize-set-variable 'shell-command-prompt-show-cwd t)
-
-;;;###autoload
-(defun async-shell-command-region (start end)
-  "Send region from START to END to `async-shell-command'and display the result."
-  (interactive "r")
-  (unless (region-active-p)
-    (user-error "No region"))
-  (let ((cmd (string-trim (buffer-substring-no-properties start end))))
-    (async-shell-command cmd)))
-
-;;;###autoload
-(defun project-or-cwd-async-shell-command (&optional dir)
-  "Run `async-shell-command' in the current project's root directory or in the current directory."
-  (declare (interactive-only async-shell-command))
-  (interactive)
-  (let ((project (project-current)))
-    (if project
-        (let ((default-directory (project-root (project-current t))))
-          (call-interactively #'async-shell-command))
-      (call-interactively #'async-shell-command))))
-
-;;;###autoload
-(defun async-shell-command-in-directory (dir)
-  "Run `async-shell-command' in the selected directory."
-  (interactive "DAsync shell command in: ")
-  (let ((default-directory dir))
-    (call-interactively #'async-shell-command)))
-
-;;;###autoload
-(defun project-or-cwd-async-shell-command-from-history ()
-  "Run `async-shell-command' with a choice from its command history in
-current project's root directory."
-  (interactive)
-  (let ((project (project-current)))
-    (if project
-        (let ((default-directory (project-root (project-current t))))
-          (call-interactively #'async-shell-command-from-history))
-      (call-interactively #'async-shell-command-from-history))))
-
-;;;###autoload
-(defun async-shell-command-from-history ()
-  "Run `async-shell-command' with a choice from its command history."
-  (interactive)
-  (let* ((command (completing-read (if shell-command-prompt-show-cwd
-                                       (format-message "Async shell command in `%s': "
-                                                       (abbreviate-file-name default-directory))
-                                     "Async shell command: ")
-                                   shell-command-history nil nil nil 'shell-command-history))
-         )
-    (async-shell-command command)))
-
-;;;###autoload
-(defun +async-shell-command (&optional p)
-  "Run `async-shell-command' in the current project's root directory or in current directory."
-  (interactive "P")
-  (if p
-      (call-interactively #'async-shell-command-in-directory)
-    (project-or-cwd-async-shell-command)))
-
-;; (defun my-make-compile-command ()
-;;   (interactive)
-;;   (let ((command (read-string "Compile in sfsd: " "make ")))
-;;     (set (make-local-variable 'compile-command) command)
-;;     (compile command)))
-
 (use-package compile
   :ensure nil
   :preface
@@ -2227,22 +2147,25 @@ current project's root directory."
             (call-interactively #'project-compile))
         (call-interactively #'compile))))
 
-  :custom
-  (compile-command "make ")
-  (compilation-read-command nil)
-  (compilation-always-kill t)
-  (compilation-ask-about-save nil)
-  (compilation-scroll-output 'first-error)
-  :config
   (defun project-compilation-buffer-name (compilation-mode)
     "Meant to be used for `compilation-buffer-name-function`.
 Argument COMPILATION-MODE is the name of the major mode used for the
 compilation buffer."
-    (concat "*" (downcase compilation-mode) "*"
+    (concat (+compilation-buffer-name-function compilation-mode)
             (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
-  (setq project-compilation-buffer-name-function 'project-compilation-buffer-name)
 
-  ;; (add-hook 'compilation-filter-hook 'ansi-color-compilation-filter)
+  (defun +compilation-buffer-name-function (arg)
+    "Rename buffer to whatever command was used.
+eg. *python main.py*"
+    (concat "*" compile-command "*"))
+
+  :custom
+  (compile-command "make ")
+  (compilation-always-kill t)
+  (compilation-ask-about-save nil)
+  (compilation-scroll-output 'first-error)
+  (project-compilation-buffer-name-function 'project-compilation-buffer-name)
+  (compilation-buffer-name-function '+compilation-buffer-name-function)
   )
 
 (use-package ansi-color
@@ -2252,39 +2175,100 @@ compilation buffer."
   :hook
   (compilation-filter-hook . ansi-color-compilation-filter))
 
-(use-package shell-command-x
-  :defer .3
-  :demand t
-  :custom
-  (shell-command-x-buffer-name-async-format "*shell:%a*")
-  (shell-command-x-buffer-name-format "*shell:%a*")
+(use-package shell
+  :ensure nil
   :bind
   ([remap shell-command] . project-or-cwd-async-shell-command)
   ("M-r" . project-or-cwd-async-shell-command-from-history)
+  :commands (+async-shell-command async-shell-command-region async-shell-command-in-directory project-or-cwd-async-shell-command-from-history project-or-cwd-async-shell-command)
+  :custom
+  ;; If a shell command never outputs anything, don't show it.
+  (async-shell-command-display-buffer nil)
+  (shell-command-prompt-show-cwd t)
+  :config
+  ;; (add-to-list 'comint-output-filter-functions 'ansi-color-process-output)
+  ;; (add-hook 'shell-mode-hook 'compilation-shell-minor-mode)
+
+  (defun +async-shell-command (&optional p)
+    "Run `async-shell-command' in the current project's root directory or in current directory."
+    (interactive "P")
+    (if p
+        (call-interactively #'async-shell-command-in-directory)
+      (project-or-cwd-async-shell-command)))
+
+  (defun async-shell-command-region (start end)
+    "Send region from START to END to `async-shell-command'and display the result."
+    (interactive "r")
+    (unless (region-active-p)
+      (user-error "No region"))
+    (let ((cmd (string-trim (buffer-substring-no-properties start end))))
+      (async-shell-command cmd)))
+
+  (defun project-or-cwd-async-shell-command (&optional dir)
+    "Run `async-shell-command' in the current project's root directory or in the current directory."
+    (declare (interactive-only async-shell-command))
+    (interactive)
+    (let ((project (project-current)))
+      (if project
+          (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'async-shell-command))
+        (call-interactively #'async-shell-command))))
+
+  (defun async-shell-command-in-directory (dir)
+    "Run `async-shell-command' in the selected directory."
+    (interactive "DAsync shell command in: ")
+    (let ((default-directory dir))
+      (call-interactively #'async-shell-command)))
+
+  (defun project-or-cwd-async-shell-command-from-history ()
+    "Run `async-shell-command' with a choice from its command history in
+current project's root directory."
+    (interactive)
+    (let ((project (project-current)))
+      (if project
+          (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'async-shell-command-from-history))
+        (call-interactively #'async-shell-command-from-history))))
+
+  (defun async-shell-command-from-history ()
+    "Run `async-shell-command' with a choice from its command history."
+    (interactive)
+    (let* ((command (completing-read (if shell-command-prompt-show-cwd
+                                         (format-message "Async shell command in `%s': "
+                                                         (abbreviate-file-name default-directory))
+                                       "Async shell command: ")
+                                     shell-command-history nil nil nil 'shell-command-history))
+           )
+      (async-shell-command command)))
+  )
+
+
+(use-package shell-command-x
+  :after shell
+  :custom
+  (shell-command-x-buffer-name-async-format "*shell:%a*")
+  (shell-command-x-buffer-name-format "*shell:%a*")
   :config
   (shell-command-x-mode 1))
-
-(defun +popup/quit-window ()
-  (interactive)
-  (if (eq popper-popup-status 'popup)
-      (popper-kill-latest-popup)
-    (quit-window)))
-(global-set-key [remap quit-window] #'+popup/quit-window)
 
 (use-package bash-completion
   :custom
   (bash-completion-use-separate-processes t)
-  :config
-  (defun eshell-bash-completion-capf-nonexclusive ()
-    (let ((compl (bash-completion-dynamic-complete-nocomint
-                  (save-excursion (eshell-bol) (point))
-                  (point) t)))
-      (when compl
-        (append compl '(:exclusive no)))))
+  ;; :config
+  ;; (defun eshell-bash-completion-capf-nonexclusive ()
+  ;;   (let ((compl (bash-completion-dynamic-complete-nocomint
+  ;;                 (save-excursion (eshell-bol) (point))
+  ;;                 (point) t)))
+  ;;     (when compl
+  ;;       (append compl '(:exclusive no)))))
   :hook
-  (on-first-buffer . bash-completion-setup) ;; shell-command completion setup
-  (eshell-mode . (lambda ()
-                   (setq-local completion-at-point-functions (list #'eshell-bash-completion-capf-nonexclusive))))
+  (elpaca-after-init . bash-completion-setup) ;; shell-command completion setup
+  ;; (eshell-mode . (lambda ()
+  ;;                  (setq-local completion-at-point-functions (list #'bash-completion-capf-nonexclusive))))
+  (eshell-mode .
+          (lambda ()
+            (add-hook 'completion-at-point-functions
+                      'bash-completion-capf-nonexclusive nil t)))
   )
 
 (use-package eat
@@ -2435,7 +2419,6 @@ compilation buffer."
   (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
 
-  ;; (define-key org-src-mode-map [remap evil-quit] 'org-edit-src-exit)
   :general-config
   (+local-leader-def
     :keymaps '(org-mode-map)
@@ -2446,6 +2429,8 @@ compilation buffer."
     "ee"  'eval-last-sexp
     "er"  'eval-region
     "l" #'org-insert-link)
+  ;; (:keymaps 'org-mode-map
+  ;;           "C-<return>" #'org-insert-heading-after-current)
   :hook
   (org-mode . org-indent-mode)
   (org-mode . variable-pitch-mode))
@@ -2454,18 +2439,15 @@ compilation buffer."
   :after (org evil)
   :init
   (setf evil-org-key-theme '(textobjects insert navigation additional todo))
+  :config
+  (evil-define-key '(normal insert) 'evil-org-mode
+      (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading-after-current)
+      (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
   :hook
-  (org-mode . (lambda ()
-    (evil-org-mode)
-    (evil-define-key 'normal 'evil-org-mode
-        ;; (kbd "<C-return>") 'org-insert-heading-after-current
-        (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading)
-        (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
-    ))
-  :hook
+  (org-mode . evil-org-mode)
   (org-agenda-mode . (lambda ()
-    (require 'evil-org-agenda)
-    (evil-org-agenda-set-keys))))
+                       (require 'evil-org-agenda)
+                       (evil-org-agenda-set-keys))))
 
 (use-package org-appear
   :hook (org-mode . org-appear-mode))
@@ -2558,6 +2540,9 @@ compilation buffer."
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
 
+(use-package bazel
+  :mode ("\\Tiltfile\\'" . bazel-starlark-mode))
+
 (setq help-window-select t)
 (setq echo-keystrokes-help nil)
 (use-package helpful
@@ -2636,6 +2621,12 @@ compilation buffer."
     "od" #'docker)
   )
 
+(use-package kubel
+  :commands (kubel))
+
+(use-package kubel-evil
+  :after kubel)
+
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")
 
@@ -2662,6 +2653,7 @@ compilation buffer."
     "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
     "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
 
+;;;###autoload
 (defun download-file (url)
   "Download file from URL."
   (interactive "sEnter URL: ")
