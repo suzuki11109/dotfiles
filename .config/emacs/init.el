@@ -1,15 +1,3 @@
-(defconst IS-MAC      (eq system-type 'darwin))
-(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
-
-(defmacro quiet! (&rest forms)
-  "Run FORMS without making any noise."
-  `(if init-file-debug
-       (progn ,@forms)
-     (let ((message-log-max nil))
-       (with-temp-message (or (current-message) "") ,@forms))))
-
-(setq use-package-enable-imenu-support t)
-
 (defvar elpaca-installer-version 0.7)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
@@ -53,6 +41,7 @@
 (elpaca elpaca-use-package
   (elpaca-use-package-mode)
   (setq elpaca-use-package-by-default t))
+(setq use-package-enable-imenu-support t)
 
 ;; Load general first for :general
 (use-package general
@@ -70,12 +59,23 @@
     :prefix "SPC m")
   )
 
-;; Make native compilation silent
-(when (native-comp-available-p)
-  (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
+(defconst IS-MAC      (eq system-type 'darwin))
+(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 
-;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer t)
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s with %d garbage collections."
+                     (format "%.03f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
+
+(defmacro quiet! (&rest forms)
+  "Run FORMS without making any noise."
+  `(if init-file-debug
+       (progn ,@forms)
+     (let ((message-log-max nil))
+       (with-temp-message (or (current-message) "") ,@forms))))
 
 (use-package on
   :ensure (on :host github :repo "ajgrf/on.el"))
@@ -91,9 +91,9 @@
   :init
   (setq gcmh-idle-delay 'auto
         gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold (* 16 1024 1024))
+        gcmh-high-cons-threshold (* 32 1024 1024))
   :hook
-  (elpaca-after-init . gcmh-mode))
+  (on-init-ui . gcmh-mode))
 
 (use-package general
   :ensure nil
@@ -235,6 +235,22 @@
   :hook
   (on-first-input . which-key-mode))
 
+;; Stretch cursor to the glyph width
+(setq x-stretch-cursor t)
+
+;; No blinking cursor
+(blink-cursor-mode -1)
+
+;; Remember cursor position in files
+(use-package saveplace
+  :ensure nil
+  :hook
+  (on-first-file . save-place-mode))
+
+;; No beep or blink
+(setq ring-bell-function #'ignore
+      visible-bell nil)
+
 (use-package catppuccin-theme
   :init
   (setq catppuccin-height-title-3 1.1)
@@ -276,7 +292,7 @@
   :hook ((org-mode markdown-mode) . (lambda () (display-line-numbers-mode 0)))
   :custom
   (display-line-numbers-type 'relative)
-  (display-line-numbers-widen t))
+  (display-line-numbers-width-start t))
 
 (use-package doom-modeline
   :custom
@@ -390,10 +406,6 @@
 ;; Confirm before quitting
 (setq confirm-kill-emacs #'y-or-n-p)
 
-;; No beep or blink
-(setq ring-bell-function #'ignore
-      visible-bell nil)
-
 ;; Window layout undo/redo
 (winner-mode 1)
 
@@ -405,7 +417,8 @@
   :custom
   (aw-scope 'frame)
   (aw-background nil)
-  (aw-dispatch-always t))
+  (aw-dispatch-always t)
+  )
 
 (use-package popper
   ;; :defer .3
@@ -580,18 +593,24 @@ of the tab bar."
 ;; Show current key-sequence in minibuffer
 (setq echo-keystrokes 0.02)
 
-;; Show recursion depth in minibuffer
-(minibuffer-depth-indicate-mode 1)
+(use-package minibuffer
+  :ensure nil
+  :hook
+  (minibuffer-setup . cursor-intangible-mode)
+  :config
+  ;; Show recursion depth in minibuffer
+  (minibuffer-depth-indicate-mode 1)
+  ;; Enable recursive calls to minibuffer
+  (setq enable-recursive-minibuffers t)
+  ;; Use y or n instead of yes or no
+  (setq use-short-answers t)
+  ;; Try to keep the cursor out of the read-only portions of the minibuffer.
+  (setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
 
-;; Enable recursive calls to minibuffer
-(setq enable-recursive-minibuffers t)
-
-;; Use y or n instead of yes or no
-(setq use-short-answers t)
-
-;; Try to keep the cursor out of the read-only portions of the minibuffer.
-(setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
-(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+  (setq read-file-name-completion-ignore-case t
+        read-buffer-completion-ignore-case t
+        completion-ignore-case t)
+  )
 
 (use-package savehist
   :ensure nil
@@ -602,10 +621,6 @@ of the tab bar."
   :config
   (savehist-mode)
 )
-
-(setq read-file-name-completion-ignore-case t
-      read-buffer-completion-ignore-case t
-      completion-ignore-case t)
 
 (use-package orderless
   :after vertico
@@ -776,8 +791,10 @@ targets."
       `(defun ,(intern (concat "+embark-ace-" (symbol-name fn))) ()
          (interactive)
          (with-demoted-errors "%s"
+           (require 'ace-window)
            (let ((aw-dispatch-always t))
              (aw-switch-to-window (aw-show-dispatch-help))
+             ;; (aw-switch-to-window (aw-select nil))
              (call-interactively (symbol-function ',fn)))))))
 
   (general-define-key
@@ -1006,21 +1023,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :hook
   ((prog-mode text-mode conf-mode) . pixel-scroll-precision-mode))
 
-;; Stretch cursor to the glyph width
-(setq x-stretch-cursor t)
-
-;; Remove visual indicators from non selected windows
-(setq-default cursor-in-non-selected-windows nil)
-
-;; No blinking cursor
-(blink-cursor-mode -1)
-
-;; Remember cursor position in files
-(use-package saveplace
-  :ensure nil
-  :hook
-  (on-first-file . save-place-mode))
-
 ;; Use only spaces
 (setq-default indent-tabs-mode nil)
 ;; Tab width 8 is too long
@@ -1214,8 +1216,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-outer-limit 48000000))
 
 (use-package undo-fu-session
-  :config
-  (global-undo-fu-session-mode)
+  :hook
+  ((prog-mode text-mode conf-mode) . undo-fu-session-mode)
   :custom
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 
@@ -1245,15 +1247,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq text-mode-ispell-word-completion nil)
 
 (use-package cape
-   :after corfu
-   :config
-   (add-to-list 'completion-at-point-functions #'cape-file)
-   (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+  :after corfu
+  :config
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
 (use-package corfu
   :hook
-  (on-first-input . global-corfu-mode)
   (on-first-input . corfu-history-mode)
+  ((prog-mode text-mode conf-mode) . corfu-mode)
+  (eshell-mode . corfu-enable-in-shell)
+  (minibuffer-setup . corfu-enable-in-minibuffer)
   :custom
   (corfu-auto t)
   (corfu-auto-delay 0.1)
@@ -1263,11 +1267,26 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
-  (global-corfu-modes '(prog-mode text-mode conf-mode))
   :general-config
   (:keymaps 'corfu-map
             "<tab>" 'corfu-insert)
   :config
+  (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
+
+  (defun corfu-enable-in-minibuffer ()
+    "Enable Corfu in the minibuffer."
+    (when (local-variable-p 'completion-at-point-functions)
+      ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
+      (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
+                  corfu-popupinfo-delay nil)
+      (corfu-mode 1)))
+
+  (defun corfu-enable-in-shell ()
+    (setq-local corfu-quit-no-match t
+                corfu-on-exact-match 'insert
+                corfu-auto nil)
+    (corfu-mode 1))
+
   (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
 
   (add-to-list 'savehist-additional-variables 'corfu-history)
@@ -2166,16 +2185,10 @@ eg. *python main.py*"
   (compilation-always-kill t)
   (compilation-ask-about-save nil)
   (compilation-scroll-output 'first-error)
-  (project-compilation-buffer-name-function 'project-compilation-buffer-name)
   (compilation-buffer-name-function '+compilation-buffer-name-function)
-  )
-
-(use-package ansi-color
-  :ensure nil
-  :init
-  (setq ansi-color-for-comint-mode t)
+  (project-compilation-buffer-name-function 'project-compilation-buffer-name)
   :hook
-  (compilation-filter-hook . ansi-color-compilation-filter))
+  (compilation-filter . ansi-color-compilation-filter))
 
 (use-package shell
   :ensure nil
@@ -2184,6 +2197,7 @@ eg. *python main.py*"
   ("M-r" . project-or-cwd-async-shell-command-from-history)
   :commands (+async-shell-command async-shell-command-region async-shell-command-in-directory project-or-cwd-async-shell-command-from-history project-or-cwd-async-shell-command)
   :custom
+  (ansi-color-for-comint-mode t)
   ;; If a shell command never outputs anything, don't show it.
   (async-shell-command-display-buffer nil)
   (shell-command-prompt-show-cwd t)

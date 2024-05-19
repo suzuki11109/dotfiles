@@ -3,19 +3,17 @@
 #+AUTO_TANGLE: t
 
 * Todolist
-** ts snippets
+** jsx jump tag if in jsx
 ** org-roam
 ** plantuml
 ** check window placement: org-select, org-todo
 ** jsx/tsx snippets
-** jsx jump tag if in jsx
 ** ai
 ** tree
 ** extract async/compile commands to module
 ** extract rails commands to module
 ** extract flymake lsp modeline to module
 * Early init
-** Startup performance
 #+begin_src emacs-lisp :tangle early-init.el
 ;;; early-init.el --- early init -*- lexical-binding: t; -*-
 ;;; Commentary:
@@ -24,12 +22,31 @@
 ;; Increase the garbage collection (GC) threshold for faster startup.
 (setq gc-cons-threshold most-positive-fixnum)
 
+;; Disable package.el support
+(setq package-enable-at-startup nil
+      package-quickstart nil
+      load-prefer-newer t)
+
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
-(defvar +file-name-handler-alist file-name-handler-alist)
-(setq file-name-handler-alist nil)
-(add-hook 'elpaca-after-init-hook
-          (lambda ()
-            (setq file-name-handler-alist +file-name-handler-alist)))
+(let ((old-file-name-handler-alist file-name-handler-alist))
+  (setq-default file-name-handler-alist nil)
+  (defun my/reset-file-handler-alist ()
+    (setq file-name-handler-alist
+          (delete-dups (append file-name-handler-alist
+                               old-file-name-handler-alist))))
+  (add-hook 'emacs-startup-hook #'my/reset-file-handler-alist 101))
+
+;; Remove some unneeded UI elements
+(push '(menu-bar-lines . 0) default-frame-alist)
+(push '(tool-bar-lines . 0) default-frame-alist)
+(push '(vertical-scroll-bars) default-frame-alist)
+(setq use-dialog-box nil)
+(setq tool-bar-mode nil
+      menu-bar-mode nil
+      scroll-bar-mode nil)
+
+;; Resizing the Emacs frame  appears to impact startup time dramatically.
+(setq frame-inhibit-implied-resize t)
 
 ;; Reduce *Message* noise at startup.
 (setq inhibit-startup-screen t
@@ -39,55 +56,25 @@
 (setq inhibit-default-init t)
 (setq initial-major-mode 'fundamental-mode)
 
-;; Disable package.el support
-(setq package-enable-at-startup nil)
-
-;; Remove some unneeded UI elements
-(setq use-dialog-box nil)
-(push '(tool-bar-lines . 0)   default-frame-alist)
-(push '(menu-bar-lines . 0)   default-frame-alist)
-(push '(vertical-scroll-bars) default-frame-alist)
-(setq tool-bar-mode nil
-      menu-bar-mode nil
-      scroll-bar-mode nil)
-
-;; Resizing the Emacs frame  appears to impact startup time dramatically.
-(setq frame-inhibit-implied-resize t)
-
 ;; Ignore X resources
 (advice-add #'x-apply-session-resources :override #'ignore)
 
 ;; Maximize frame by default
 (push '(fullscreen . maximized) default-frame-alist)
 
+;; Make native compilation silent
+(when (native-comp-available-p)
+  (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
 
-;; Profile emacs startup
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs loaded in %s with %d garbage collections."
-                     (format "%.03f seconds"
-                             (float-time (time-subtract (current-time) before-init-time)))
-                     gcs-done)))
+;; Increase single chunk bytes to read from subprocess (default 4096)
+(setq read-process-output-max (* 3 1024 1024)) ;; 3mb
 
+;; ;; Improve `lsp-mode' performances
+(setenv "LSP_USE_PLISTS" "true")
 ;;; early-init.el ends here
-#+end_src
-* Constants
-#+begin_src emacs-lisp
-(defconst IS-MAC      (eq system-type 'darwin))
-(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
-#+end_src
-* Functions
-#+begin_src emacs-lisp
-(defmacro quiet! (&rest forms)
-  "Run FORMS without making any noise."
-  `(if init-file-debug
-       (progn ,@forms)
-     (let ((message-log-max nil))
-       (with-temp-message (or (current-message) "") ,@forms))))
 #+end_src
 * Package management
 #+begin_src emacs-lisp
-(setq use-package-enable-imenu-support t)
 
 (defvar elpaca-installer-version 0.7)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
@@ -132,6 +119,7 @@
 (elpaca elpaca-use-package
   (elpaca-use-package-mode)
   (setq elpaca-use-package-by-default t))
+(setq use-package-enable-imenu-support t)
 
 ;; Load general first for :general
 (use-package general
@@ -150,18 +138,29 @@
   )
 
 #+end_src
-* Misc
-** Nativecomp
+* Constants
 #+begin_src emacs-lisp
-
-;; Make native compilation silent
-(when (native-comp-available-p)
-  (setq native-comp-async-report-warnings-errors 'silent)) ; Emacs 28 with native compilation
-
-;; Do not wast time checking the modification time of each file
-(setq load-prefer-newer t)
-
+(defconst IS-MAC      (eq system-type 'darwin))
+(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 #+end_src
+* Functions
+#+begin_src emacs-lisp
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s with %d garbage collections."
+                     (format "%.03f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
+
+(defmacro quiet! (&rest forms)
+  "Run FORMS without making any noise."
+  `(if init-file-debug
+       (progn ,@forms)
+     (let ((message-log-max nil))
+       (with-temp-message (or (current-message) "") ,@forms))))
+#+end_src
+* Misc
 ** On
 #+begin_src emacs-lisp
 (use-package on
@@ -179,9 +178,6 @@
 ** Runtime performance
 #+begin_src emacs-lisp :tangle early-init.el
 
-;; Case-insensitive pass over `auto-mode-alist' is time wasted.
-(setq auto-mode-case-fold nil)
-
 ;; Slightly faster re-display
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
@@ -192,30 +188,27 @@
 (setq-default cursor-in-non-selected-windows nil)
 (setq highlight-nonselected-windows nil)
 
-;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
-(setq idle-update-delay 1.0
-      jit-lock-defer-time 0)
-
-;; Don't ping things that look like domain names.
-(setq ffap-machine-p-known 'reject)
-
-;; Don’t compact font caches during GC
-(setq inhibit-compacting-font-caches t)
-
-;; This timeout adds latency to frame operations
-(setq pgtk-wait-for-event-timeout 0.001)
-
 ;; Accelerate scrolling with the trade-off of sometimes delayed accurate fontification
 (setq fast-but-imprecise-scrolling t)
-
-;; Increase single chunk bytes to read from subprocess (default 4096)
-(setq read-process-output-max (* 3 1024 1024)) ;; 3mb
 
 ;; Inhibits fontification while receiving input
 (setq redisplay-skip-fontification-on-input t)
 
-;; ;; Improve `lsp-mode' performances
-(setenv "LSP_USE_PLISTS" "true")
+;; Don't ping things that look like domain names.
+(setq ffap-machine-p-known 'reject)
+
+;; Case-insensitive pass over `auto-mode-alist' is time wasted.
+(setq auto-mode-case-fold nil)
+
+;; Emacs "updates" its ui more often than it needs to, so slow it down slightly
+(setq idle-update-delay 1.0
+      jit-lock-defer-time 0)
+
+;; Don’t compact font caches during GC (not sure if it has effect on unix)
+;; (setq inhibit-compacting-font-caches t)
+
+;; This timeout adds latency to frame operations
+(setq pgtk-wait-for-event-timeout 0.001)
 
 #+end_src
 ** Garbage collector
@@ -224,9 +217,9 @@
   :init
   (setq gcmh-idle-delay 'auto
         gcmh-auto-idle-delay-factor 10
-        gcmh-high-cons-threshold (* 16 1024 1024))
+        gcmh-high-cons-threshold (* 32 1024 1024))
   :hook
-  (elpaca-after-init . gcmh-mode))
+  (on-init-ui . gcmh-mode))
 
 #+end_src
 * Keybindings
@@ -378,6 +371,26 @@
 #+end_src
 
 * Appearance
+** Cursor
+#+begin_src emacs-lisp
+;; Stretch cursor to the glyph width
+(setq x-stretch-cursor t)
+
+;; No blinking cursor
+(blink-cursor-mode -1)
+
+;; Remember cursor position in files
+(use-package saveplace
+  :ensure nil
+  :hook
+  (on-first-file . save-place-mode))
+#+end_src
+** Bell
+#+begin_src emacs-lisp
+;; No beep or blink
+(setq ring-bell-function #'ignore
+      visible-bell nil)
+#+end_src
 ** Themes
 #+begin_src emacs-lisp
 (use-package catppuccin-theme
@@ -428,7 +441,7 @@
   :hook ((org-mode markdown-mode) . (lambda () (display-line-numbers-mode 0)))
   :custom
   (display-line-numbers-type 'relative)
-  (display-line-numbers-widen t))
+  (display-line-numbers-width-start t))
 #+end_src
 
 ** Modeline
@@ -552,10 +565,6 @@
 ;; Confirm before quitting
 (setq confirm-kill-emacs #'y-or-n-p)
 
-;; No beep or blink
-(setq ring-bell-function #'ignore
-      visible-bell nil)
-
 #+end_src
 ** Windows
 #+begin_src emacs-lisp
@@ -570,7 +579,8 @@
   :custom
   (aw-scope 'frame)
   (aw-background nil)
-  (aw-dispatch-always t))
+  (aw-dispatch-always t)
+  )
 
 (use-package popper
   ;; :defer .3
@@ -704,7 +714,7 @@ of the tab bar."
 
 #+end_src
 
-** Workspaces
+** Tabspaces
 #+begin_src emacs-lisp
 (use-package tabspaces
   :custom
@@ -756,21 +766,28 @@ of the tab bar."
 * Completion
 ** Minibuffer
 #+begin_src emacs-lisp
+
 ;; Show current key-sequence in minibuffer
 (setq echo-keystrokes 0.02)
 
-;; Show recursion depth in minibuffer
-(minibuffer-depth-indicate-mode 1)
+(use-package minibuffer
+  :ensure nil
+  :hook
+  (minibuffer-setup . cursor-intangible-mode)
+  :config
+  ;; Show recursion depth in minibuffer
+  (minibuffer-depth-indicate-mode 1)
+  ;; Enable recursive calls to minibuffer
+  (setq enable-recursive-minibuffers t)
+  ;; Use y or n instead of yes or no
+  (setq use-short-answers t)
+  ;; Try to keep the cursor out of the read-only portions of the minibuffer.
+  (setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
 
-;; Enable recursive calls to minibuffer
-(setq enable-recursive-minibuffers t)
-
-;; Use y or n instead of yes or no
-(setq use-short-answers t)
-
-;; Try to keep the cursor out of the read-only portions of the minibuffer.
-(setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
-(add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
+  (setq read-file-name-completion-ignore-case t
+        read-buffer-completion-ignore-case t
+        completion-ignore-case t)
+  )
 
 #+end_src
 ** History
@@ -787,10 +804,6 @@ of the tab bar."
 #+end_src
 ** Orderless
 #+begin_src emacs-lisp
-(setq read-file-name-completion-ignore-case t
-      read-buffer-completion-ignore-case t
-      completion-ignore-case t)
-
 (use-package orderless
   :after vertico
   :demand t
@@ -966,8 +979,10 @@ targets."
       `(defun ,(intern (concat "+embark-ace-" (symbol-name fn))) ()
          (interactive)
          (with-demoted-errors "%s"
+           (require 'ace-window)
            (let ((aw-dispatch-always t))
              (aw-switch-to-window (aw-show-dispatch-help))
+             ;; (aw-switch-to-window (aw-select nil))
              (call-interactively (symbol-function ',fn)))))))
 
   (general-define-key
@@ -1214,25 +1229,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   ((prog-mode text-mode conf-mode) . pixel-scroll-precision-mode))
 
 #+end_src
-** Cursor
-#+begin_src emacs-lisp
-
-;; Stretch cursor to the glyph width
-(setq x-stretch-cursor t)
-
-;; Remove visual indicators from non selected windows
-(setq-default cursor-in-non-selected-windows nil)
-
-;; No blinking cursor
-(blink-cursor-mode -1)
-
-;; Remember cursor position in files
-(use-package saveplace
-  :ensure nil
-  :hook
-  (on-first-file . save-place-mode))
-#+end_src
-
 ** Whitespaces
 #+begin_src emacs-lisp
 ;; Use only spaces
@@ -1443,8 +1439,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-outer-limit 48000000))
 
 (use-package undo-fu-session
-  :config
-  (global-undo-fu-session-mode)
+  :hook
+  ((prog-mode text-mode conf-mode) . undo-fu-session-mode)
   :custom
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 #+end_src
@@ -1480,15 +1476,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (setq text-mode-ispell-word-completion nil)
 
 (use-package cape
-   :after corfu
-   :config
-   (add-to-list 'completion-at-point-functions #'cape-file)
-   (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+  :after corfu
+  :config
+  (add-to-list 'completion-at-point-functions #'cape-file)
+  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
 (use-package corfu
   :hook
-  (on-first-input . global-corfu-mode)
   (on-first-input . corfu-history-mode)
+  ((prog-mode text-mode conf-mode) . corfu-mode)
+  (eshell-mode . corfu-enable-in-shell)
+  (minibuffer-setup . corfu-enable-in-minibuffer)
   :custom
   (corfu-auto t)
   (corfu-auto-delay 0.1)
@@ -1498,11 +1496,26 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
-  (global-corfu-modes '(prog-mode text-mode conf-mode))
   :general-config
   (:keymaps 'corfu-map
             "<tab>" 'corfu-insert)
   :config
+  (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
+
+  (defun corfu-enable-in-minibuffer ()
+    "Enable Corfu in the minibuffer."
+    (when (local-variable-p 'completion-at-point-functions)
+      ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
+      (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
+                  corfu-popupinfo-delay nil)
+      (corfu-mode 1)))
+
+  (defun corfu-enable-in-shell ()
+    (setq-local corfu-quit-no-match t
+                corfu-on-exact-match 'insert
+                corfu-auto nil)
+    (corfu-mode 1))
+
   (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
 
   (add-to-list 'savehist-additional-variables 'corfu-history)
@@ -2456,16 +2469,10 @@ eg. *python main.py*"
   (compilation-always-kill t)
   (compilation-ask-about-save nil)
   (compilation-scroll-output 'first-error)
-  (project-compilation-buffer-name-function 'project-compilation-buffer-name)
   (compilation-buffer-name-function '+compilation-buffer-name-function)
-  )
-
-(use-package ansi-color
-  :ensure nil
-  :init
-  (setq ansi-color-for-comint-mode t)
+  (project-compilation-buffer-name-function 'project-compilation-buffer-name)
   :hook
-  (compilation-filter-hook . ansi-color-compilation-filter))
+  (compilation-filter . ansi-color-compilation-filter))
 
 (use-package shell
   :ensure nil
@@ -2474,6 +2481,7 @@ eg. *python main.py*"
   ("M-r" . project-or-cwd-async-shell-command-from-history)
   :commands (+async-shell-command async-shell-command-region async-shell-command-in-directory project-or-cwd-async-shell-command-from-history project-or-cwd-async-shell-command)
   :custom
+  (ansi-color-for-comint-mode t)
   ;; If a shell command never outputs anything, don't show it.
   (async-shell-command-display-buffer nil)
   (shell-command-prompt-show-cwd t)
