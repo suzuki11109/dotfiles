@@ -62,14 +62,6 @@
 (defconst IS-MAC      (eq system-type 'darwin))
 (defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
 
-;; Profile emacs startup
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (message "Emacs loaded in %s with %d garbage collections."
-                     (format "%.03f seconds"
-                             (float-time (time-subtract (current-time) before-init-time)))
-                     gcs-done)))
-
 (defmacro quiet! (&rest forms)
   "Run FORMS without making any noise."
   `(if init-file-debug
@@ -317,7 +309,7 @@
 
   (doom-modeline-def-modeline 'vcs
     '(matches bar window-number modals buffer-info remote-host selection-info parrot)
-    '(compilation misc-info battery irc mu4e gnus github debug minor-modes buffer-encoding major-mode process time))
+    '(compilation misc-info battery irc mu4e gnus github debug minor-modes buffer-encoding major-mode process time " "))
 
 ;;   (defun +modeline-flymake-counter (type)
 ;;     "Compute number of diagnostics in buffer with TYPE's severity.
@@ -380,13 +372,6 @@
 (use-package evil-anzu
   :after (evil anzu))
 
-;; (use-package dashboard
-;;   :hook
-;;   (elpaca-after-init . dashboard-insert-startupify-lists)
-;;   (elpaca-after-init . dashboard-initialize)
-;;   :config
-;;   (dashboard-setup-startup-hook))
-
 ;; Frame title
 (setq frame-title-format
       (list
@@ -421,7 +406,6 @@
   )
 
 (use-package popper
-  ;; :defer .3
   :general-config
   ("C-`" 'popper-toggle)
   ("C-\\"  'popper-cycle)
@@ -1057,8 +1041,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 
 (use-package evil
   :defer .2
-  ;; :init
-  ;; (setq evil-want-keybinding nil)
   :custom
   (evil-want-keybinding nil)
   (evil-v$-excludes-newline t)
@@ -1094,7 +1076,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-set-undo-system 'undo-fu)
   (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-mode 1)
-)
+  )
 
 (use-package evil-collection
   :after evil magit forge
@@ -1128,6 +1110,19 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (setq evil-goggles-enable-change nil)
   (setq evil-goggles-enable-nerd-commenter nil)
   (evil-goggles-mode 1))
+
+(use-package evil-matchit
+  :after evil
+  :config
+  (defun evilmi-jsx-get-tag ()
+    (evilmi-html-get-tag))
+
+  (defun evilmi-jsx-jump (info num)
+    (jtsx-jump-jsx-element-tag-dwim))
+
+  (evilmi-load-plugin-rules '(html-ts-mode) '(template simple html))
+  (evilmi-load-plugin-rules '(jtsx-tsx-mode jtsx-jsx-mode) '(simple javascript jsx))
+  (global-evil-matchit-mode 1))
 
 (use-package avy
   :after evil
@@ -1730,20 +1725,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (js-chain-indent t)
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
-  ;; :general-config
-  ;; (:states '(motion)
-  ;;          "%" 'jtsx-)
   :hook
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
                                                           (+add-pairs '((?` . ?`)))))
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . lsp-deferred)
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . apheleia-mode)
-  ;; (jtsx-jsx-mode . (lambda ()
-  ;;                    (yas-activate-extra-mode 'js-ts-mode))
-  ;;                    ;; (yas-activate-extra-mode '+web-react-mode))
-  ;;                )
-  ;; (jtsx-tsx-mode . (lambda ()
-  ;;                    (yas-activate-extra-mode 'typescript-tsx-mode)))
   )
 
 (use-package web-mode
@@ -1769,11 +1755,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (web-mode . apheleia-mode)
   )
 
-(use-package auto-rename-tag
-  :hook ((jtsx-jsx-mode . auto-rename-tag-mode)
-         (html-ts-mode . auto-rename-tag-mode)
-         (jtsx-tsx-mode . auto-rename-tag-mode)))
-
 (use-package python-ts-mode
   :ensure nil
   :preface
@@ -1784,7 +1765,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (python-ts-mode . +python-mode-setup))
 
 (use-package pytest
-  ;; :vc (:fetcher github :repo ionrock/pytest-el)
   :after python-ts-mode
   :ensure (:host github :repo "ionrock/pytest-el")
   :general-config
@@ -1867,13 +1847,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (+local-leader-def
     :keymaps '(ruby-ts-mode-map)
     "rk" #'rake))
-
-;; geneators only list
-;; find resource macro
-;; goto, gemfile,routes,seed,schema
-;; default task runner
-;; extract to module
-;; extract partial?
 
 (defvar rails-command-prefix "bundle exec rails")
 
@@ -2022,7 +1995,6 @@ is available as part of \"future history\"."
   :ensure nil
   :hook
   (ruby-ts-mode . apheleia-mode)
-  ;; (ruby-ts-mode . eglot-ensure)
   (ruby-ts-mode . lsp-deferred)
   :general-config
   (+local-leader-def
@@ -2202,9 +2174,6 @@ eg. *python main.py*"
   (async-shell-command-display-buffer nil)
   (shell-command-prompt-show-cwd t)
   :config
-  ;; (add-to-list 'comint-output-filter-functions 'ansi-color-process-output)
-  ;; (add-hook 'shell-mode-hook 'compilation-shell-minor-mode)
-
   (defun +async-shell-command (&optional p)
     "Run `async-shell-command' in the current project's root directory or in current directory."
     (interactive "P")
@@ -2410,7 +2379,7 @@ current project's root directory."
   (eshell-mode . +eshell-setup))
 
 (use-package org
-  ;; :defer .3
+  :ensure nil
   :custom
   (org-directory "~/Dropbox/org/")
   (org-hide-emphasis-markers t)

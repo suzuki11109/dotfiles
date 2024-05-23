@@ -54,6 +54,7 @@
 
 ;; ;; Improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
+
 ;;; early-init.el ends here
 
 ;; Slightly faster re-display
@@ -87,3 +88,11 @@
 
 ;; This timeout adds latency to frame operations
 (setq pgtk-wait-for-event-timeout 0.001)
+
+;; Profile emacs startup
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (message "Emacs loaded in %s with %d garbage collections."
+                     (format "%.03f seconds"
+                             (float-time (time-subtract (current-time) before-init-time)))
+                     gcs-done)))
