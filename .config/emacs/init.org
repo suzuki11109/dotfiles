@@ -3,10 +3,12 @@
 #+AUTO_TANGLE: t
 
 * Todolist
-** jsx/tsx snippets with react sample app
+** load mode on project types
+** jtsx comment/uncomment
 ** org-roam
+** jsx/tsx snippets with react sample app
 ** plantuml
-** check window placement: org-select, org-todo
+** manual window placement (check karthink's config)
 ** extract async/compile commands to module
 ** extract rails commands to module
 ** extract flymake lsp modeline to module
@@ -243,7 +245,7 @@
 
     "b"   '(nil :wk "buffer")
     "bb"  '(switch-to-buffer :wk "Switch buffer")
-    "bd"  '(kill-this-buffer :wk "Kill this buffer")
+    "bd"  '(kill-current-buffer :wk "Kill this buffer")
     "bD"  '(kill-buffer :wk "Kill buffer")
     "bi"  #'ibuffer
     "bo"  '(switch-to-buffer-other-window :wk "Switch buffer other window")
@@ -618,6 +620,7 @@
           sbt-mode
           forge-post-mode
           "\\*Embark Export:"
+          npm-mode
           ))
   :hook
   (on-first-buffer . popper-mode)
@@ -723,9 +726,8 @@ of the tab bar."
     "<tab>p" #'tab-bar-switch-to-prev-tab)
   (+leader-def
     "pp" #'tabspaces-open-or-create-project-and-workspace)
-  :hook
-  (on-init-ui . tabspaces-mode)
   :config
+  (tabspaces-mode 1)
   (tab-bar-mode 1)
   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
 
@@ -793,34 +795,42 @@ of the tab bar."
 ** Orderless
 #+begin_src emacs-lisp
 (use-package orderless
-  :after vertico
   :demand t
   :preface
   (defun basic-remote-try-completion (string table pred point)
     (and (vertico--remote-p string)
          (completion-basic-try-completion string table pred point)))
+
   (defun basic-remote-all-completions (string table pred point)
     (and (vertico--remote-p string)
          (completion-basic-all-completions string table pred point)))
+
   (defun +orderless-dispatch-flex-first (_pattern index _total)
     (and (eq index 0) 'orderless-flex))
+
   (defun +lsp-mode-setup-completion ()
     (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
           '(orderless))
-    (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
+    ;; (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
     ;; (setq-local completion-at-point-functions (list (cape-capf-buster #'lsp-completion-at-point)))
     )
-  :config
-  (add-to-list
-   'completion-styles-alist
-   '(basic-remote basic-remote-try-completion basic-remote-all-completions nil))
-  (setq completion-styles '(orderless basic))
-  (setq completion-category-defaults nil)
-  (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))
-                                        ))
-  (setq orderless-matching-styles '(orderless-literal orderless-regexp))
-  :hook
-  (lsp-completion-mode . +lsp-mode-setup-completion)
+  :init
+  (setq completion-styles '(orderless partial-completion basic)
+        completion-category-defaults nil
+        completion-category-overrides '((file (styles orderless partial-completion)))
+        orderless-component-separator #'orderless-escapable-split-on-space)
+
+  ;; :config
+  ;; (add-to-list
+  ;;  'completion-styles-alist
+  ;;  '(basic-remote basic-remote-try-completion basic-remote-all-completions nil))
+  ;; (setq completion-styles '(orderless basic))
+  ;; (setq completion-category-defaults nil)
+  ;; (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))
+  ;;                                       ))
+  ;; (setq orderless-matching-styles '(orderless-literal orderless-regexp))
+  ;; :hook
+  ;; (lsp-completion-mode . +lsp-mode-setup-completion)
   )
 
 #+end_src
@@ -1477,7 +1487,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 (use-package cape
   :after corfu
   :config
-  (add-to-list 'completion-at-point-functions #'cape-file)
+  (advice-add #'lsp-completion-at-point :around #'cape-wrap-noninterruptible)
+  (advice-add #'lsp-completion-at-point :around #'cape-wrap-nonexclusive)
+  (advice-add #'comint-completion-at-point :around #'cape-wrap-nonexclusive)
+  (advice-add #'pcomplete-completions-at-point :around #'cape-wrap-nonexclusive)
+
   (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
 (use-package corfu
@@ -1488,7 +1502,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (minibuffer-setup . corfu-enable-in-minibuffer)
   :custom
   (corfu-auto t)
-  (corfu-auto-delay 0.1)
+  (corfu-auto-delay 0.18)
   (corfu-auto-prefix 2)
   (corfu-cycle t)
   (corfu-max-width 120)
@@ -1499,12 +1513,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (:keymaps 'corfu-map
             "<tab>" 'corfu-insert)
   :config
+  (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
+
   (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
 
   (defun corfu-enable-in-minibuffer ()
     "Enable Corfu in the minibuffer."
     (when (local-variable-p 'completion-at-point-functions)
-      ;; (setq-local corfu-auto nil) ;; Enable/disable auto completion
+      (setq-local corfu-auto nil) ;; Enable/disable auto completion
       (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
                   corfu-popupinfo-delay nil)
       (corfu-mode 1)))
@@ -1518,6 +1534,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
 
   (add-to-list 'savehist-additional-variables 'corfu-history)
+
   (defun +corfu-combined-sort (candidates)
     "Sort CANDIDATES using both display-sort-function and corfu-sort-function."
     (let ((candidates
@@ -1536,6 +1553,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :after corfu
   :config
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
+
+;; (use-package corfu-terminal
+;;   :unless (display-graphic-p)
+;;   :ensure (:type git :repo "https://codeberg.org/akib/emacs-corfu-terminal.git")
+;;   :config
+;;   (corfu-terminal-mode +1)
+;;   )
 
 #+end_src
 * Git
@@ -1831,7 +1855,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
   (lsp-register-custom-settings
    '(("gopls.completeUnimported" t t)
-     ("gopls.staticcheck" t t)))
+     ("gopls.staticcheck" t t)
+    ))
 
   :custom
   (lsp-keymap-prefix nil)
@@ -1847,11 +1872,13 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (lsp-disabled-clients '(rubocop-ls))
   (lsp-kotlin-compiler-jvm-target "2.1")
   (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
+  (lsp-pylsp-plugins-ruff-enabled t)
   (lsp-clients-typescript-prefer-use-project-ts-server t)
+  (lsp-clients-typescript-preferences '(:importModuleSpecifierPreference "non-relative" :includeCompletionsForImportStatements nil))
+  (lsp-typescript-suggest-complete-js-docs nil)
+  ;; :jsxAttributeCompletionStyle "none"
   (lsp-javascript-implicit-project-config-check-js t)
   (lsp-javascript-suggest-complete-js-docs nil)
-  (lsp-pylsp-plugins-ruff-enabled t)
-  ;; (lsp-clients-typescript-preferences '(:includeCompletionsForImportStatements nil))
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
                                   :states '(normal)
@@ -1979,6 +2006,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (add-to-list 'emmet-jsx-major-modes 'jtsx-jsx-mode)
   :hook
   ((jtsx-tsx-mode jtsx-jsx-mode) . emmet-mode)
+  (html-ts-mode . emmet-mode)
   (web-mode . emmet-mode))
 
 (use-package jtsx
@@ -2458,6 +2486,7 @@ eg. *python main.py*"
   ;; If a shell command never outputs anything, don't show it.
   (async-shell-command-display-buffer nil)
   (shell-command-prompt-show-cwd t)
+  ;; (shell-command-switch "-ic")
   :config
   (defun +async-shell-command (&optional p)
     "Run `async-shell-command' in the current project's root directory or in current directory."
@@ -2524,25 +2553,85 @@ current project's root directory."
 #+end_src
 ** Completion
 #+begin_src emacs-lisp
-(use-package bash-completion
-  :custom
-  (bash-completion-use-separate-processes t)
-  ;; :config
-  ;; (defun eshell-bash-completion-capf-nonexclusive ()
-  ;;   (let ((compl (bash-completion-dynamic-complete-nocomint
-  ;;                 (save-excursion (eshell-bol) (point))
-  ;;                 (point) t)))
-  ;;     (when compl
-  ;;       (append compl '(:exclusive no)))))
+;; (use-package bash-completion
+;;   :custom
+;;   (bash-completion-use-separate-processes t)
+;;   :config
+;;   (defun eshell-bash-completion-capf-nonexclusive ()
+;;     (let ((compl (bash-completion-dynamic-complete-nocomint
+;;                   (save-excursion (eshell-bol) (point))
+;;                   (point) t)))
+;;       (when compl
+;;         (append compl '(:exclusive no)))))
+;;   :hook
+;;   (elpaca-after-init . bash-completion-setup) ;; shell-command completion setup
+;;   (eshell-mode . (lambda ()
+;;                    (setq-local completion-at-point-functions (list #'bash-completion-capf-nonexclusive))))
+;;   (eshell-mode .
+;;                (lambda ()
+;;                  (add-hook 'completion-at-point-functions
+;;                            'bash-completion-capf-nonexclusive nil t)))
+;;   )
+
+(use-package fish-completion
+  :if (executable-find "fish")
   :hook
-  (elpaca-after-init . bash-completion-setup) ;; shell-command completion setup
-  ;; (eshell-mode . (lambda ()
-  ;;                  (setq-local completion-at-point-functions (list #'bash-completion-capf-nonexclusive))))
-  (eshell-mode .
-          (lambda ()
-            (add-hook 'completion-at-point-functions
-                      'bash-completion-capf-nonexclusive nil t)))
-  )
+  (minibuffer-setup . fish-completion-mode)
+  (eshell-mode . fish-completion-mode))
+
+(require 'subr-x)
+(require 'seq)
+
+(defun zsh-completion--list-completions (raw-prompt)
+  "Return list of completion candidates for RAW-PROMPT."
+  (mapcar (lambda (e) (car (split-string e "\t")))
+          (let ((candidates (zsh-completion--list-completions-with-desc raw-prompt)))
+            (when candidates (split-string candidates "\n" t)))))
+
+(defvar zsh-completion-command (executable-find "zsh")
+  "The `zsh' executable.")
+
+(defun zsh-completion--list-completions-with-desc (raw-prompt)
+  "Return list of completion candidates for RAW-PROMPT.
+The candidates include the description."
+  (let ((prompt (zsh-completion--normalize-prompt raw-prompt)))
+    (message prompt)
+    (when zsh-completion-command
+      (zsh-completion--call zsh-completion-command
+                            "/home/aki/capture.zsh" prompt))))
+
+(defun zsh-completion--call (command &rest args)
+  "Return the output of the call to COMMAND ARGS as a string."
+  (with-output-to-string
+    (with-current-buffer standard-output
+      (apply #'call-process
+             command
+             nil '(t nil) nil
+             args))))
+
+(defun zsh-completion--normalize-prompt (prompt)
+  "Return a prompt that can be understood by Fish."
+  ;; Eshell supports star-prefixed commands but not Fish:
+  ;; remove the star for fish-completion.
+  (setq prompt (replace-regexp-in-string "^[[:space:]]*\\*" "" prompt))
+  (let (;; We *must* keep spaces at the end because completion on "ls" and "ls "
+        ;; is different, so keep OMIT-NULLS to nil in `split-string'.  The first
+        ;; non-empty `car' is the command, we can discard leading empty strings.
+        (tokens (split-string prompt
+                              split-string-default-separators nil)))
+    (if (not (member (car tokens) '("sudo" "env")))
+        prompt
+      (setq tokens (cdr tokens))
+      ;; Skip env/sudo parameters, like -u and LC_ALL=C.
+      (setq tokens (seq-drop-while (lambda (e)
+                                     (or (string-match "^-.*" e)
+                                         (string-match "=" e)))
+                                   tokens))
+      (if (and tokens (not (string-empty-p (car tokens))))
+          (mapconcat 'identity tokens " ")
+        ;; If there is no subcommand, then we
+        ;; complete against the parent command.
+        prompt))))
 
 #+end_src
 ** Eat
@@ -2721,8 +2810,8 @@ current project's root directory."
   (setf evil-org-key-theme '(textobjects insert navigation additional todo))
   :config
   (evil-define-key '(normal insert) 'evil-org-mode
-      (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading-after-current)
-      (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
+    (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading-after-current)
+    (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
   :hook
   (org-mode . evil-org-mode)
   (org-agenda-mode . (lambda ()
@@ -2730,7 +2819,8 @@ current project's root directory."
                        (evil-org-agenda-set-keys))))
 
 (use-package org-appear
-  :hook (org-mode . org-appear-mode))
+  :hook
+  (org-mode . org-appear-mode))
 
 (use-package org-superstar
   :custom
@@ -2895,9 +2985,9 @@ current project's root directory."
 
 (use-package exec-path-from-shell
   :config
-  (setq exec-path-from-shell-arguments '("-l"))
-  (dolist (var '("KUBECONFIG"))
-    (add-to-list 'exec-path-from-shell-variables var))
+  ;; (setq exec-path-from-shell-arguments '("-l"))
+  ;; (dolist (var '("KUBECONFIG"))
+  ;;   (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
 
 (use-package envrc
@@ -2922,7 +3012,10 @@ current project's root directory."
 ** K8S
 #+begin_src emacs-lisp
 (use-package kubel
-  :commands (kubel))
+  :commands (kubel)
+  :general
+  (+leader-def
+    "ok" 'kubel))
 
 (use-package kubel-evil
   :after kubel)

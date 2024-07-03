@@ -1,38 +1,44 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
+[ ! -d $ZINIT_HOME ] && mkdir -p "$(dirname $ZINIT_HOME)"
+[ ! -d $ZINIT_HOME/.git ] && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+source "${ZINIT_HOME}/zinit.zsh"
 
-source "${HOME}/.zgenom/zgenom.zsh"
-zgenom autoupdate
-if ! zgenom saved; then
-  zgenom ohmyzsh
-  zgenom ohmyzsh plugins/git
-  zgenom load zdharma-continuum/fast-syntax-highlighting
-  zgenom load zsh-users/zsh-completions
-  zgenom load zsh-users/zsh-history-substring-search
-  zgenom load hlissner/zsh-autopair
-  zgenom load romkatv/powerlevel10k powerlevel10k
-  zgenom load djui/alias-tips
-  zgenom save
-fi
+zinit light zdharma-continuum/fast-syntax-highlighting
+zinit light zsh-users/zsh-completions
+zinit light hlissner/zsh-autopair
 
-alias vi="nvim"
-alias vim="nvim"
-export EDITOR="nvim"
+zinit snippet OMZP::git
 
-alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
-alias k="kubectl"
+autoload -U compinit && compinit
 
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+zinit cdreplay -q
 
-[[ -r "$HOME/emacs-vterm-zsh.sh" ]] && source "$HOME/emacs-vterm-zsh.sh"
+bindkey -e
 
-# Load Angular CLI autocompletion.
-command -v ng >/dev/null && source <(ng completion script)
+HISTSIZE=5000
+SAVEHIST=5000
+HISTFILE=~/.zsh_history
+setopt appendhistory
+setopt sharehistory
+setopt hist_ignore_space
+setopt hist_save_no_dups
+setopt hist_ignore_all_dups
+setopt hist_ignore_dups
+setopt hist_find_no_dups
+bindkey '^p' history-search-backward
+bindkey '^n' history-search-forward
 
-[[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+bindkey '^[[Z' reverse-menu-complete
 
-eval "$(zoxide init zsh)"
+alias ls="ls --color"
+
+PS1='%F{blue}%~ %(?.%F{green}.%F{red})%#%f '
+
+[ -n "$EAT_SHELL_INTEGRATION_DIR" ] && \
+  source "$EAT_SHELL_INTEGRATION_DIR/zsh"
+
+export PATH="$HOME/.nodenv/bin:$PATH"
+command -v nodenv >/dev/null && eval "$(nodenv init - zsh)"

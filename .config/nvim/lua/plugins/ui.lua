@@ -89,9 +89,8 @@ return {
    {
       'nvim-treesitter/nvim-treesitter',
       event = { 'BufReadPre', 'BufNewFile' },
-      dependencies = { 
+      dependencies = {
          'nvim-treesitter/nvim-treesitter-textobjects',
-         'JoosepAlviste/nvim-ts-context-commentstring',
       },
       build = function()
          pcall(require('nvim-treesitter.install').update { with_sync = true })
@@ -127,9 +126,6 @@ return {
          },
          highlight = { enable = true },
          indent = { enable = true },
-         context_commentstring = {
-           enable = true,
-         }, 
          textobjects = {
             select = {
                enable = true,
@@ -149,6 +145,8 @@ return {
          require('nvim-treesitter.configs').setup(opts)
       end,
    },
+
+   'JoosepAlviste/nvim-ts-context-commentstring',
 
    {
       'stevearc/oil.nvim',

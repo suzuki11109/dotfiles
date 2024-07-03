@@ -20,12 +20,9 @@ return {
       },
       opts = {
          servers = {
-            jsonls = {},
-            solargraph = {},
             gopls = {},
-            angularls = {},
             pyright = {},
-            kotlin_language_server = {},
+            tsserver = {},
             lua_ls = {
                settings = {
                   Lua = {
