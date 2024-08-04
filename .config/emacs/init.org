@@ -3,13 +3,10 @@
 #+AUTO_TANGLE: t
 
 * Todolist
-** load mode on project types
-** jtsx comment/uncomment
 ** org-roam
-** jsx/tsx snippets with react sample app
 ** plantuml
-** manual window placement (check karthink's config)
 ** extract async/compile commands to module
+** load mode on project types (rails)
 ** extract rails commands to module
 ** extract flymake lsp modeline to module
 * Early init
@@ -226,6 +223,8 @@
 ** General
 #+begin_src emacs-lisp
 
+(setq mac-command-modifier 'meta)
+
 (use-package general
   :ensure nil
   :after evil
@@ -327,6 +326,8 @@
     "of"  #'make-frame
     "oF"  #'select-frame-by-name
     "ol"  #'browse-url
+    "oS"  '((lambda () (interactive)
+              (async-shell-command "open -a Simulator")) :wk "Open iOS simulator")
     "o-"  #'dired-jump
 
     "p"   '(nil :wk "project")
@@ -393,6 +394,9 @@
 #+end_src
 ** Themes
 #+begin_src emacs-lisp
+(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
+(add-to-list 'default-frame-alist '(ns-appearance . dark))
+
 (use-package catppuccin-theme
   :init
   (setq catppuccin-height-title-3 1.1)
@@ -401,14 +405,12 @@
 ** Fonts
 #+begin_src emacs-lisp
 
-(add-hook 'on-init-ui-hook (lambda ()
-  ;; Set thai font
-  (set-fontset-font t 'thai "SF Thonburi")
-  (set-fontset-font t 'thai (font-spec :script 'thai) nil 'append)
+(setq-default line-spacing 4)
 
+(add-hook 'on-init-ui-hook (lambda ()
   ;; Set default fonts
-  (set-face-attribute 'default nil :font "monospace" :height 108)
-  (set-face-attribute 'variable-pitch nil :family "Inter" :height 1.0)
+  (set-face-attribute 'default nil :family "JetBrains Mono" :height 130)
+  (set-face-attribute 'variable-pitch nil :family "Helvetica" :height 1.0)
   (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0)
 
   (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
@@ -449,6 +451,7 @@
 (use-package doom-modeline
   :custom
   (doom-modeline-bar-width 0)
+  (doom-modeline-height 36)
   (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
@@ -593,17 +596,14 @@
         '("\\*Messages\\*"
           "\\*Warnings\\*"
           "Output\\*$"
-          "\\*Async Shell Command\\*$"
+          ;; "\\*Async Shell Command\\*$"
           compilation-mode
+          comint-mode
+          "^\\*term.*\\*$" term-mode
+          "^\\*shell.*\\*$" shell-mode shell-command-mode
+          "^\\*eshell" eshell-mode "-eshell\\*$"
+          "^\\*vterm" vterm-mode "-vterm\\*$"
           "\\*Go Test\\*$"
-          "\\*eshell"
-          "-eshell\\*$"
-          "\\*shell\\*"
-          shell-mode
-          "\\*term\\*"
-          term-mode
-          "-eat\\*$"
-          "\\*eat"
           "\\*Flycheck errors\\*"
           "\\*rake-compilation\\*"
           "\\*rspec-compilation\\*"
@@ -620,7 +620,8 @@
           sbt-mode
           forge-post-mode
           "\\*Embark Export:"
-          npm-mode
+          "\\*Embark Collect:"
+          flutter-mode
           ))
   :hook
   (on-first-buffer . popper-mode)
@@ -797,21 +798,13 @@ of the tab bar."
 (use-package orderless
   :demand t
   :preface
-  (defun basic-remote-try-completion (string table pred point)
-    (and (vertico--remote-p string)
-         (completion-basic-try-completion string table pred point)))
-
-  (defun basic-remote-all-completions (string table pred point)
-    (and (vertico--remote-p string)
-         (completion-basic-all-completions string table pred point)))
-
   (defun +orderless-dispatch-flex-first (_pattern index _total)
     (and (eq index 0) 'orderless-flex))
 
   (defun +lsp-mode-setup-completion ()
-    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
-          '(orderless))
-    ;; (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
+    ;; (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+    ;;      '(orderless))
+    (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
     ;; (setq-local completion-at-point-functions (list (cape-capf-buster #'lsp-completion-at-point)))
     )
   :init
@@ -829,8 +822,8 @@ of the tab bar."
   ;; (setq completion-category-overrides '((file (styles basic-remote orderless partial-completion))
   ;;                                       ))
   ;; (setq orderless-matching-styles '(orderless-literal orderless-regexp))
-  ;; :hook
-  ;; (lsp-completion-mode . +lsp-mode-setup-completion)
+  :hook
+  (lsp-completion-mode . +lsp-mode-setup-completion)
   )
 
 #+end_src
@@ -900,6 +893,24 @@ of the tab bar."
                      #'consult-completion-in-region
                    #'completion--in-region)
                  args)))
+
+  ;; narrow key without delay
+  (defun immediate-which-key-for-narrow (fun &rest args)
+    (let* ((refresh t)
+           (timer (and consult-narrow-key
+                       (memq :narrow args)
+                       (run-at-time 0.05 0.05
+                                    (lambda ()
+                                      (if (eq last-input-event (elt consult-narrow-key 0))
+                                          (when refresh
+                                            (setq refresh nil)
+                                            (which-key--update))
+                                        (setq refresh t)))))))
+      (unwind-protect
+          (apply fun args)
+        (when timer
+          (cancel-timer timer)))))
+  (advice-add #'consult--read :around #'immediate-which-key-for-narrow)
   )
 
 (use-package consult-dir
@@ -933,6 +944,24 @@ any directory proferred by `consult-dir'."
   :commands (embark-act embark-dwim)
   :bind
   ([remap describe-bindings] . embark-bindings)
+  :preface
+  (defun +embark-export-write ()
+    "Export the current vertico results to a writable buffer if possible.
+
+Supports exporting consult-grep to wgrep, file to wdeired, and consult-location to occur-edit"
+    (interactive)
+    (require 'embark)
+    (require 'wgrep)
+    (let* ((edit-command
+            (pcase-let ((`(,type . ,candidates)
+                         (run-hook-with-args-until-success 'embark-candidate-collectors)))
+              (pcase type
+                ('consult-grep #'wgrep-change-to-wgrep-mode)
+                ('file #'wdired-change-to-wdired-mode)
+                ('consult-location #'occur-edit-mode)
+                (x (user-error "embark category %S doesn't support writable export" x)))))
+           (embark-after-export-hook `(,@embark-after-export-hook ,edit-command)))
+      (embark-export)))
   :config
   (defun embark-which-key-indicator ()
     "An embark indicator that displays keymaps using which-key.
@@ -992,8 +1021,10 @@ targets."
   (general-define-key
    :keymaps 'embark-general-map
    "D" #'xref-find-definitions-other-window)
+  :general
+  (:keymaps 'minibuffer-local-map
+            "C-c C-e" #'+embark-export-write)
   :bind
-  ("C-." . embark-dwim)
   ("C-;" . embark-act))
 
 (use-package embark-consult
@@ -1131,9 +1162,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :init
   (setq
    recentf-filename-handlers '(abbreviate-file-name)
-   recentf-max-menu-items 0
-   recentf-max-saved-items 300
-   recentf-auto-cleanup 'never
+   recentf-max-saved-items 200
+   recentf-auto-cleanup 300
    recentf-exclude
    `(,(rx (* any)
           (or
@@ -1301,7 +1331,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (customize-set-variable 'evil-want-Y-yank-to-eol t) ;; :custom doesn't work
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'shell-mode 'normal)
+  (evil-set-initial-state 'shell-command-mode 'normal)
 
   (evil-set-undo-system 'undo-fu)
   (evil-select-search-module 'evil-search-module 'evil-search)
@@ -1509,13 +1539,14 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
-  :general-config
-  (:keymaps 'corfu-map
-            "<tab>" 'corfu-insert)
+  ;; :general-config
+  ;; (:keymaps 'corfu-map
+  ;;           "<tab>" 'corfu-insert)
   :config
-  (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
-
   (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
+
+  (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
+  (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
 
   (defun corfu-enable-in-minibuffer ()
     "Enable Corfu in the minibuffer."
@@ -1530,8 +1561,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                 corfu-on-exact-match 'insert
                 corfu-auto nil)
     (corfu-mode 1))
-
-  (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
 
   (add-to-list 'savehist-additional-variables 'corfu-history)
 
@@ -1978,6 +2007,39 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
     "ta" 'go-test-current-project
     "tb" 'go-test-current-benchmark))
 #+end_src
+** Flutter
+#+begin_src emacs-lisp
+(use-package dart-mode
+  :mode "\\.dart\\'")
+
+(use-package flutter
+  :after dart-mode
+  :general-config
+  (+local-leader-def
+    :keymaps 'dart-mode-map
+    "f" '(:ignore t :wk "flutter")
+    "ff" #'flutter-run-or-hot-reload
+    "fq" #'flutter-quit
+    "fr" #'flutter-hot-reload
+    "fR" #'flutter-hot-restart
+    ))
+
+(use-package lsp-dart
+  :custom
+  (lsp-dart-test-tree-on-run nil)
+  :hook
+  (dart-mode . lsp-deferred)
+  :general-config
+  (+local-leader-def
+    :keymaps 'dart-mode-map
+    "t" '(:ignore t :wk "test")
+    "ts" #'lsp-dart-run-test-at-point
+    "tt" #'lsp-dart-run-last-test
+    "ta" #'lsp-dart-run-all-tests
+    "tf" #'lsp-dart-run-test-file
+    ))
+#+end_src
+
 ** Rust
 #+begin_src emacs-lisp
 (use-package rust-ts-mode
@@ -2014,11 +2076,38 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
          ("\\.tsx\\'" . jtsx-tsx-mode)
          ("\\.ts\\'" . jtsx-typescript-mode))
   :commands jtsx-install-treesit-language
+  :bind
+  ([remap comment-dwim] . jtsx-comment-dwim)
   :custom
   (js-chain-indent t)
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
+  :preface
+  (defun +jsx-comment-or-uncomment-region (beg end)
+    (cond
+     ((jtsx-jsx-attribute-context-p)
+      (let* ((comment-start "/* ")
+             (comment-end " */")
+             (comment-use-syntax nil)
+             (comment-start-skip "\\(?:/\\*+\\)\\s-*")
+             (comment-end-skip "\\s-*\\(\\*+/\\)"))
+        (evilnc-comment-or-uncomment-region-internal beg end)))
+     ((jtsx-jsx-context-p)
+      (let* ((comment-start "{/* ")
+             (comment-end " */}")
+             (comment-use-syntax nil)
+             (comment-start-skip "\\(?:{?/\\*+\\)\\s-*")
+             (comment-end-skip "\\s-*\\(\\*+/}?\\)"))
+        (evilnc-comment-or-uncomment-region-internal beg end)))
+     (t (evilnc-comment-or-uncomment-region-internal beg end))))
+
+  :general-config
+  (:states '(normal visual motion)
+           :keymaps '(jtsx-tsx-mode)
+           "M-r" #'consult-history)
   :hook
+  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
+                                                          (setq-local evilnc-comment-or-uncomment-region-function '+jsx-comment-or-uncomment-region)))
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
                                                           (+add-pairs '((?` . ?`)))))
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . lsp-deferred)
@@ -2391,9 +2480,11 @@ is available as part of \"future history\"."
 ** Others
 #+begin_src emacs-lisp
 
+(use-package jenkinsfile-mode
+  :mode "\\Jenkinsfile\\'")
+
 (use-package dockerfile-ts-mode
   :ensure nil
-  ;; :mode "\\Dockerfile\\'"
   :hook
   (dockerfile-ts-mode . lsp-deferred))
 
@@ -2557,16 +2648,16 @@ current project's root directory."
 ;;   :custom
 ;;   (bash-completion-use-separate-processes t)
 ;;   :config
-;;   (defun eshell-bash-completion-capf-nonexclusive ()
-;;     (let ((compl (bash-completion-dynamic-complete-nocomint
-;;                   (save-excursion (eshell-bol) (point))
-;;                   (point) t)))
-;;       (when compl
-;;         (append compl '(:exclusive no)))))
+;;   ;; (defun eshell-bash-completion-capf-nonexclusive ()
+;;   ;;   (let ((compl (bash-completion-dynamic-complete-nocomint
+;;   ;;                 (save-excursion (eshell-bol) (point))
+;;   ;;                 (point) t)))
+;;   ;;     (when compl
+;;   ;;       (append compl '(:exclusive no)))))
 ;;   :hook
 ;;   (elpaca-after-init . bash-completion-setup) ;; shell-command completion setup
-;;   (eshell-mode . (lambda ()
-;;                    (setq-local completion-at-point-functions (list #'bash-completion-capf-nonexclusive))))
+;;   ;; (eshell-mode . (lambda ()
+;;   ;;                  (setq-local completion-at-point-functions (list #'bash-completion-capf-nonexclusive))))
 ;;   (eshell-mode .
 ;;                (lambda ()
 ;;                  (add-hook 'completion-at-point-functions
@@ -2574,99 +2665,83 @@ current project's root directory."
 ;;   )
 
 (use-package fish-completion
-  :if (executable-find "fish")
   :hook
   (minibuffer-setup . fish-completion-mode)
   (eshell-mode . fish-completion-mode))
 
-(require 'subr-x)
-(require 'seq)
-
-(defun zsh-completion--list-completions (raw-prompt)
-  "Return list of completion candidates for RAW-PROMPT."
-  (mapcar (lambda (e) (car (split-string e "\t")))
-          (let ((candidates (zsh-completion--list-completions-with-desc raw-prompt)))
-            (when candidates (split-string candidates "\n" t)))))
-
-(defvar zsh-completion-command (executable-find "zsh")
-  "The `zsh' executable.")
-
-(defun zsh-completion--list-completions-with-desc (raw-prompt)
-  "Return list of completion candidates for RAW-PROMPT.
-The candidates include the description."
-  (let ((prompt (zsh-completion--normalize-prompt raw-prompt)))
-    (message prompt)
-    (when zsh-completion-command
-      (zsh-completion--call zsh-completion-command
-                            "/home/aki/capture.zsh" prompt))))
-
-(defun zsh-completion--call (command &rest args)
-  "Return the output of the call to COMMAND ARGS as a string."
-  (with-output-to-string
-    (with-current-buffer standard-output
-      (apply #'call-process
-             command
-             nil '(t nil) nil
-             args))))
-
-(defun zsh-completion--normalize-prompt (prompt)
-  "Return a prompt that can be understood by Fish."
-  ;; Eshell supports star-prefixed commands but not Fish:
-  ;; remove the star for fish-completion.
-  (setq prompt (replace-regexp-in-string "^[[:space:]]*\\*" "" prompt))
-  (let (;; We *must* keep spaces at the end because completion on "ls" and "ls "
-        ;; is different, so keep OMIT-NULLS to nil in `split-string'.  The first
-        ;; non-empty `car' is the command, we can discard leading empty strings.
-        (tokens (split-string prompt
-                              split-string-default-separators nil)))
-    (if (not (member (car tokens) '("sudo" "env")))
-        prompt
-      (setq tokens (cdr tokens))
-      ;; Skip env/sudo parameters, like -u and LC_ALL=C.
-      (setq tokens (seq-drop-while (lambda (e)
-                                     (or (string-match "^-.*" e)
-                                         (string-match "=" e)))
-                                   tokens))
-      (if (and tokens (not (string-empty-p (car tokens))))
-          (mapconcat 'identity tokens " ")
-        ;; If there is no subcommand, then we
-        ;; complete against the parent command.
-        prompt))))
-
 #+end_src
 ** Eat
 #+begin_src emacs-lisp
-(use-package eat
-  :commands (eat project-eat)
+;; (use-package eat
+;;   :commands (eat project-eat)
+;;   :custom
+;;   (eat-kill-buffer-on-exit t)
+;;   :preface
+;;   (defun project-eat ()
+;;     "Start Eat in the current project's root directory."
+;;     (interactive)
+;;     (defvar eat-buffer-name)
+;;     (let* ((default-directory (project-root (project-current t)))
+;;            (eat-buffer-name (project-prefixed-buffer-name "eat"))
+;;            (eat-buffer (get-buffer eat-buffer-name)))
+;;       (if (and eat-buffer (not current-prefix-arg))
+;;           (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
+;;         (eat))))
+;;   :config
+;;   (evil-set-initial-state 'eat-mode 'insert)
+;;   :general
+;;   (+leader-def
+;;     "ot" #'eat
+;;     "pt" #'project-eat)
+;;   :general-config
+;;   (:states '(normal visual)
+;;            :keymaps 'eat-mode-map
+;;            "<return>" #'evil-insert-resume)
+;;   (:states '(insert)
+;;            :keymaps 'eat-mode-map
+;;            "C-y" #'eat-yank)
+;;   :hook
+;;   (eshell-load . eat-eshell-mode)
+;;   (eshell-load . eat-eshell-visual-command-mode))
+#+end_src
+** Vterm
+#+begin_src emacs-lisp
+(use-package vterm
+  :commands (vterm)
   :custom
-  (eat-kill-buffer-on-exit t)
+  (vterm-kill-buffer-on-exit t)
+  (vterm-max-scrollback 5000)
   :preface
-  (defun project-eat ()
-    "Start Eat in the current project's root directory."
+  (defun project-vterm ()
     (interactive)
-    (defvar eat-buffer-name)
-    (let* ((default-directory (project-root (project-current t)))
-           (eat-buffer-name (project-prefixed-buffer-name "eat"))
-           (eat-buffer (get-buffer eat-buffer-name)))
-      (if (and eat-buffer (not current-prefix-arg))
-          (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
-        (eat))))
-  :config
-  (evil-set-initial-state 'eat-mode 'insert)
-  :general
-  (+leader-def
-    "ot" #'eat
-    "pt" #'project-eat)
+    (defvar vterm-buffer-name)
+    (let* ((default-directory (project-root     (project-current t)))
+           (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
+           (vterm-buffer (get-buffer vterm-buffer-name)))
+      (if (and vterm-buffer (not current-prefix-arg))
+          (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
+        (vterm))))
+  :hook
+  (vterm-mode . (lambda ()
+                  (setq confirm-kill-processes nil)
+                  (setq hscroll-margin 0)))
   :general-config
   (:states '(normal visual)
-           :keymaps 'eat-mode-map
+           :keymaps 'vterm-mode-map
            "<return>" #'evil-insert-resume)
   (:states '(insert)
-           :keymaps 'eat-mode-map
-           "C-y" #'eat-yank)
-  :hook
-  (eshell-load . eat-eshell-mode)
-  (eshell-load . eat-eshell-visual-command-mode))
+           :keymaps 'vterm-mode-map
+           "C-y" #'vterm-yank)
+  :general
+  (+leader-def
+    "pt" #'project-vterm
+    "ot" #'vterm))
+
+(use-package eshell-vterm
+  :ensure (eshell-vterm :host github :repo "iostapyshyn/eshell-vterm")
+  :after eshell
+  :config
+  (eshell-vterm-mode))
 #+end_src
 ** Eshell
 #+begin_src emacs-lisp
@@ -2685,11 +2760,6 @@ The candidates include the description."
                              :sort 'visibility
                              :as #'buffer-name))))
   (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
-
-(use-package shell
-  :ensure nil
-  :hook
-  (shell-mode . evil-normal-state))
 
 (use-package eshell
   :ensure nil
@@ -2754,6 +2824,7 @@ The candidates include the description."
   (eshell-scroll-to-bottom-on-output 'all)
   (eshell-kill-processes-on-exit t)
   (eshell-hist-ignoredups t)
+  (eshell-history-size 4096)
   (eshell-prompt-regexp "^.* λ ")
   (eshell-prompt-function #'+eshell-default-prompt-fn)
   (eshell-glob-case-insensitive t)
@@ -2766,8 +2837,9 @@ The candidates include the description."
 #+begin_src emacs-lisp
 (use-package org
   :ensure nil
+  :init
+  (setq org-directory "~/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/") ;; don't know why but custom not load on init
   :custom
-  (org-directory "~/Dropbox/org/")
   (org-hide-emphasis-markers t)
   (org-pretty-entities t)
   (org-cycle-separator-lines 2)
@@ -2980,13 +3052,20 @@ The candidates include the description."
 (add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
 (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h)
 #+end_src
+** Search
+#+begin_src emacs-lisp
+(use-package wgrep
+  :defer t
+  :commands (wgrep-change-to-wgrep-mode)
+  :custom
+  (wgrep-auto-save-buffer t))
+#+end_src
 ** Env
 #+begin_src emacs-lisp
-
 (use-package exec-path-from-shell
   :config
-  ;; (setq exec-path-from-shell-arguments '("-l"))
-  ;; (dolist (var '("KUBECONFIG"))
+  (setq exec-path-from-shell-arguments nil)
+  ;; (dolist (var '("KUBECONFIG" "SDKMAN_DIR"))
   ;;   (add-to-list 'exec-path-from-shell-variables var))
   (exec-path-from-shell-initialize))
 
