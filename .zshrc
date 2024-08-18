@@ -35,6 +35,12 @@ bindkey '^[[Z' reverse-menu-complete
 
 PS1='%F{blue}%~ %(?.%F{green}.%F{red})%#%f '
 
+alias ls="ls --color"
+alias vi="nvim"
+alias vim="nvim"
+alias k="kubectl"
+alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
+
 # vterm shell-side configuration
 vterm_printf() {
     if [ -n "$TMUX" ] && ([ "${TERM%%-*}" = "tmux" ] || [ "${TERM%%-*}" = "screen" ]); then
@@ -64,15 +70,6 @@ vterm_prompt_end() {
 setopt PROMPT_SUBST
 PROMPT=$PROMPT'%{$(vterm_prompt_end)%}'
 
-# command -v nodenv >/dev/null && eval "$(nodenv init -)"
-# command -v rbenv >/dev/null && eval "$(rbenv init - --no-rehash zsh)"
-
-# export PNPM_HOME="/Users/aki/Library/pnpm"
-# case ":$PATH:" in
-#   *":$PNPM_HOME:"*) ;;
-#   *) export PATH="$PNPM_HOME:$PATH" ;;
-# esac
-
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-# export SDKMAN_DIR="$HOME/.sdkman"
-# [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+command -v nodenv >/dev/null && eval "$(nodenv init -)"
+command -v rbenv >/dev/null && eval "$(pyenv init -)"
+command -v rbenv >/dev/null && eval "$(rbenv init -)"
