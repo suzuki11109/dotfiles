@@ -142,7 +142,10 @@
     "kl"  #'list-bookmarks
     "kd"  #'bookmark-delete
 
-    ;; "l"  '(nil :wk "package")
+    "l"  '(nil :wk "package")
+    "ll"  #'list-packages
+    "lu"  #'package-upgrade
+    "lU"  #'package-upgrade-all
 
     "m"  '(nil :wk "mode-specific")
 
@@ -1542,30 +1545,44 @@ targets."
 
 (use-package treesit
   :ensure nil
+  :preface
+  (defun treesit-install-all-language-grammers ()
+    "Build and install the tree-sitter language grammar libraries
+
+for all languages configured in `treesit-language-source-alist'."
+    (interactive)
+    (dolist (source treesit-language-source-alist)
+      (unless (treesit-ready-p (car source))
+        (treesit-install-language-grammar (car source)))))
   :init
-  (setq treesit-font-lock-level 4))
+  (setq treesit-font-lock-level 4)
+  (setq treesit-language-source-alist
+        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+          (c "https://github.com/tree-sitter/tree-sitter-c")
+          (cmake "https://github.com/uyha/tree-sitter-cmake")
+          (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
+          (css "https://github.com/tree-sitter/tree-sitter-css")
+          (csharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
+          (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
+          (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
+          (go "https://github.com/tree-sitter/tree-sitter-go" "master")
+          (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+          (heex "https://github.com/phoenixframework/tree-sitter-heex")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
+          (java "https://github.com/tree-sitter/tree-sitter-java")
+          (js . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
+          (json "https://github.com/tree-sitter/tree-sitter-json")
+          (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
+          (php "https://github.com/tree-sitter/tree-sitter-php")
+          (python "https://github.com/tree-sitter/tree-sitter-python")
+          (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
+          (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (toml "https://github.com/tree-sitter/tree-sitter-toml")
+          (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
+          (typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
+          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
 
-(use-package treesit-auto
-  :custom
-  (treesit-auto-install 'prompt)
-  :config
-  (treesit-auto-add-to-auto-mode-alist 'all)
-  (global-treesit-auto-mode))
-
-(use-package evil-textobj-tree-sitter
-  :after (treesit evil)
-  :config
-  (add-to-list 'evil-textobj-tree-sitter-major-mode-language-alist '(tsx-ts-mode . "typescript"))
-  (general-define-key
-   :keymaps 'evil-outer-text-objects-map
-   "f" (evil-textobj-tree-sitter-get-textobj "function.outer")
-   "a" (evil-textobj-tree-sitter-get-textobj "parameter.outer")
-   "c" (evil-textobj-tree-sitter-get-textobj "class.outer"))
-  (general-define-key
-   :keymaps 'evil-inner-text-objects-map
-   "f" (evil-textobj-tree-sitter-get-textobj "function.inner")
-   "a" (evil-textobj-tree-sitter-get-textobj "parameter.inner")
-   "c" (evil-textobj-tree-sitter-get-textobj "class.inner"))
+  (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
   )
 
 ;; Use only spaces
@@ -1617,10 +1634,10 @@ targets."
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)
     ))
-
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
+  ;; (lsp-diagnostics-provider :flymake)
   (lsp-headerline-breadcrumb-enable nil)
   (lsp-keep-workspace-alive nil)
   (lsp-enable-symbol-highlighting nil)
@@ -1628,10 +1645,10 @@ targets."
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-auto-execute-action nil)
-  (lsp-eldoc-enable-hover nil)
+  ;; (lsp-eldoc-enable-hover nil)
   (lsp-disabled-clients '(rubocop-ls))
-  (lsp-kotlin-compiler-jvm-target "2.1")
-  (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
+  ;; (lsp-kotlin-compiler-jvm-target "2.1")
+  ;; (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
   (lsp-pylsp-plugins-ruff-enabled t)
   (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-clients-typescript-preferences '(:importModuleSpecifierPreference "non-relative" :includeCompletionsForImportStatements nil))
@@ -1704,6 +1721,7 @@ targets."
 (use-package go-ts-mode
   :ensure nil
   :mode "\\.go\\'"
+  :mode ("go\\.mod\\'" . go-mod-ts-mode)
   :custom
   (go-ts-mode-indent-offset 4)
   :preface
@@ -1876,6 +1894,8 @@ targets."
 ;;     "t." #'pytest-run
 ;;     "tt" #'pytest-again
 ;;     "ts" #'pytest-one))
+
+(use-package pythontest)
 
 (use-package auto-virtualenv
   :hook
@@ -2192,6 +2212,7 @@ is available as part of \"future history\"."
 
 (use-package dockerfile-ts-mode
   :ensure nil
+  :mode "[/\\]\\(?:Containerfile\\|Dockerfile\\)\\(?:\\.[^/\\]*\\)?\\'"
   :hook
   (dockerfile-ts-mode . lsp-deferred))
 
