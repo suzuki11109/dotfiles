@@ -73,8 +73,6 @@
     ":"   '(pp-eval-expression :wk "Eval expression")
     "X"   #'org-capture
     "u"   '(universal-argument :wk "C-u")
-    "!"   #'+async-shell-command
-    "|"   #'async-shell-command-region
 
     "<tab>"   '(nil :wk "workspaces")
 
@@ -92,8 +90,8 @@
     "bz"  '(bury-buffer :wk "Bury buffer")
 
     "c"  '(nil :wk "code")
-    "cc" '(project-or-cwd-compile :wk "Compile")
-    "cC" '(recompile :wk "Recompile")
+    ;; "cc" '(project-or-cwd-compile :wk "Compile")
+    ;; "cC" '(recompile :wk "Recompile")
     "cd" '(xref-find-definitions :wk "Go to definitions")
     "cD" '(xref-find-definitions-other-window :wk "Go to definitions other window")
     "cR" '(xref-find-references :wk "Find references")
@@ -162,11 +160,11 @@
     "of"  #'make-frame
     "oF"  #'select-frame-by-name
     "ol"  #'browse-url
-    "oS"  '((lambda () (interactive)
-              (async-shell-command "open -a Simulator")) :wk "Open iOS simulator")
+    "ow"  #'download-file
     "o-"  #'dired-jump
 
     "p"  '(nil :wk "project")
+    "pp" #'project-switch-project
 
     "q"  '(nil :wk "quit/session")
     "qf" '(delete-frame :wk "Delete this frame")
@@ -193,15 +191,10 @@
   :custom
   (which-key-ellipsis "..")
   (which-key-sort-order 'which-key-key-order-alpha)
-  (which-key-min-display-lines 5)
+  (which-key-sort-uppercase-first nil)
   (which-key-add-column-padding 1)
   (which-key-side-window-slot -10)
-  :config
-  (setq which-key-replacement-alist (append
-                                     which-key-replacement-alist
-                                     '((("" . "\\`+?evil[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "◂\\1"))
-                                       (("" . "\\`+?projectile-rails[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "rails-\\1"))
-                                       (("" . "\\`+?projectile[-:]?\\(?:a-\\)?\\(.*\\)") . (nil . "‹\\1")))))
+  (which-key-min-display-lines 5)
   :hook
   (on-first-input . which-key-mode)
   )
@@ -322,12 +315,14 @@
         '("\\*Messages\\*"
           "\\*Warnings\\*"
           "Output\\*$"
+          ("\\*Compile-Log\\*" . hide)
           ;; "\\*Async Shell Command\\*$"
           compilation-mode
           comint-mode
           "^\\*term.*\\*$" term-mode
           "^\\*shell.*\\*$" shell-mode shell-command-mode
           "^\\*eshell" eshell-mode "-eshell\\*$"
+          "^\\*eat" eat-mode "-eat\\*$"
           "^\\*vterm" vterm-mode "-vterm\\*$"
           "\\*Go Test\\*$"
           "\\*Flycheck errors\\*"
@@ -399,7 +394,7 @@
   ("M-=" 'default-text-scale-increase))
 
 (use-package nerd-icons
-  :defer t
+  :demand t
   :general-config
   (+leader-def
     "in" '(nerd-icons-insert :wk "Nerd icons"))
@@ -518,8 +513,6 @@
   (tab-bar-new-tab-to 'rightmost)
   (tab-bar-format '(tab-bar-format-tabs
                     #'+tab-bar-suffix
-                    ;; tab-bar-format-align-right
-                    ;; tab-bar-format-global
                     ))
   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
   :config
@@ -529,11 +522,6 @@
        (concat
         (propertize " " 'display '(space :width (8)))
         (alist-get 'name tab)
-        ;; (or (and tab-bar-close-button-show
-        ;;          (not (eq tab-bar-close-button-show
-        ;;                   (if current-p 'non-selected 'selected)))
-        ;;          tab-bar-close-button)
-        ;;     "")
         (propertize " " 'display '(space :width (8))))
        'face (funcall tab-bar-tab-face-function tab))))
   (defun +tab-bar-suffix ()
@@ -546,6 +534,7 @@ of the tab bar."
 (use-package project
   :ensure nil
   :commands (project-find-file
+             project-dired
              project-switch-to-buffer
              project-switch-project
              project-switch-project-open-file)
@@ -553,8 +542,15 @@ of the tab bar."
   (project-switch-commands 'project-dired)
   :general
   (+leader-def
-    "p" '(:keymap project-prefix-map :wk "project")
-    "p!" #'project-async-shell-command
+    "p" '(:ignore t :wk "project")
+    "pp" #'project-switch-project
+    "pb" #'project-switch-to-buffer
+    "pd" #'project-dired
+    "pD" #'project-forget-project
+    "pe" #'project-eshell
+    "pf" #'project-find-file
+    "pF" #'project-or-external-find-file
+    "pk" #'project-kill-buffers
     ))
 
 (use-package tabspaces
@@ -816,6 +812,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
                                     evil-goto-definition-search))
   :general-config
   (+leader-def
+    "bN"  '(evil-buffer-new :wk "New empty buffer")
     "w" '(:keymap evil-window-map :wk "window"))
   (:states 'motion
            "j" 'evil-next-visual-line
@@ -891,12 +888,12 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (avy-background t))
 
-(use-package elec-pair
+(use-package electric-pair-mode
   :ensure nil
   :custom
   (electric-pair-skip-whitespace nil)
   :hook
-  ((prog-mode text-mode conf-mode) . electric-pair-mode)
+  ((prog-mode text-mode conf-mode) . electric-pair-local-mode)
   (org-mode . (lambda ()
                 (setq-local electric-pair-inhibit-predicate
                             `(lambda (c)
@@ -1103,11 +1100,19 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :bind
   (:map minibuffer-local-map
         ("M-r" . consult-history))
+  :preface
+  (defun consult-ripgrep-in-dir ()
+    "Search with `rg' for files in DIR selected from prompt"
+    (interactive)
+    (setq current-prefix-arg '(4))
+    (call-interactively 'consult-ripgrep))
   :general-config
   (+leader-def
     "sb"  #'consult-line
     "sB"  #'consult-line-multi
+    "sd"  #'consult-ripgrep-in-dir
     "sf"  #'consult-find
+    "sI"  #'consult-imenu-multi
     "sp"  #'consult-ripgrep
     "hI"  #'consult-info)
   :custom
@@ -1615,7 +1620,7 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package editorconfig
   :general-config
   (+leader-def
-    "fc" #'editorconfig-find-current-editorconfig)
+    "fc" '(editorconfig-find-current-editorconfig :wk "Open project editorconfig"))
   :hook (on-first-file . editorconfig-mode))
 
 (setq xref-prompt-for-identifier nil)
@@ -1756,6 +1761,7 @@ for all languages configured in `treesit-language-source-alist'."
 
 (use-package flutter
   :after dart-mode
+  :demand t
   :general-config
   (+local-leader-def
     :keymaps 'dart-mode-map
@@ -1763,12 +1769,23 @@ for all languages configured in `treesit-language-source-alist'."
     "ff" #'flutter-run-or-hot-reload
     "fq" #'flutter-quit
     "fr" #'flutter-hot-reload
-    "fR" #'flutter-hot-restart
-    ))
+    "fR" #'flutter-hot-restart)
+  :preface
+  (defun +flutter-mode-setup ()
+    (add-hook 'after-save-hook 'flutter-hot-reload))
+  :hook
+  (dart-mode . +flutter-mode-setup)
+  )
 
 (use-package lsp-dart
   :custom
   (lsp-dart-test-tree-on-run nil)
+  :config
+  (dap-register-debug-template "Flutter :: Custom debug"
+                               (list :flutterPlatform "x86_64"
+                                     :program "lib/main_dev.dart"
+                                     :type "flutter"
+                                     :args '("--flavor" "dev")))
   :hook
   (dart-mode . lsp-deferred)
   :general-config
@@ -1875,6 +1892,7 @@ for all languages configured in `treesit-language-source-alist'."
 
 (use-package python-ts-mode
   :ensure nil
+  :mode "\\.py\\'"
   :preface
   (defun +python-mode-setup ()
     (add-hook 'before-save-hook 'lsp-format-buffer nil t))
@@ -1882,20 +1900,14 @@ for all languages configured in `treesit-language-source-alist'."
   (python-ts-mode . lsp-deferred)
   (python-ts-mode . +python-mode-setup))
 
-;; (use-package pytest
-;;   :after python-ts-mode
-;;   :ensure (:host github :repo "ionrock/pytest-el")
-;;   :general-config
-;;   (+local-leader-def
-;;     :keymaps '(python-ts-mode-map)
-;;     "t" '(nil :wk "test")
-;;     "ta" #'pytest-all
-;;     "tf" #'pytest-module
-;;     "t." #'pytest-run
-;;     "tt" #'pytest-again
-;;     "ts" #'pytest-one))
-
-(use-package pythontest)
+(use-package pythontest
+  :general
+  (+local-leader-def
+    :keymaps '(python-ts-mode-map)
+    "t" '(nil :wk "test")
+    "ta" #'pythontest-test-all
+    "tf" #'pythontest-test-file
+    "ts" #'pythontest-test-at-point))
 
 (use-package auto-virtualenv
   :hook
@@ -1968,6 +1980,17 @@ for all languages configured in `treesit-language-source-alist'."
     :keymaps '(ruby-ts-mode-map)
     "rk" #'rake))
 
+(use-package ruby-ts-mode
+  :ensure nil
+  :hook
+  (ruby-ts-mode . apheleia-mode)
+  (ruby-ts-mode . lsp-deferred)
+  :general-config
+  (+local-leader-def
+    :keymaps '(ruby-ts-mode-map inf-ruby-mode-map erb-mode-map)
+    "r" '(:keymap rails-command-map :wk "rails"))
+  )
+
 (defvar rails-command-prefix "bundle exec rails")
 
 (defvar rails-generators
@@ -2036,7 +2059,7 @@ is available as part of \"future history\"."
   (interactive)
   (project-find-file-in-dir "app/controllers/"))
 
-;; macro?
+;; refactor to macro?
 (defun rails-find-model ()
   (interactive)
   (project-find-file-in-dir "app/models/"))
@@ -2110,17 +2133,6 @@ is available as part of \"future history\"."
     map)
   "Keymap after `rails-keymap-prefix'.")
 (fset 'rails-command-map rails-command-map)
-
-(use-package ruby-ts-mode
-  :ensure nil
-  :hook
-  (ruby-ts-mode . apheleia-mode)
-  (ruby-ts-mode . lsp-deferred)
-  :general-config
-  (+local-leader-def
-    :keymaps '(ruby-ts-mode-map inf-ruby-mode-map erb-mode-map)
-    "r" '(:keymap rails-command-map :wk "rails"))
-  )
 
 (use-package feature-mode
   :mode ("/\\.feature\\'" . feature-mode)
@@ -2218,20 +2230,7 @@ is available as part of \"future history\"."
 
 (use-package yaml-ts-mode
   :ensure nil
-  :mode "\\.ya?ml\\'"
-  :config
-  (setq yaml-ts-mode--syntax-table
-    (let ((table (make-syntax-table)))
-        (modify-syntax-entry ?#  "<"  table)
-        (modify-syntax-entry ?\n ">"  table)
-        (modify-syntax-entry ?&  "."  table)
-        (modify-syntax-entry ?*  "."  table)
-        (modify-syntax-entry ?\( "."  table)
-        (modify-syntax-entry ?\) "."  table)
-        (modify-syntax-entry ?\' "\"" table)
-        (modify-syntax-entry ?/  ". 124b" table)
-        table))
-  )
+  :mode "\\.ya?ml\\'")
 
 (use-package json-ts-mode
   :ensure nil
@@ -2268,14 +2267,32 @@ is available as part of \"future history\"."
             (call-interactively #'project-compile))
         (call-interactively #'compile))))
 
-  (defun project-compilation-buffer-name (compilation-mode)
+  (defun compile-from-history ()
+    "Run `compile' with a choice from its command history."
+    (interactive)
+    (let* ((command (completing-read (format-message "Compile command in `%s': " (abbreviate-file-name default-directory))
+                                     compile-history nil nil nil 'compile-history))
+           )
+      (compile command)))
+
+  (defun project-or-cwd-compile-from-history ()
+    "Run `compile' with a choice from its command history in
+current project's root directory."
+    (interactive)
+    (let ((project (project-current)))
+      (if project
+          (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'compile-from-history))
+        (call-interactively #'compile-from-history))))
+
+  (defun +project-compilation-buffer-name (compilation-mode)
     "Meant to be used for `compilation-buffer-name-function`.
 Argument COMPILATION-MODE is the name of the major mode used for the
 compilation buffer."
     (concat (+compilation-buffer-name-function compilation-mode)
             (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
 
-  (defun +compilation-buffer-name-function (arg)
+  (defun +compilation-buffer-name (arg)
     "Rename buffer to whatever command was used.
 eg. *python main.py*"
     (concat "*" compile-command "*"))
@@ -2285,8 +2302,14 @@ eg. *python main.py*"
   (compilation-always-kill t)
   (compilation-ask-about-save nil)
   (compilation-scroll-output 'first-error)
-  (compilation-buffer-name-function '+compilation-buffer-name-function)
-  (project-compilation-buffer-name-function 'project-compilation-buffer-name)
+  (compilation-buffer-name-function '+compilation-buffer-name)
+  (project-compilation-buffer-name-function '+project-compilation-buffer-name)
+  :general-config
+  (+leader-def
+    "pc" 'project-or-cwd-compile
+    "cc" 'project-or-cwd-compile)
+  :bind
+  ("M-o" . project-or-cwd-compile-from-history)
   :hook
   (compilation-filter . ansi-color-compilation-filter))
 
@@ -2303,53 +2326,42 @@ eg. *python main.py*"
   :bind
   ([remap shell-command] . project-or-cwd-async-shell-command)
   ("M-r" . project-or-cwd-async-shell-command-from-history)
-  :commands (+async-shell-command async-shell-command-region async-shell-command-in-directory project-or-cwd-async-shell-command-from-history project-or-cwd-async-shell-command)
+  :commands (async-shell-command-region async-shell-command-in-directory project-or-cwd-async-shell-command-from-history project-or-cwd-async-shell-command)
+  :general
+  (+leader-def
+    "!"  #'project-or-cwd-async-shell-command
+    "@"  #'async-shell-command-in-directory
+    "|"  #'async-shell-command-region
+    "pR" #'project-run-project
+    "p!" #'project-or-cwd-async-shell-command)
   :custom
   ;; If a shell command never outputs anything, don't show it.
   (async-shell-command-display-buffer nil)
   (shell-command-prompt-show-cwd t)
   ;; (shell-command-switch "-ic")
   :config
-  (defun +async-shell-command (&optional p)
-    "Run `async-shell-command' in the current project's root directory or in current directory."
-    (interactive "P")
-    (if p
-        (call-interactively #'async-shell-command-in-directory)
-      (project-or-cwd-async-shell-command)))
+  (put 'project-commands-run-command 'safe-local-variable #'stringp)
 
-  (defun async-shell-command-region (start end)
-    "Send region from START to END to `async-shell-command'and display the result."
-    (interactive "r")
-    (unless (region-active-p)
-      (user-error "No region"))
-    (let ((cmd (string-trim (buffer-substring-no-properties start end))))
-      (async-shell-command cmd)))
-
-  (defun project-or-cwd-async-shell-command (&optional dir)
+  (defun project-or-cwd-async-shell-command (&optional command)
     "Run `async-shell-command' in the current project's root directory or in the current directory."
     (declare (interactive-only async-shell-command))
     (interactive)
-    (let ((project (project-current)))
-      (if project
-          (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'async-shell-command))
-        (call-interactively #'async-shell-command))))
+    (async-shell-command-in-directory (+project-or-cwd-default-directory) command))
 
-  (defun async-shell-command-in-directory (dir)
+  (defun async-shell-command-in-directory (dir &optional command)
     "Run `async-shell-command' in the selected directory."
     (interactive "DAsync shell command in: ")
     (let ((default-directory dir))
-      (call-interactively #'async-shell-command)))
+      (if command
+          (async-shell-command command)
+        (call-interactively #'async-shell-command))))
 
   (defun project-or-cwd-async-shell-command-from-history ()
     "Run `async-shell-command' with a choice from its command history in
 current project's root directory."
     (interactive)
-    (let ((project (project-current)))
-      (if project
-          (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'async-shell-command-from-history))
-        (call-interactively #'async-shell-command-from-history))))
+    (let ((default-directory (+project-or-cwd-default-directory)))
+      (call-interactively #'async-shell-command-from-history)))
 
   (defun async-shell-command-from-history ()
     "Run `async-shell-command' with a choice from its command history."
@@ -2361,14 +2373,31 @@ current project's root directory."
                                      shell-command-history nil nil nil 'shell-command-history))
            )
       (async-shell-command command)))
-  )
 
+  (defun async-shell-command-region (start end)
+    "Send region from START to END to `async-shell-command'and display the result."
+    (interactive "r")
+    (unless (region-active-p)
+      (user-error "No region"))
+    (let ((cmd (string-trim (buffer-substring-no-properties start end))))
+      (async-shell-command cmd)))
+
+  (defun project-run-project ()
+    (interactive)
+    (project-or-cwd-async-shell-command project-commands-run-command))
+
+  (defun +project-or-cwd-default-directory ()
+    (let ((project (project-current)))
+      (if project
+          (project-root (project-current t))
+        default-directory)))
+  )
 
 (use-package shell-command-x
   :after shell
   :custom
-  (shell-command-x-buffer-name-async-format "*shell:%a*")
-  (shell-command-x-buffer-name-format "*shell:%a*")
+  (shell-command-x-buffer-name-async-format "*shell %p:%a*")
+  (shell-command-x-buffer-name-format "*shell %p:%a*")
   :config
   (shell-command-x-mode 1))
 
@@ -2398,68 +2427,69 @@ current project's root directory."
   (minibuffer-setup . fish-completion-mode)
   (eshell-mode . fish-completion-mode))
 
-;; (use-package eat
-;;   :commands (eat project-eat)
-;;   :custom
-;;   (eat-kill-buffer-on-exit t)
-;;   :preface
-;;   (defun project-eat ()
-;;     "Start Eat in the current project's root directory."
-;;     (interactive)
-;;     (defvar eat-buffer-name)
-;;     (let* ((default-directory (project-root (project-current t)))
-;;            (eat-buffer-name (project-prefixed-buffer-name "eat"))
-;;            (eat-buffer (get-buffer eat-buffer-name)))
-;;       (if (and eat-buffer (not current-prefix-arg))
-;;           (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
-;;         (eat))))
-;;   :config
-;;   (evil-set-initial-state 'eat-mode 'insert)
-;;   :general
-;;   (+leader-def
-;;     "ot" #'eat
-;;     "pt" #'project-eat)
-;;   :general-config
-;;   (:states '(normal visual)
-;;            :keymaps 'eat-mode-map
-;;            "<return>" #'evil-insert-resume)
-;;   (:states '(insert)
-;;            :keymaps 'eat-mode-map
-;;            "C-y" #'eat-yank)
-;;   :hook
-;;   (eshell-load . eat-eshell-mode)
-;;   (eshell-load . eat-eshell-visual-command-mode))
-
-(use-package vterm
-  :commands (vterm)
+(use-package eat
+  :commands (eat eat-project)
   :custom
-  (vterm-kill-buffer-on-exit t)
-  (vterm-max-scrollback 5000)
-  :preface
-  (defun project-vterm ()
-    (interactive)
-    (defvar vterm-buffer-name)
-    (let* ((default-directory (project-root     (project-current t)))
-           (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
-           (vterm-buffer (get-buffer vterm-buffer-name)))
-      (if (and vterm-buffer (not current-prefix-arg))
-          (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
-        (vterm))))
-  :hook
-  (vterm-mode . (lambda ()
-                  (setq confirm-kill-processes nil)
-                  (setq hscroll-margin 0)))
-  :general-config
-  (:states '(normal visual)
-           :keymaps 'vterm-mode-map
-           "<return>" #'evil-insert-resume)
-  (:states '(insert)
-           :keymaps 'vterm-mode-map
-           "C-y" #'vterm-yank)
+  (eat-kill-buffer-on-exit t)
+  (eat-term-name "xterm-256color")
+  ;; :preface
+  ;; (defun project-eat ()
+  ;;   "Start Eat in the current project's root directory."
+  ;;   (interactive)
+  ;;   (defvar eat-buffer-name)
+  ;;   (let* ((default-directory (project-root (project-current t)))
+  ;;          (eat-buffer-name (project-prefixed-buffer-name "eat"))
+  ;;          (eat-buffer (get-buffer eat-buffer-name)))
+  ;;     (if (and eat-buffer (not current-prefix-arg))
+  ;;         (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
+  ;;       (eat))))
+  :config
+  (evil-set-initial-state 'eat-mode 'insert)
   :general
   (+leader-def
-    "pt" #'project-vterm
-    "ot" #'vterm))
+    "os" #'eat
+    "ps" #'eat-project)
+  :general-config
+  (:states '(normal visual)
+           :keymaps 'eat-mode-map
+           "<return>" #'evil-insert-resume)
+  (:states '(insert)
+           :keymaps 'eat-mode-map
+           "C-y" #'eat-yank)
+  :hook
+  (eshell-load . eat-eshell-mode)
+  (eshell-load . eat-eshell-visual-command-mode))
+
+;; (use-package vterm
+;;   :commands (vterm)
+;;   :custom
+;;   (vterm-kill-buffer-on-exit t)
+;;   (vterm-max-scrollback 5000)
+;;   :preface
+;;   (defun project-vterm ()
+;;     (interactive)
+;;     (defvar vterm-buffer-name)
+;;     (let* ((default-directory (project-root     (project-current t)))
+;;            (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
+;;            (vterm-buffer (get-buffer vterm-buffer-name)))
+;;       (if (and vterm-buffer (not current-prefix-arg))
+;;           (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
+;;         (vterm))))
+;;   :hook
+;;   (vterm-mode . (lambda ()
+;;                   (setq confirm-kill-processes nil)
+;;                   (setq hscroll-margin 0)))
+;;   :general-config
+;;   (:states '(normal visual)
+;;            :keymaps 'vterm-mode-map
+;;            "<return>" #'evil-insert-resume)
+;;   (:states '(insert)
+;;            :keymaps 'vterm-mode-map
+;;            "C-y" #'vterm-yank)
+;;   :general
+;;   (+leader-def
+;;     "pt" #'project-vterm
+;;     "ot" #'vterm))
 
 ;; (use-package eshell-vterm
 ;;   :ensure (eshell-vterm :host github :repo "iostapyshyn/eshell-vterm")
@@ -2467,20 +2497,20 @@ current project's root directory."
 ;;   :config
 ;;   (eshell-vterm-mode))
 
-(with-eval-after-load 'consult
-  (defvar  +consult--source-term
-    (list :name     "Terminal buffers"
-          :narrow   ?t
-          :category 'buffer
-          :face     'consult-buffer
-          :history  'buffer-name-history
-          :state    #'consult--buffer-state
-          :items (lambda () (consult--buffer-query
-                             :predicate #'tabspaces--local-buffer-p
-                             :mode '(shell-mode eshell-mode term-mode eat-mode compilation-mode)
-                             :sort 'visibility
-                             :as #'buffer-name))))
-  (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
+;; (with-eval-after-load 'consult
+;;   (defvar  +consult--source-term
+;;     (list :name     "Terminal buffers"
+;;           :narrow   ?t
+;;           :category 'buffer
+;;           :face     'consult-buffer
+;;           :history  'buffer-name-history
+;;           :state    #'consult--buffer-state
+;;           :items (lambda () (consult--buffer-query
+;;                              :predicate #'tabspaces--local-buffer-p
+;;                              :mode '(shell-mode eshell-mode term-mode eat-mode compilation-mode)
+;;                              :sort 'visibility
+;;                              :as #'buffer-name))))
+;;   (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
 (use-package eshell
   :ensure nil
@@ -2590,10 +2620,6 @@ current project's root directory."
     :keymaps '(org-mode-map)
     "'" #'org-edit-special
     "." #'consult-org-heading
-    "e"   '(nil :wk "eval")
-    "ed"  'eval-defun
-    "ee"  'eval-last-sexp
-    "er"  'eval-region
     "l" #'org-insert-link)
   :hook
   (org-mode . org-indent-mode)
@@ -2642,11 +2668,30 @@ current project's root directory."
 
 (use-package org-agenda
   :ensure nil
+  :preface
+  (defun +org-project-notes-file ()
+    (expand-file-name ".project-notes.org" (project-root (project-current t))))
+
+  ;; (defun +org-agenda-project ()
+  ;;   (interactive)
+  ;;   (let* ((org-agenda-files (list (+org-project-notes-file))))
+  ;;     (org-todo-list)))
+
+  (defun +org-capture-project ()
+    (interactive)
+    (let* ((org-capture-templates
+            `(("t" "Tasks" entry (file+olp +org-project-notes-file "Tasks")
+               "* TODO %?")
+              ("n" "Notes" entry (file+olp +org-project-notes-file "Notes")
+               "* %?")
+              ))
+           )
+      (org-capture)))
   :custom
   (org-agenda-sorting-strategy '((agenda habit-down time-up priority-down category-keep)
-                                (todo tag-up priority-down category-keep)
-                                (tags priority-down category-keep)
-                                (search category-keep)))
+                                 (todo tag-up priority-down category-keep)
+                                 (tags priority-down category-keep)
+                                 (search category-keep)))
   (org-todo-keywords
    '((sequence "TODO(t)" "NEXT(n)" "|" "DONE(d!)")
      (sequence "[ ](T)" "|" "[X](x!)")))
@@ -2657,10 +2702,22 @@ current project's root directory."
   (org-agenda-confirm-kill nil)
   (org-agenda-window-setup 'only-window)
   (org-agenda-restore-windows-after-quit t)
+  ;; (org-agenda-custom-commands
+  ;;  '(("v" "Vocabulary" search ""
+  ;;     ((org-agenda-files
+  ;;       `(,(expand-file-name "vocab.org" org-directory)))))))
   (org-capture-templates
-   `(("t" "Tasks" entry (file "tasks.org")
+   `(("t" "Task" entry (file "tasks.org")
       "* TODO %?")
+     ("e" "Emacs todo" entry (file+olp "~/.config/emacs/init.org" "Todos")
+      "* %?")
+     ("v" "Vocalubary" entry (file "vocab.org")
+      "* %?")
      ))
+  :general
+  (+leader-def
+    "px"  '((lambda () (interactive) (find-file (+org-project-notes-file))) :wk "Edit .project-notes.org")
+    "pX" '+org-capture-project)
   :general-config
   (:keymaps 'org-agenda-mode-map
             "q" 'org-agenda-exit)
@@ -2687,8 +2744,8 @@ current project's root directory."
     ;; https://github.com/bbatsov/helm-projectile/issues/51
     (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
 
-    ;; need this because syncing updates from cloud show categories as ???
-    (advice-add #'org-agenda-redo :after (lambda (&rest _) (org-element-cache-reset t)))
+  ;; need this because syncing updates from cloud show categories as ???
+  (advice-add #'org-agenda-redo :after (lambda (&rest _) (org-element-cache-reset t)))
   )
 
 (use-package org-super-agenda
@@ -2765,6 +2822,11 @@ current project's root directory."
   :custom
   (wgrep-auto-save-buffer t))
 
+(use-package link-hint
+  :general
+  (+leader-def
+    "oL" #'link-hint-open-link))
+
 (use-package envrc
   :commands (envrc-global-mode)
   :hook (on-first-buffer . envrc-global-mode))
@@ -2810,18 +2872,31 @@ current project's root directory."
                                (append org-babel-load-languages
                                        '((verb     . t))))
   (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
-  :general
+  :general-config
   (+leader-def
     :keymaps 'org-mode-map
     "v" '(:ignore t :wk "verb")
-    "vf" '(verb-send-request-on-point-other-window-stay :wk "Send request")
-    "vr" '(verb-send-request-on-point-other-window-stay :wk "Send request other window")))
+    "vv" '(verb-send-request-on-point-other-window-stay :wk "Send request")
+    "vs" '(verb-set-var :wk "Set variable")
+    "vu" '(verb-unset-var :wk "Unset variable")
+    "vg" '(verb-show-vars :wk "Show variables"))
+    )
 
 ;;;###autoload
 (defun download-file (url)
   "Download file from URL."
   (interactive "sEnter URL: ")
   (url-copy-file url (read-file-name "Save as: ")))
+
+(use-package makefile-executor
+  :general
+  (+local-leader-def
+    :keymaps 'makefile-mode-map
+    "m" 'makefile-executor-execute-target)
+  (+leader-def
+    "pm" 'makefile-executor-execute-project-target)
+  :hook
+  (makefile-mode . makefile-executor-mode))
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))

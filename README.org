@@ -7,3 +7,8 @@ git clone --bare git@github.com:suzuki11109/dotfiles.git $HOME/.cfg
 git --git-dir=$HOME/.cfg/.git --work-tree=$HOME config --local status.showUntrackedFiles no
 git --git-dir=$HOME/.cfg/.git --work-tree=$HOME checkout
 #+end_src
+*** Set up remote
+#+begin_src sh
+dot config remote.origin.fetch '+refs/heads/*:refs/remotes/origin/*'
+dot fetch
+#+end_src
