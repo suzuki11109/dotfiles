@@ -2338,34 +2338,6 @@ is available as part of \"future history\"."
 (use-package compile
   :ensure nil
   :preface
-  (defun project-or-cwd-compile ()
-    "Run `compile' in the current project's root directory."
-    (declare (interactive-only compile))
-    (interactive)
-    (let ((project (project-current)))
-      (if project
-          (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'project-compile))
-        (call-interactively #'compile))))
-
-  (defun compile-from-history ()
-    "Run `compile' with a choice from its command history."
-    (interactive)
-    (let* ((command (completing-read (format-message "Compile command in `%s': " (abbreviate-file-name default-directory))
-                                     compile-history nil nil nil 'compile-history))
-           )
-      (compile command)))
-
-  (defun project-or-cwd-compile-from-history ()
-    "Run `compile' with a choice from its command history in
-current project's root directory."
-    (interactive)
-    (let ((project (project-current)))
-      (if project
-          (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'compile-from-history))
-        (call-interactively #'compile-from-history))))
-
   (defun +project-compilation-buffer-name (compilation-mode)
     "Meant to be used for `compilation-buffer-name-function`.
 Argument COMPILATION-MODE is the name of the major mode used for the
@@ -2377,7 +2349,6 @@ compilation buffer."
     "Rename buffer to whatever command was used.
 eg. *python main.py*"
     (concat "*" compile-command "*"))
-
   :custom
   (compile-command "make ")
   (compilation-always-kill t)
@@ -2385,12 +2356,6 @@ eg. *python main.py*"
   (compilation-scroll-output 'first-error)
   (compilation-buffer-name-function '+compilation-buffer-name)
   (project-compilation-buffer-name-function '+project-compilation-buffer-name)
-  :general-config
-  (+leader-def
-    "pc" 'project-or-cwd-compile
-    "cc" 'project-or-cwd-compile)
-  :bind
-  ("M-o" . project-or-cwd-compile-from-history)
   :hook
   (compilation-filter . ansi-color-compilation-filter))
 
@@ -2399,43 +2364,45 @@ eg. *python main.py*"
   :custom
   (ansi-color-for-comint-mode t)
   (comint-prompt-read-only t)
-  (comint-buffer-maximum-size 2048)
-  )
+  (comint-buffer-maximum-size 2048))
 
-(use-package shell
-  :ensure nil
-  :bind
-  ([remap shell-command] . project-or-cwd-async-shell-command)
-  ("M-r" . project-or-cwd-async-shell-command-from-history)
-  :commands (async-shell-command-region async-shell-command-in-directory project-or-cwd-async-shell-command-from-history project-or-cwd-async-shell-command)
-  :general
-  (+leader-def
-    "!"  #'project-or-cwd-async-shell-command
-    "@"  #'async-shell-command-in-directory
-    "|"  #'async-shell-command-region
-    "pR" #'project-run-project
-    "p!" #'project-or-cwd-async-shell-command)
-  :custom
-  ;; If a shell command never outputs anything, don't show it.
-  (async-shell-command-display-buffer nil)
-  (shell-command-prompt-show-cwd t)
-  ;; (shell-command-switch "-ic")
-  :config
-  (put 'project-commands-run-command 'safe-local-variable #'stringp)
+(use-package shell-command-pro
+  :vc (shell-command-pro :url "https://github.com/suzuki11109/shell-command-pro")
+  :commands (async-shell-command-in-dir async-shell-command-from-history
+             project-or-cwd-async-shell-command project-or-cwd-async-shell-command-from-history
+             project-run-project project-or-cwd-compile project-or-cwd-compile-from-history)
+  :preface
+  (defun project-or-cwd-compile ()
+    "Run `compile' in the current project's root directory."
+    (declare (interactive-only compile))
+    (interactive)
+    (let ((project (project-current)))
+      (if project
+          (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'project-compile))
+        (call-interactively #'compile))))
+
+  (defun project-or-cwd-compile-from-history ()
+    "Run `compile' with a choice from its command history in
+current project's root directory."
+    (interactive)
+    (let ((project (project-current)))
+      (if project
+          (let ((default-directory (project-root (project-current t))))
+            (call-interactively #'compile-from-history))
+        (call-interactively #'compile-from-history))))
+
+  (defun +project-or-cwd-default-directory ()
+    (let ((project (project-current)))
+      (if project
+          (project-root (project-current t))
+        default-directory)))
 
   (defun project-or-cwd-async-shell-command (&optional command)
     "Run `async-shell-command' in the current project's root directory or in the current directory."
     (declare (interactive-only async-shell-command))
     (interactive)
-    (async-shell-command-in-directory (+project-or-cwd-default-directory) command))
-
-  (defun async-shell-command-in-directory (dir &optional command)
-    "Run `async-shell-command' in the selected directory."
-    (interactive "DAsync shell command in: ")
-    (let ((default-directory dir))
-      (if command
-          (async-shell-command command)
-        (call-interactively #'async-shell-command))))
+    (async-shell-command-in-dir (+project-or-cwd-default-directory) command))
 
   (defun project-or-cwd-async-shell-command-from-history ()
     "Run `async-shell-command' with a choice from its command history in
@@ -2444,17 +2411,33 @@ current project's root directory."
     (let ((default-directory (+project-or-cwd-default-directory)))
       (call-interactively #'async-shell-command-from-history)))
 
-  (defun async-shell-command-from-history ()
-    "Run `async-shell-command' with a choice from its command history."
+  (defun project-run-project ()
     (interactive)
-    (let* ((command (completing-read (if shell-command-prompt-show-cwd
-                                         (format-message "Async shell command in `%s': "
-                                                         (abbreviate-file-name default-directory))
-                                       "Async shell command: ")
-                                     shell-command-history nil nil nil 'shell-command-history))
-           )
-      (async-shell-command command)))
+    (project-or-cwd-async-shell-command project-commands-run-command))
+  :init
+  (put 'project-commands-run-command 'safe-local-variable #'stringp)
+  :bind
+  ([remap shell-command] . project-or-cwd-async-shell-command)
+  ("M-r" . project-or-cwd-async-shell-command-from-history)
+  ("M-o" . project-or-cwd-compile-from-history)
+  :general
+  (+leader-def
+    "cc" #'project-or-cwd-compile
+    "pc" #'project-or-cwd-compile
+    "!"  #'project-or-cwd-async-shell-command
+    "p!" #'project-or-cwd-async-shell-command
+    "pR" #'project-run-project
+    "@"  #'async-shell-command-in-dir))
 
+(use-package shell
+  :ensure nil
+  :general
+  (+leader-def
+    "|"  #'async-shell-command-region)
+  :custom
+  (async-shell-command-display-buffer nil) ;; If a shell command never outputs anything, don't show it.
+  (shell-command-prompt-show-cwd t)
+  :preface
   (defun async-shell-command-region (start end)
     "Send region from START to END to `async-shell-command'and display the result."
     (interactive "r")
@@ -2462,16 +2445,6 @@ current project's root directory."
       (user-error "No region"))
     (let ((cmd (string-trim (buffer-substring-no-properties start end))))
       (async-shell-command cmd)))
-
-  (defun project-run-project ()
-    (interactive)
-    (project-or-cwd-async-shell-command project-commands-run-command))
-
-  (defun +project-or-cwd-default-directory ()
-    (let ((project (project-current)))
-      (if project
-          (project-root (project-current t))
-        default-directory)))
   )
 
 (use-package shell-command-x
@@ -2836,6 +2809,18 @@ current project's root directory."
           ))
   (setq org-super-agenda-header-map (make-sparse-keymap))
   (org-super-agenda-mode 1))
+
+(use-package org-roam
+  :hook (org-load . org-roam-db-autosync-mode)
+  :config
+  :custom
+  (org-roam-directory (file-truename "~/org-roam"))
+  (org-roam-list-files-commands '(fd fdfind rg find))
+  (org-roam-completion-everywhere t)
+  (org-roam-node-display-template
+   (concat "${title:*} "
+           (propertize "${tags:10}" 'face 'org-tag)))
+  )
 
 (use-package bazel
   :mode ("\\Tiltfile\\'" . bazel-starlark-mode))
