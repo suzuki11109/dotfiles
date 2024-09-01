@@ -6,7 +6,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH=$HOME/.local/bin:$PATH
 export PATH=/usr/local/go1.22.5/bin:$PATH
 export PATH=$HOME/go/bin:$PATH
-export PATH=$HOME/flutter3.19.6/bin:$PATH
+export PATH=$HOME/flutter/bin:$PATH
 
 export PATH=$HOME/.pyenv/shims:$PATH
 export PATH=$HOME/.rbenv/shims:$PATH

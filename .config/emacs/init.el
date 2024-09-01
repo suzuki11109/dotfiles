@@ -1,6 +1,8 @@
 ;;; init.el --- init file -*- lexical-binding: t; no-byte-compile: t; -*-
 
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+(setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
+                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+                         ("melpa" . "https://melpa.org/packages/")))
 
 ;; Highest number gets priority (what is not mentioned has priority 0)
 (setq package-archive-priorities
@@ -11,6 +13,9 @@
 (setq package-install-upgrade-built-in nil)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
+
+(eval-when-compile
+  (require 'use-package))
 
 ;; Set exec-path
 (use-package exec-path-from-shell
@@ -90,8 +95,6 @@
     "bz"  '(bury-buffer :wk "Bury buffer")
 
     "c"  '(nil :wk "code")
-    ;; "cc" '(project-or-cwd-compile :wk "Compile")
-    ;; "cC" '(recompile :wk "Recompile")
     "cd" '(xref-find-definitions :wk "Go to definitions")
     "cD" '(xref-find-definitions-other-window :wk "Go to definitions other window")
     "cR" '(xref-find-references :wk "Find references")
@@ -157,8 +160,8 @@
 
     "o"   '(nil   :wk "app/open")
     "oa"  #'org-agenda
-    "of"  #'make-frame
-    "oF"  #'select-frame-by-name
+    "of"  #'select-frame-by-name
+    "oF"  #'make-frame
     "ol"  #'browse-url
     "ow"  #'download-file
     "o-"  #'dired-jump
@@ -259,12 +262,13 @@
 ;; Frame title
 (setq frame-title-format
       (list
-       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
        '(:eval
          (let ((project (project-current)))
            (when project
-             (format " — %s" (project-name project)))))))
-(setq icon-title-format frame-title-format)
+             (format "%s — " (project-name project)))))
+       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+       ))
+;; (setq icon-title-format frame-title-format)
 
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
@@ -345,8 +349,8 @@
           flutter-mode
           ))
   :hook
-  (on-first-input . popper-mode)
-  (on-first-input . popper-echo-mode)
+  (after-init . popper-mode)
+  (after-init . popper-echo-mode)
   )
 
 (use-package transient
@@ -490,48 +494,8 @@
 (use-package evil-anzu
   :after (evil anzu))
 
-;; New frame initial buffer
-;; (defun +set-frame-scratch-buffer (frame)
-;;   (with-selected-frame frame
-;;     (switch-to-buffer "*scratch*")))
-;; (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
-
-  ;; (add-to-list 'global-mode-string
-  ;;              '(:eval
-  ;;                (let ((branch (magit-get-current-branch)))
-  ;;                  (when branch
-  ;;                    (format " %s" branch)))))
-
-(use-package tab-bar
-  :ensure nil
-  :commands (tab-bar-mode)
-  :custom
-  (tab-bar-close-tab-select 'recent)
-  (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
-  (tab-bar-close-button-show nil)
-  (tab-bar-auto-width nil)
-  (tab-bar-new-tab-to 'rightmost)
-  (tab-bar-format '(tab-bar-format-tabs
-                    #'+tab-bar-suffix
-                    ))
-  (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
-  :config
-  (defun +tab-bar-tab-name-format (tab i)
-    (let ((current-p (eq (car tab) 'current-tab)))
-      (propertize
-       (concat
-        (propertize " " 'display '(space :width (8)))
-        (alist-get 'name tab)
-        (propertize " " 'display '(space :width (8))))
-       'face (funcall tab-bar-tab-face-function tab))))
-  (defun +tab-bar-suffix ()
-    "Add empty space.
-This ensures that the last tab's face does not extend to the end
-of the tab bar."
-    " ")
-  )
-
 (use-package project
+  :demand t
   :ensure nil
   :commands (project-find-file
              project-dired
@@ -553,50 +517,175 @@ of the tab bar."
     "pk" #'project-kill-buffers
     ))
 
-(use-package tabspaces
-  :custom
-  (tab-bar-new-tab-choice "*scratch*")
-  (tabspaces-use-filtered-buffers-as-default t)
-  (tabspaces-default-tab "scratch")
-  (tabspaces-include-buffers '("*dashboard*" "*scratch*" "*Messages*"))
-  (tabspaces-initialize-project-with-todo nil)
+(use-package beframe
+  :hook
+  (after-init . beframe-mode)
+  :preface
+  (defun prot-project--switch (directory &optional command)
+    "Do the work of `project-switch-project' in the given DIRECTORY.
+With optional COMMAND, run it in DIRECTORY."
+    (let ((command (or (when (functionp command) command)
+                       (if (symbolp project-switch-commands)
+                           project-switch-commands
+                         (project--switch-project-command))))
+          (buffer (current-buffer)))
+      (unwind-protect
+          (progn
+            (setq-local project-current-directory-override directory)
+            (call-interactively command))
+        (with-current-buffer buffer
+          (kill-local-variable 'project-current-directory-override)))))
+
+  (defun find-frame-by-project (search my-list)
+    (cl-find search my-list
+             :test (lambda (target item)
+                     (string= target (car (split-string item))))))
+
+  (defun prot-project--frame-names ()
+    "Return a list of frame names."
+    (mapcar #'car (make-frame-names-alist)))
+
+  (defun prot-project-switch (directory)
+    "Switch to project DIRECTORY.
+If DIRECTORY exists in a frame, select it.  Otherwise switch to
+the project in DIRECTORY using `project-dired'."
+    (interactive (list (funcall project-prompter)))
+    (project--remember-dir directory)
+    (let ((frame-name (find-frame-by-project (file-name-nondirectory (directory-file-name directory)) (prot-project--frame-names))))
+      (if frame-name
+          (select-frame-by-name frame-name)
+        (prot-project--switch directory 'project-dired))))
+
+  (defun +select-frame-by-name ()
+    "Select a frame by name, excluding the current frame from the options."
+    (interactive)
+    (let* ((current-frame (selected-frame))
+           (frames (frame-list))
+           (frames (remove current-frame frames)) ; Exclude current frame
+           (frame-names (mapcar (lambda (frame) (frame-parameter frame 'name)) frames))
+           (frame-name (completing-read "Select frame: " frame-names)))
+      (when frame-name
+        (select-frame-by-name frame-name))))
+
   :general-config
   (+leader-def
-    "<tab>1" #'tab-bar-switch-to-default-tab
-    "<tab>b" #'tabspaces-switch-to-buffer
-    "<tab>k" #'tabspaces-kill-buffers-close-workspace
-    "<tab><tab>" #'tab-bar-switch-to-tab
-    "<tab>s" #'tabspaces-switch-or-create-workspace
-    "<tab>t" #'tabspaces-switch-buffer-and-tab
-    "<tab>n" #'tab-bar-switch-to-next-tab
-    "<tab>p" #'tab-bar-switch-to-prev-tab)
-  (+leader-def
-    "pp" #'tabspaces-open-or-create-project-and-workspace)
+    "pp" #'prot-project-switch
+    "of" #'+select-frame-by-name
+    )
   :config
-  (tabspaces-mode 1)
-  (tab-bar-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
+  (setq beframe-functions-in-frames '(project-prompt-project-dir))
+  (setq beframe-create-frame-scratch-buffer nil)
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
 
-    (defvar consult--source-workspace
-      (list :name     "Workspace Buffers"
-            :narrow   ?w
-            :history  'buffer-name-history
-            :category 'buffer
-            :state    #'consult--buffer-state
-            :default  t
-            :items    (lambda () (consult--buffer-query
-                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
-                                  :sort 'visibility
-                                  :as #'buffer-name))))
-    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+    (defun beframe-buffer-names-sorted (&optional frame)
+      "Return the list of buffers from `beframe-buffer-names' sorted by visibility.
+With optional argument FRAME, return the list of buffers of FRAME."
+      (beframe-buffer-names frame :sort #'beframe-buffer-sort-visibility))
 
-  (defun tab-bar-switch-to-default-tab ()
-    (interactive)
-    (tab-bar-switch-to-tab tabspaces-default-tab))
+    (defvar beframe-consult-source
+      `( :name     "Workspace buffers"
+         :narrow   ?w
+         :category buffer
+         :default  t
+         :history  beframe-history
+         :action   ,#'switch-to-buffer
+         :state    ,#'consult--buffer-state
+         :items    ,(lambda () (consult--buffer-query
+                                :predicate (lambda (x) (and (beframe--frame-buffer-p x) (not (popper-popup-p x))))
+                                :sort 'visibility
+                                :as #'buffer-name))
+         ))
+
+    (add-to-list 'consult-buffer-sources 'beframe-consult-source))
   )
+
+;; New frame initial buffer
+;; (defun +set-frame-scratch-buffer (frame)
+;;   (with-selected-frame frame
+;;     (switch-to-buffer "*scratch*")))
+;; (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
+
+  ;; (add-to-list 'global-mode-string
+  ;;              '(:eval
+  ;;                (let ((branch (magit-get-current-branch)))
+  ;;                  (when branch
+  ;;                    (format " %s" branch)))))
+
+;; (use-package tab-bar
+;;   :ensure nil
+;;   :commands (tab-bar-mode)
+;;   :custom
+;;   (tab-bar-close-tab-select 'recent)
+;;   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
+;;   (tab-bar-close-button-show nil)
+;;   (tab-bar-auto-width nil)
+;;   (tab-bar-new-tab-to 'rightmost)
+;;   (tab-bar-format '(tab-bar-format-tabs
+;;                     #'+tab-bar-suffix
+;;                     ))
+;;   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
+;;   :config
+;;   (defun +tab-bar-tab-name-format (tab i)
+;;     (let ((current-p (eq (car tab) 'current-tab)))
+;;       (propertize
+;;        (concat
+;;         (propertize " " 'display '(space :width (8)))
+;;         (alist-get 'name tab)
+;;         (propertize " " 'display '(space :width (8))))
+;;        'face (funcall tab-bar-tab-face-function tab))))
+;;   (defun +tab-bar-suffix ()
+;;     "Add empty space.
+;; This ensures that the last tab's face does not extend to the end
+;; of the tab bar."
+;;     " ")
+;;   )
+
+;; (use-package tabspaces
+;;   :custom
+;;   (tab-bar-new-tab-choice "*scratch*")
+;;   (tabspaces-use-filtered-buffers-as-default t)
+;;   (tabspaces-default-tab "scratch")
+;;   (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
+;;   (tabspaces-initialize-project-with-todo t)
+;;   :general-config
+;;   (+leader-def
+;;     "<tab>1" #'tab-bar-switch-to-default-tab
+;;     "<tab>b" #'tabspaces-switch-to-buffer
+;;     "<tab>k" #'tabspaces-kill-buffers-close-workspace
+;;     "<tab><tab>" #'tab-bar-switch-to-tab
+;;     "<tab>s" #'tabspaces-switch-or-create-workspace
+;;     "<tab>t" #'tabspaces-switch-buffer-and-tab
+;;     "<tab>n" #'tab-bar-switch-to-next-tab
+;;     "<tab>p" #'tab-bar-switch-to-prev-tab)
+;;   (+leader-def
+;;     "pp" #'tabspaces-open-or-create-project-and-workspace)
+;;   :config
+;;   (tabspaces-mode 1)
+;;   (tab-bar-mode 1)
+;;   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
+
+;;   (with-eval-after-load 'consult
+;;     (consult-customize consult--source-buffer :hidden t :default nil)
+
+;;     (defvar consult--source-workspace
+;;       (list :name     "Workspace Buffers"
+;;             :narrow   ?w
+;;             :history  'buffer-name-history
+;;             :category 'buffer
+;;             :state    #'consult--buffer-state
+;;             :default  t
+;;             :items    (lambda () (consult--buffer-query
+;;                                   :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
+;;                                   :sort 'visibility
+;;                                   :as #'buffer-name))))
+;;     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+
+;;   (defun tab-bar-switch-to-default-tab ()
+;;     (interactive)
+;;     (tab-bar-switch-to-tab tabspaces-default-tab))
+;;   )
 
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
@@ -728,8 +817,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (dired-recursive-deletes 'top)
   (dired-create-destination-dirs 'ask)
   (dired-listing-switches "-ahl")
-  (dired-kill-when-opening-new-dired-buffer t)
-  )
+  (dired-kill-when-opening-new-dired-buffer t))
 
 ;; Dired fontlock
 (use-package diredfl
@@ -840,7 +928,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init)
-  )
+  (evil-collection-define-key 'normal 'dired-mode-map
+    "q" nil))
 
 (use-package evil-nerd-commenter
   :after evil
@@ -967,8 +1056,8 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-outer-limit 48000000))
 
 (use-package undo-fu-session
-  :hook
-  ((prog-mode text-mode conf-mode) . undo-fu-session-mode)
+  :config
+  (undo-fu-session-global-mode)
   :custom
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 
@@ -1650,7 +1739,7 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-auto-execute-action nil)
-  ;; (lsp-eldoc-enable-hover nil)
+  (lsp-eldoc-enable-hover nil)
   (lsp-disabled-clients '(rubocop-ls))
   ;; (lsp-kotlin-compiler-jvm-target "2.1")
   ;; (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
@@ -1760,9 +1849,7 @@ for all languages configured in `treesit-language-source-alist'."
   :mode "\\.dart\\'")
 
 (use-package flutter
-  :after dart-mode
-  :demand t
-  :general-config
+  :general
   (+local-leader-def
     :keymaps 'dart-mode-map
     "f" '(:ignore t :wk "flutter")
@@ -1772,7 +1859,7 @@ for all languages configured in `treesit-language-source-alist'."
     "fR" #'flutter-hot-restart)
   :preface
   (defun +flutter-mode-setup ()
-    (add-hook 'after-save-hook 'flutter-hot-reload))
+    (add-hook 'after-save-hook 'flutter-hot-reload nil t))
   :hook
   (dart-mode . +flutter-mode-setup)
   )
@@ -1780,12 +1867,6 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package lsp-dart
   :custom
   (lsp-dart-test-tree-on-run nil)
-  :config
-  (dap-register-debug-template "Flutter :: Custom debug"
-                               (list :flutterPlatform "x86_64"
-                                     :program "lib/main_dev.dart"
-                                     :type "flutter"
-                                     :args '("--flavor" "dev")))
   :hook
   (dart-mode . lsp-deferred)
   :general-config
@@ -2432,17 +2513,6 @@ current project's root directory."
   :custom
   (eat-kill-buffer-on-exit t)
   (eat-term-name "xterm-256color")
-  ;; :preface
-  ;; (defun project-eat ()
-  ;;   "Start Eat in the current project's root directory."
-  ;;   (interactive)
-  ;;   (defvar eat-buffer-name)
-  ;;   (let* ((default-directory (project-root (project-current t)))
-  ;;          (eat-buffer-name (project-prefixed-buffer-name "eat"))
-  ;;          (eat-buffer (get-buffer eat-buffer-name)))
-  ;;     (if (and eat-buffer (not current-prefix-arg))
-  ;;         (pop-to-buffer eat-buffer (bound-and-true-p display-comint-buffer-action))
-  ;;       (eat))))
   :config
   (evil-set-initial-state 'eat-mode 'insert)
   :general
@@ -2587,6 +2657,14 @@ current project's root directory."
   :after eshell
   :config
   (eshell-syntax-highlighting-global-mode +1))
+
+(use-package ielm
+  :ensure nil
+  :general-config
+  (:states '(insert)
+           :keymaps 'inferior-emacs-lisp-mode-map
+           "C-y" #'yank)
+  )
 
 (use-package org
   :ensure nil
@@ -2897,6 +2975,13 @@ current project's root directory."
     "pm" 'makefile-executor-execute-project-target)
   :hook
   (makefile-mode . makefile-executor-mode))
+
+(use-package elcord
+  :defer 1
+  :custom
+  (elcord-quiet t)
+  :config
+  (elcord-mode 1))
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
