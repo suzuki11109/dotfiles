@@ -3,6 +3,9 @@
 ;;; Commentary:
 ;;; Code:
 
+(defconst IS-MAC      (eq system-type 'darwin))
+(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+
 ;; Increase the garbage collection (GC) threshold for faster startup.
 (setq gc-cons-threshold most-positive-fixnum)
 (add-hook 'emacs-startup-hook
@@ -81,6 +84,17 @@
 (setq menu-bar-mode nil
       tool-bar-mode nil
       scroll-bar-mode nil)
+
+(when IS-MAC
+  ;; NOTE: The correct way to disable this hack is to toggle `menu-bar-mode' (or
+  ;;   put it on a hook). Don't try to undo the hack below, as it may change
+  ;;   without warning, but will always respect `menu-bar-mode'.
+  (setcdr (assq 'menu-bar-lines default-frame-alist) 'tty)
+  (add-hook 'after-make-frame-functions
+    (defun init-menu-bar-on-macos-h (&optional frame)
+      (if (eq (frame-parameter frame 'menu-bar-lines) 'tty)
+          (set-frame-parameter frame 'menu-bar-lines
+                               (if (display-graphic-p frame) 1 0))))))
 
 (set-language-environment "UTF-8")
 (setq default-input-method nil)

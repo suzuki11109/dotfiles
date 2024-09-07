@@ -41,8 +41,7 @@
 (use-package on
   :vc (on :url "https://github.com/ajgrf/on.el" :branch "master"))
 
-(defconst IS-MAC      (eq system-type 'darwin))
-(defconst IS-LINUX    (memq system-type '(gnu gnu/linux gnu/kfreebsd berkeley-unix)))
+
 
 (defmacro quiet! (&rest forms)
   "Run FORMS without making any noise."
@@ -70,7 +69,6 @@
   :ensure nil
   :after evil
   :config
-  ;; Escape once
   (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
   (+leader-def
@@ -320,7 +318,7 @@
           "\\*Warnings\\*"
           "Output\\*$"
           ("\\*Compile-Log\\*" . hide)
-          ;; "\\*Async Shell Command\\*$"
+          "\\*Async Shell Command\\*$"
           compilation-mode
           comint-mode
           "^\\*term.*\\*$" term-mode
@@ -495,16 +493,10 @@
   :after (evil anzu))
 
 (use-package project
-  :demand t
   :ensure nil
-  :commands (project-find-file
-             project-dired
-             project-switch-to-buffer
-             project-switch-project
-             project-switch-project-open-file)
   :custom
   (project-switch-commands 'project-dired)
-  :general
+  :general-config
   (+leader-def
     "p" '(:ignore t :wk "project")
     "pp" #'project-switch-project
@@ -517,175 +509,197 @@
     "pk" #'project-kill-buffers
     ))
 
-(use-package beframe
-  :hook
-  (after-init . beframe-mode)
-  :preface
-  (defun prot-project--switch (directory &optional command)
-    "Do the work of `project-switch-project' in the given DIRECTORY.
-With optional COMMAND, run it in DIRECTORY."
-    (let ((command (or (when (functionp command) command)
-                       (if (symbolp project-switch-commands)
-                           project-switch-commands
-                         (project--switch-project-command))))
-          (buffer (current-buffer)))
-      (unwind-protect
-          (progn
-            (setq-local project-current-directory-override directory)
-            (call-interactively command))
-        (with-current-buffer buffer
-          (kill-local-variable 'project-current-directory-override)))))
+;; (use-package beframe
+;;   :hook
+;;   (after-init . beframe-mode)
+;;   :preface
+;;   (defun prot-project--switch (directory &optional command)
+;;     "Do the work of `project-switch-project' in the given DIRECTORY.
+;; With optional COMMAND, run it in DIRECTORY."
+;;     (let ((command (or (when (functionp command) command)
+;;                        (if (symbolp project-switch-commands)
+;;                            project-switch-commands
+;;                          (project--switch-project-command))))
+;;           (buffer (current-buffer)))
+;;       (unwind-protect
+;;           (progn
+;;             (setq-local project-current-directory-override directory)
+;;             (call-interactively command))
+;;         (with-current-buffer buffer
+;;           (kill-local-variable 'project-current-directory-override)))))
 
-  (defun find-frame-by-project (search my-list)
-    (cl-find search my-list
-             :test (lambda (target item)
-                     (string= target (car (split-string item))))))
+;;   (defun find-frame-by-project (search my-list)
+;;     (cl-find search my-list
+;;              :test (lambda (target item)
+;;                      (string= target (car (split-string item))))))
 
-  (defun prot-project--frame-names ()
-    "Return a list of frame names."
-    (mapcar #'car (make-frame-names-alist)))
+;;   (defun prot-project--frame-names ()
+;;     "Return a list of frame names."
+;;     (mapcar #'car (make-frame-names-alist)))
 
-  (defun prot-project-switch (directory)
-    "Switch to project DIRECTORY.
-If DIRECTORY exists in a frame, select it.  Otherwise switch to
-the project in DIRECTORY using `project-dired'."
-    (interactive (list (funcall project-prompter)))
-    (project--remember-dir directory)
-    (let ((frame-name (find-frame-by-project (file-name-nondirectory (directory-file-name directory)) (prot-project--frame-names))))
-      (if frame-name
-          (select-frame-by-name frame-name)
-        (prot-project--switch directory 'project-dired))))
+;;   (defun prot-project-switch (directory)
+;;     "Switch to project DIRECTORY.
+;; If DIRECTORY exists in a frame, select it.  Otherwise switch to
+;; the project in DIRECTORY using `project-dired'."
+;;     (interactive (list (funcall project-prompter)))
+;;     (project--remember-dir directory)
+;;     (let ((frame-name (find-frame-by-project (file-name-nondirectory (directory-file-name directory)) (prot-project--frame-names))))
+;;       (if frame-name
+;;           (select-frame-by-name frame-name)
+;;         (prot-project--switch directory 'project-dired))))
 
-  (defun +select-frame-by-name ()
-    "Select a frame by name, excluding the current frame from the options."
-    (interactive)
-    (let* ((current-frame (selected-frame))
-           (frames (frame-list))
-           (frames (remove current-frame frames)) ; Exclude current frame
-           (frame-names (mapcar (lambda (frame) (frame-parameter frame 'name)) frames))
-           (frame-name (completing-read "Select frame: " frame-names)))
-      (when frame-name
-        (select-frame-by-name frame-name))))
+;;   ;; (defun +select-frame-by-name ()
+;;   ;;   "Select a frame by name, excluding the current frame from the options."
+;;   ;;   (interactive)
+;;   ;;   (let* ((current-frame (selected-frame))
+;;   ;;          (frames (frame-list))
+;;   ;;          (frames (remove current-frame frames)) ; Exclude current frame
+;;   ;;          (frame-names (mapcar (lambda (frame) (frame-parameter frame 'name)) frames))
+;;   ;;          (frame-name (completing-read "Select frame: " frame-names)))
+;;   ;;     (when frame-name
+;;   ;;       (select-frame-by-name frame-name))))
 
-  :general-config
-  (+leader-def
-    "pp" #'prot-project-switch
-    "of" #'+select-frame-by-name
-    )
-  :config
-  (setq beframe-functions-in-frames '(project-prompt-project-dir))
-  (setq beframe-create-frame-scratch-buffer nil)
-
-  (with-eval-after-load 'consult
-    (consult-customize consult--source-buffer :hidden t :default nil)
-
-    (defun beframe-buffer-names-sorted (&optional frame)
-      "Return the list of buffers from `beframe-buffer-names' sorted by visibility.
-With optional argument FRAME, return the list of buffers of FRAME."
-      (beframe-buffer-names frame :sort #'beframe-buffer-sort-visibility))
-
-    (defvar beframe-consult-source
-      `( :name     "Workspace buffers"
-         :narrow   ?w
-         :category buffer
-         :default  t
-         :history  beframe-history
-         :action   ,#'switch-to-buffer
-         :state    ,#'consult--buffer-state
-         :items    ,(lambda () (consult--buffer-query
-                                :predicate (lambda (x) (and (beframe--frame-buffer-p x) (not (popper-popup-p x))))
-                                :sort 'visibility
-                                :as #'buffer-name))
-         ))
-
-    (add-to-list 'consult-buffer-sources 'beframe-consult-source))
-  )
-
-;; New frame initial buffer
-;; (defun +set-frame-scratch-buffer (frame)
-;;   (with-selected-frame frame
-;;     (switch-to-buffer "*scratch*")))
-;; (add-hook 'after-make-frame-functions #'+set-frame-scratch-buffer)
-
-  ;; (add-to-list 'global-mode-string
-  ;;              '(:eval
-  ;;                (let ((branch (magit-get-current-branch)))
-  ;;                  (when branch
-  ;;                    (format " %s" branch)))))
-
-;; (use-package tab-bar
-;;   :ensure nil
-;;   :commands (tab-bar-mode)
-;;   :custom
-;;   (tab-bar-close-tab-select 'recent)
-;;   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
-;;   (tab-bar-close-button-show nil)
-;;   (tab-bar-auto-width nil)
-;;   (tab-bar-new-tab-to 'rightmost)
-;;   (tab-bar-format '(tab-bar-format-tabs
-;;                     #'+tab-bar-suffix
-;;                     ))
-;;   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
-;;   :config
-;;   (defun +tab-bar-tab-name-format (tab i)
-;;     (let ((current-p (eq (car tab) 'current-tab)))
-;;       (propertize
-;;        (concat
-;;         (propertize " " 'display '(space :width (8)))
-;;         (alist-get 'name tab)
-;;         (propertize " " 'display '(space :width (8))))
-;;        'face (funcall tab-bar-tab-face-function tab))))
-;;   (defun +tab-bar-suffix ()
-;;     "Add empty space.
-;; This ensures that the last tab's face does not extend to the end
-;; of the tab bar."
-;;     " ")
-;;   )
-
-;; (use-package tabspaces
-;;   :custom
-;;   (tab-bar-new-tab-choice "*scratch*")
-;;   (tabspaces-use-filtered-buffers-as-default t)
-;;   (tabspaces-default-tab "scratch")
-;;   (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
-;;   (tabspaces-initialize-project-with-todo t)
 ;;   :general-config
 ;;   (+leader-def
-;;     "<tab>1" #'tab-bar-switch-to-default-tab
-;;     "<tab>b" #'tabspaces-switch-to-buffer
-;;     "<tab>k" #'tabspaces-kill-buffers-close-workspace
-;;     "<tab><tab>" #'tab-bar-switch-to-tab
-;;     "<tab>s" #'tabspaces-switch-or-create-workspace
-;;     "<tab>t" #'tabspaces-switch-buffer-and-tab
-;;     "<tab>n" #'tab-bar-switch-to-next-tab
-;;     "<tab>p" #'tab-bar-switch-to-prev-tab)
-;;   (+leader-def
-;;     "pp" #'tabspaces-open-or-create-project-and-workspace)
+;;     "pp" #'prot-project-switch
+;;     ;; "of" #'+select-frame-by-name
+;;     )
 ;;   :config
-;;   (tabspaces-mode 1)
-;;   (tab-bar-mode 1)
-;;   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
+;;   (setq beframe-functions-in-frames '(project-prompt-project-dir))
+;;   (setq beframe-create-frame-scratch-buffer nil)
 
 ;;   (with-eval-after-load 'consult
 ;;     (consult-customize consult--source-buffer :hidden t :default nil)
 
-;;     (defvar consult--source-workspace
-;;       (list :name     "Workspace Buffers"
-;;             :narrow   ?w
-;;             :history  'buffer-name-history
-;;             :category 'buffer
-;;             :state    #'consult--buffer-state
-;;             :default  t
-;;             :items    (lambda () (consult--buffer-query
-;;                                   :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
-;;                                   :sort 'visibility
-;;                                   :as #'buffer-name))))
-;;     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+;;     (defun beframe-buffer-names-sorted (&optional frame)
+;;       "Return the list of buffers from `beframe-buffer-names' sorted by visibility.
+;; With optional argument FRAME, return the list of buffers of FRAME."
+;;       (beframe-buffer-names frame :sort #'beframe-buffer-sort-visibility))
 
-;;   (defun tab-bar-switch-to-default-tab ()
-;;     (interactive)
-;;     (tab-bar-switch-to-tab tabspaces-default-tab))
+;;     (defvar beframe-consult-source
+;;       `( :name     "Workspace buffers"
+;;          :narrow   ?w
+;;          :category buffer
+;;          :default  t
+;;          :history  beframe-history
+;;          :action   ,#'switch-to-buffer
+;;          :state    ,#'consult--buffer-state
+;;          :items    ,(lambda () (consult--buffer-query
+;;                                 :predicate (lambda (x) (and (beframe--frame-buffer-p x) (not (popper-popup-p x))))
+;;                                 :sort 'visibility
+;;                                 :as #'buffer-name))
+;;          ))
+
+;;     (add-to-list 'consult-buffer-sources 'beframe-consult-source))
 ;;   )
+
+(use-package tab-bar
+  :ensure nil
+  :commands (tab-bar-mode)
+  :custom
+  (tab-bar-close-tab-select 'recent)
+  (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
+  (tab-bar-close-button-show nil)
+  (tab-bar-auto-width nil)
+  (tab-bar-new-tab-to 'rightmost)
+  (tab-bar-format '(tab-bar-format-tabs
+                    #'+tab-bar-suffix
+                    ))
+  (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
+  :config
+  (defun +tab-bar-tab-name-format (tab i)
+    (let ((current-p (eq (car tab) 'current-tab)))
+      (propertize
+       (concat
+        (propertize " " 'display '(space :width (8)))
+        (alist-get 'name tab)
+        (propertize " " 'display '(space :width (8))))
+       'face (funcall tab-bar-tab-face-function tab))))
+  (defun +tab-bar-suffix ()
+    "Add empty space.
+This ensures that the last tab's face does not extend to the end
+of the tab bar."
+    " ")
+  )
+
+(use-package tabspaces
+  :custom
+  (tab-bar-new-tab-choice "*scratch*")
+  (tabspaces-use-filtered-buffers-as-default t)
+  (tabspaces-default-tab "scratch")
+  (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
+  (tabspaces-initialize-project-with-todo t)
+  :general-config
+  (+leader-def
+    "<tab>1" #'tab-bar-switch-to-default-tab
+    "<tab>b" #'tabspaces-switch-to-buffer
+    "<tab>k" #'tabspaces-kill-buffers-close-workspace
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>s" #'tabspaces-switch-or-create-workspace
+    "<tab>t" #'tabspaces-switch-buffer-and-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
+  (+leader-def
+    "pp" #'tabspaces-open-or-create-project-and-workspace)
+  :config
+  (tabspaces-mode 1)
+  (tab-bar-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
+
+  ;; tab-name not exists
+  ;;  add to map, use simple name
+  ;; tab-name exists & same project path
+  ;;  use simple name
+  ;; tab-name exists & diff project path
+  ;;  rename existing tab, use complex name
+  (defun tabspaces-generate-descriptive-tab-name (project-path existing-tab-names)
+    "Generate a unique tab name from the PROJECT-PATH checking against EXISTING-TAB-NAMES."
+    (let* ((parts (reverse (split-string (directory-file-name project-path) "/")))
+           (base-name (car parts))
+           (parent-dir (nth 1 parts))
+           (grandparent-dir (nth 2 parts))
+           (simple-tab-name base-name)
+           (complex-tab-name (if parent-dir
+                                 (format "%s (%s/%s)" base-name (or grandparent-dir "") parent-dir)
+                               base-name)))
+      (if (member simple-tab-name existing-tab-names)
+          (let ((existing-path (rassoc simple-tab-name tabspaces-project-tab-map)))
+            (when (not (string= (car existing-path) project-path))
+              ;; Generate a new complex name for the existing conflict
+              (let ((new-name-for-existing (tabspaces-generate-complex-name (car existing-path))))
+                ;; Rename the existing tab
+                (tabspaces-rename-existing-tab simple-tab-name new-name-for-existing)
+                ;; Update the map with the new name for the existing path
+                (setcdr existing-path new-name-for-existing))
+              ;; Use the complex name for the new tab to avoid future conflicts
+              complex-tab-name)
+            simple-tab-name)
+        ;; No conflict, add to map and use the simple name
+        (progn
+          (add-to-list 'tabspaces-project-tab-map (cons project-path simple-tab-name))
+          simple-tab-name))))
+
+
+  (with-eval-after-load 'consult
+    (consult-customize consult--source-buffer :hidden t :default nil)
+
+    (defvar consult--source-workspace
+      (list :name     "Workspace Buffers"
+            :narrow   ?w
+            :history  'buffer-name-history
+            :category 'buffer
+            :state    #'consult--buffer-state
+            :default  t
+            :items    (lambda () (consult--buffer-query
+                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
+                                  :sort 'visibility
+                                  :as #'buffer-name))))
+    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+
+  (defun tab-bar-switch-to-default-tab ()
+    (interactive)
+    (tab-bar-switch-to-tab tabspaces-default-tab))
+  )
 
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
@@ -1382,9 +1396,6 @@ targets."
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
-  ;; :general-config
-  ;; (:keymaps 'corfu-map
-  ;;           "<tab>" 'corfu-insert)
   :config
   (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
 
@@ -1728,6 +1739,7 @@ for all languages configured in `treesit-language-source-alist'."
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)
     ))
+
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
@@ -1758,23 +1770,21 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-completion-mode . +update-completions-list)
   :general-config
   (+leader-def
-    :keymaps 'lsp-mode-map
-    :infix "c"
-    "a" '(lsp-execute-code-action :wk "Code action")
-    "i" '(lsp-find-implementation :wk "Find implementation")
-    "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
-    "l" '(lsp-avy-lens :wk "Click lens")
-    "o" '(lsp-organize-imports :wk "Organize imports")
-    "Q" '(lsp-workspace-restart :wk "Restart workspace")
-    "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
-    "r" '(lsp-rename :wk "Rename")
+    "ca" '(lsp-execute-code-action :wk "Code action")
+    "ci" '(lsp-find-implementation :wk "Find implementation")
+    "ck" '(lsp-describe-thing-at-point :wk "Show hover doc")
+    "cl" '(lsp-avy-lens :wk "Click lens")
+    "co" '(lsp-organize-imports :wk "Organize imports")
+    "cQ" '(lsp-workspace-restart :wk "Restart workspace")
+    "cq" '(lsp-workspace-shutdown :wk "Shutdown workspace")
+    "cr" '(lsp-rename :wk "Rename")
     )
   )
 
 (use-package consult-lsp
   :after (consult lsp-mode)
   :general-config
-  (+leader-def :keymaps 'lsp-mode-map
+  (+leader-def
     "cj" '(consult-lsp-symbols :wk "Workspace symbols")
     "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
 
@@ -1849,6 +1859,8 @@ for all languages configured in `treesit-language-source-alist'."
   :mode "\\.dart\\'")
 
 (use-package flutter
+  :init
+  (put 'flutter-run-args 'safe-local-variable #'stringp)
   :general
   (+local-leader-def
     :keymaps 'dart-mode-map
@@ -2367,7 +2379,7 @@ eg. *python main.py*"
   (comint-buffer-maximum-size 2048))
 
 (use-package shell-command-pro
-  :vc (shell-command-pro :url "https://github.com/suzuki11109/shell-command-pro")
+  :load-path "~/code/shell-command-pro"
   :commands (async-shell-command-in-dir async-shell-command-from-history
              project-or-cwd-async-shell-command project-or-cwd-async-shell-command-from-history
              project-run-project project-or-cwd-compile project-or-cwd-compile-from-history)
@@ -2412,6 +2424,7 @@ current project's root directory."
       (call-interactively #'async-shell-command-from-history)))
 
   (defun project-run-project ()
+    "Run project's run command with `async-shell-command'."
     (interactive)
     (project-or-cwd-async-shell-command project-commands-run-command))
   :init
@@ -2539,21 +2552,6 @@ current project's root directory."
 ;;   :after eshell
 ;;   :config
 ;;   (eshell-vterm-mode))
-
-;; (with-eval-after-load 'consult
-;;   (defvar  +consult--source-term
-;;     (list :name     "Terminal buffers"
-;;           :narrow   ?t
-;;           :category 'buffer
-;;           :face     'consult-buffer
-;;           :history  'buffer-name-history
-;;           :state    #'consult--buffer-state
-;;           :items (lambda () (consult--buffer-query
-;;                              :predicate #'tabspaces--local-buffer-p
-;;                              :mode '(shell-mode eshell-mode term-mode eat-mode compilation-mode)
-;;                              :sort 'visibility
-;;                              :as #'buffer-name))))
-;;   (add-to-list 'consult-buffer-sources '+consult--source-term 'append))
 
 (use-package eshell
   :ensure nil
