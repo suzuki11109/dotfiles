@@ -1,0 +1,481 @@
+#+STARTUP: overview
+* Scala
+#+begin_src emacs-lisp
+(use-package scala-mode
+  :custom
+  (scala-indent:align-parameters t)
+  (scala-indent:use-javadoc-style t)
+  :interpreter ("scala" . scala-mode)
+  :mode "\\.scala\\'"
+  :mode "\\.sbt\\'")
+
+(use-package sbt-mode
+  :general
+  (+local-leader-def
+    :keymaps '(scala-mode-map)
+    "b" '(nil :wk "sbt")
+    "bb" #'sbt-command
+    "bc" #'sbt-compile
+    "br" #'sbt-start
+    "b." #'sbt-run-previous-command
+    "t" '(nil :wk "test")
+    "ta" '(sbt-do-test :wk "Test quick")
+    "tf" '(+sbt-test-file :wk "Test current file")
+    ;; "tt" '(nil :wk "Test quick")
+  )
+  :commands sbt-start sbt-command
+  :init
+  (defun +sbt-get-testonly-file (&optional file)
+    "Return FILE formatted in a sbt testOnly command."
+    (--> (or file (file-name-base))
+         (format "testOnly *%s" it)))
+
+  (defun +sbt-test-file (&optional file)
+    (interactive)
+    (sbt-command (+sbt-get-testonly-file file)))
+
+  ;; (defun +sbt-get-testcase-name ()
+  ;;   "Get Scala test case nearby point."
+  ;;   (interactive)
+  ;;   (save-excursion
+  ;;     (let* ((line (thing-at-point 'line t))
+  ;;            (on-testcase-p (and (s-contains? "\"" line)
+  ;;                                (s-contains? "{\n" line)))
+  ;;            (get-testcase-name (lambda (l)
+  ;;                                 (--> l
+  ;;                                      (s-split "\"" it)
+  ;;                                      reverse
+  ;;                                      cl-second))))
+  ;;       (if on-testcase-p
+  ;;           (funcall get-testcase-name line)
+  ;;         (progn
+  ;;           (search-backward "{\n")
+  ;;           (funcall get-testcase-name (thing-at-point 'line t)))))))
+
+  ;; (defun +sbt-run-testcase-at-point ()
+  ;;   "Run Scala test case at point."
+  ;;   (interactive)
+  ;;   (sbt-command (format "%s -- -z \"%s\"" (+sbt-get-testonly-file) (+sbt-get-testcase-name))))
+  :config
+  ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
+  ;; allows using SPACE when in the minibuffer
+  (substitute-key-definition
+   'minibuffer-complete-word
+   'self-insert-command
+   minibuffer-local-completion-map)
+  ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
+  (setq sbt:program-options '("-Dsbt.supershell=false")))
+
+;; (use-package lsp-metals
+;;   :general
+;;   (+local-leader-def
+;;     :keymaps '(scala-mode-map)
+;;     "fn" #'lsp-metals-new-scala-file)
+;;   :custom
+;;   (lsp-metals-server-args '("-J-Dmetals.allow-multiline-string-formatting=off"))
+;;   :hook
+;;   (scala-mode . lsp-deferred))
+ #+end_src
+
+* Kotlin
+#+begin_src emacs-lisp
+(use-package kotlin-ts-mode
+  :mode "\\.kt\\'"
+  :hook
+  (kotlin-ts-mode . lsp-deferred)
+  :config
+  (require 'dap-kotlin)
+  (dap-register-debug-template "Kotlin tests with launcher"
+                               (list :type "kotlin"
+                                     :request "launch"
+                                     :mainClass "org.junit.platform.console.ConsoleLauncher --scan-classpath"
+                                     :enableJsonLogging nil
+                                     :noDebug nil))
+
+  )
+#+end_src
+* Lsp
+#+begin_src emacs-lisp
+(use-package lsp-mode
+  :commands (lsp lsp-deferred lsp-install-server)
+  :config
+  (add-to-list 'lsp-file-watch-ignored-directories "[/\\\\]vendor")
+  (lsp-register-custom-settings
+   '(("gopls.completeUnimported" t t)
+     ("gopls.staticcheck" t t)))
+  :custom
+  (lsp-keymap-prefix nil)
+  (lsp-completion-provider :none)
+  (lsp-headerline-breadcrumb-enable nil)
+  (lsp-keep-workspace-alive nil)
+  (lsp-enable-symbol-highlighting nil)
+  (lsp-enable-text-document-color nil)
+  (lsp-signature-auto-activate nil)
+  ;; (lsp-semantic-tokens-enable t)
+  (lsp-signature-render-documentation nil)
+  (lsp-modeline-code-action-fallback-icon "󰌶")
+  (lsp-auto-execute-action nil)
+  (lsp-disabled-clients '(rubocop-ls))
+  (lsp-kotlin-compiler-jvm-target "2.1")
+  (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
+  (lsp-clients-typescript-prefer-use-project-ts-server t)
+  (lsp-javascript-implicit-project-config-check-js t)
+  (lsp-javascript-suggest-complete-js-docs nil)
+  ;; (lsp-clients-typescript-preferences '(:includeCompletionsForImportStatements nil))
+  ;; (lsp-solargraph-server-command '("solargraph" "socket"))
+  ;; (lsp-log-io t)
+  :init
+  (defun +update-completions-list ()
+    (progn
+      (fset 'non-greedy-lsp (cape-capf-properties #'lsp-completion-at-point :exclusive 'no))
+      (setq-local completion-at-point-functions
+                  (list (cape-capf-super #'non-greedy-lsp #'yasnippet-capf)))))
+
+  :hook
+  (lsp-managed-mode . (lambda () (general-define-key
+                                  :states '(normal)
+                                  :keymaps 'local
+                                  "K" 'lsp-describe-thing-at-point)))
+  ;; (lsp-managed-mode . evil-normalize-keymaps)
+  (lsp-completion-mode . +update-completions-list)
+  ;; (lsp-managed-mode . eldoc-mode)
+  :general
+  (+leader-def
+    :keymaps 'lsp-mode-map
+    :infix "c"
+    "a" '(lsp-execute-code-action :wk "Code action")
+    "i" '(lsp-find-implementation :wk "Find implementation")
+    "k" '(lsp-describe-thing-at-point :wk "Show hover doc")
+    "l" '(lsp-avy-lens :wk "Click lens")
+    "o" '(lsp-organize-imports :wk "Organize imports")
+    "q" '(lsp-workspace-shutdown :wk "Shutdown workspace")
+    "Q" '(lsp-workspace-restart :wk "Restart workspace")
+    "r" '(lsp-rename :wk "Rename")
+    ;; "R" '(lsp-find-references :wk "Restart workspace")
+    )
+  )
+
+(use-package consult-lsp
+  :general
+  (+leader-def :keymaps 'lsp-mode-map
+    "cj" '(consult-lsp-symbols :wk "Workspace symbols")
+    "cx" '(consult-lsp-diagnostics :wk "Workspace diagnostics")))
+#+end_src
+
+* Project
+#+begin_src emacs-lisp
+(use-package project
+  :ensure nil
+  :demand t
+  :commands (project-find-file
+             project-switch-to-buffer
+             project-switch-project
+             project-switch-project-open-file)
+  :config
+  (setq project-switch-commands 'project-find-file)
+  :general
+  (+leader-def
+    "p" '(:keymap project-prefix-map :wk "project")
+    "p!" #'project-async-shell-command
+    ))
+#+end_src
+* Tabspaces
+#+begin_src emacs-lisp
+(use-package tabspaces
+  :custom
+  (tabspaces-use-filtered-buffers-as-default t)
+  (tabspaces-default-tab "home")
+  (tabspaces-include-buffers '("*scratch*" "*Messages*"))
+  (tabspaces-keymap-prefix nil)
+  (tabspaces-initialize-project-with-todo nil)
+  :general
+  (+leader-def
+    "<tab>" '(:keymap tabspaces-command-map :wk "workspaces")
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
+  (+leader-def
+    "pp" #'tabspaces-open-or-create-project-and-workspace)
+  :init
+  (tabspaces-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab)
+
+  (with-eval-after-load 'consult
+    (consult-customize consult--source-buffer :hidden t :default nil)
+
+    (defvar consult--source-workspace
+      (list :name     "Workspace Buffers"
+            :narrow   ?w
+            :history  'buffer-name-history
+            :category 'buffer
+            :state    #'consult--buffer-state
+            :default  t
+            :items    (lambda () (consult--buffer-query
+                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
+                                  :sort 'visibility
+                                  :as #'buffer-name))))
+    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+  )
+#+end_src
+
+* Flycheck
+#+begin_src emacs-lisp
+(use-package flycheck
+  :preface
+  (defun +flycheck-eldoc (callback &rest _ignored)
+    "Print flycheck messages at point by calling CALLBACK."
+    (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
+      (mapc
+       (lambda (err)
+         (funcall callback
+                  (format "%s: %s"
+                          (let ((level (flycheck-error-level err)))
+                            (pcase level
+                              ('info (propertize "I" 'face 'flycheck-error-list-info))
+                              ('error (propertize "E" 'face 'flycheck-error-list-error))
+                              ('warning (propertize "W" 'face 'flycheck-error-list-warning))
+                              (_ level)))
+                          (flycheck-error-message err))
+                  :thing (or (flycheck-error-id err)
+                             (flycheck-error-group err))
+                  :face 'font-lock-doc-face))
+       flycheck-errors)))
+
+  :custom
+  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
+  (flycheck-checkers nil)
+  (flycheck-display-errors-function nil)
+  (flycheck-help-echo-function nil)
+  (flycheck-buffer-switch-check-intermediate-buffers t)
+  (flycheck-emacs-lisp-load-path 'inherit)
+  (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
+  ;; :hook
+  ;; (flycheck-mode . (lambda ()
+  ;;                    (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc 0 t)))
+  )
+
+#+end_src
+
+* Projectile
+#+begin_src emacs-lisp
+  (defun projectile-run-eat (&optional arg)
+    "Start Eat in the current projectile's root directory."
+    (interactive "P")
+    (let ((project (projectile-acquire-root)))
+      (projectile-with-default-dir project
+        (let ((eat-buffer-name (projectile-generate-process-name "eat" arg project)))
+          (eat)))))
+
+  (consult-project-function (lambda (_) (projectile-project-root)))
+  (add-to-list 'marginalia-command-categories '(projectile-find-file . project-file))
+  (add-to-list 'marginalia-command-categories '(projectile-recentf . project-file))
+
+(use-package projectile
+  :defer .3
+  :commands (projectile-project-root
+             projectile-project-name
+             projectile-project-p
+             projectile-locate-dominating-file
+             projectile-relevant-known-projects)
+  :custom
+  ;; (projectile-enable-caching (not noninteractive))
+  (projectile-project-search-path '("~/code"))
+  (projectile-globally-ignored-files '(".DS_Store" "TAGS"))
+  (projectile-globally-ignored-file-suffixes '(".elc" ".pyc" ".o"))
+  (projectile-ignored-projects '("~/"))
+  (projectile-kill-buffers-filter 'kill-only-files)
+  :config
+  ;; Reduce the number of project root marker files/directories for performance
+  (setq projectile-project-root-files-bottom-up
+        (append '(".projectile"
+                  ".project"
+                  ".git")))
+  (setq projectile-project-root-files '())
+  (setq projectile-project-root-files-top-down-recurring '("Makefile"))
+
+  ;; Per-project compilation buffers
+  (setq compilation-buffer-name-function #'projectile-compilation-buffer-name
+        compilation-save-buffers-predicate #'projectile-current-project-buffer-p)
+
+  (projectile-mode +1)
+  :general
+  (+leader-def :infix "p"
+    "&" #'projectile-run-async-shell-command-in-root
+    "!" #'projectile-run-async-shell-command-in-root
+    "a" #'projectile-add-known-project
+    "b" #'projectile-switch-to-buffer
+    "c" #'projectile-compile-project
+    "C" #'projectile-repeat-last-command
+    "d" #'projectile-remove-known-project
+    "D" #'projectile-dired
+    "e" #'projectile-run-eshell
+    "f" #'projectile-find-file
+    "i" #'projectile-invalidate-cache
+    "o" #'projectile-find-other-file
+    "R" #'projectile-run-project
+    "r" #'projectile-recentf
+    "S" #'projectile-save-project-buffers
+    "T" #'projectile-test-project)
+  )
+
+(use-package persp-projectile
+  :after (projectile perspective)
+  :general
+  (+leader-def
+    "pp" #'projectile-persp-switch-project))
+
+#+end_src
+
+* Perspective
+#+begin_src emacs-lisp
+
+(use-package perspective
+  :demand t
+  :custom
+  (persp-sort 'created)
+  (persp-show-modestring nil)
+  (persp-initial-frame-name "home")
+  (persp-mode-prefix-key (kbd "C-c M-p"))
+  :general
+  (+leader-def
+    "<tab>" '(:keymap perspective-map :wk "workspaces")
+    "<tab><tab>" #'persp-switch
+    "<tab>k" '((lambda () (interactive) (persp-kill (persp-current-name))) :wk "Kill this workspace")
+    )
+  :preface
+  (defun +persp-names ()
+    "Return a list of the perspective names sorted in different direction."
+    (let ((persps (hash-table-values (perspectives-hash))))
+      (cond ((eq persp-sort 'name)
+             (sort (mapcar 'persp-name persps) 'string<))
+            ((eq persp-sort 'access)
+             (mapcar 'persp-name
+                     (sort persps (lambda (a b)
+                                    (time-less-p (persp-last-switch-time a)
+                                                 (persp-last-switch-time b))))))
+            ((eq persp-sort 'created)
+             (mapcar 'persp-name
+                     (sort persps (lambda (a b)
+                                    (time-less-p (persp-created-time a)
+                                                 (persp-created-time b)))))))))
+  :config
+  (advice-add 'persp-names :override #'+persp-names)
+  (persp-mode +1)
+
+  (with-eval-after-load 'consult
+    (consult-customize consult--source-buffer :hidden t :default nil)
+
+    (defvar consult--source-workspace
+      (list :name     "Workspace Buffers"
+            :narrow   ?w
+            :history  'buffer-name-history
+            :category 'buffer
+            :state    #'consult--buffer-state
+            :default  t
+            :items    (lambda () (consult--buffer-query
+                                  :predicate (lambda (x) (and (persp-is-current-buffer x) (not (popper-popup-p x))))
+                                  :sort 'visibility
+                                  :as #'buffer-name))))
+    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+  )
+
+(use-package perspective-tabs
+  :after (perspective)
+  :vc (:fetcher sourcehut :repo woozong/perspective-tabs)
+  :config
+  (perspective-tabs-mode +1))
+#+end_src
+
+* Eglot
+#+begin_src emacs-lisp
+;; (use-package eglot
+;;   :ensure nil
+;;   :commands eglot eglot-ensure
+;;   :custom
+;;   (eglot-sync-connect 1)
+;;   (eglot-connect-timeout 10)
+;;   (eglot-autoshutdown t)
+;;   (eglot-ignored-server-capabilities '(:documentHighlightProvider))
+;;   (eglot-extend-to-xref t)
+;;   :init
+;;   (setq eglot-stay-out-of '(eldoc))
+;;   ;; (fset #'jsonrpc--log-event #'ignore)
+;;   ;; (setf (plist-get eglot-events-buffer-config :size) 0)
+;;   (setq eglot-workspace-configuration
+;;         '(:solargraph (:diagnostics t)
+;;           :gopls      (:staticcheck t)))
+
+;;   ;; (setf (plist-get (plist-get eglot-workspace-configuration :gopls) :tags) "e2e")
+
+;;   (defun +eglot-organize-imports ()
+;;     (interactive)
+;; 	  (eglot-code-actions nil nil "source.organizeImports" t))
+
+;;   (defvar +eglot--help-buffer nil)
+;;   (defun +eglot-describe-at-point ()
+;;     (interactive)
+;;     "Request documentation for the thing at point."
+;;     (eglot--dbind ((Hover) contents range)
+;;         (jsonrpc-request (eglot--current-server-or-lose) :textDocument/hover
+;;                          (eglot--TextDocumentPositionParams))
+;;       (let ((blurb (and (not (seq-empty-p contents))
+;;                         (eglot--hover-info contents range)))
+;;             (hint (thing-at-point 'symbol)))
+;;         (if blurb
+;;             (with-current-buffer
+;;                 (or (and (buffer-live-p +eglot--help-buffer)
+;;                          +eglot--help-buffer)
+;;                     (setq +eglot--help-buffer (generate-new-buffer "*eglot-help*")))
+;;               (with-help-window (current-buffer)
+;;                 (rename-buffer (format "*eglot-help for %s*" hint))
+;;                 (with-current-buffer standard-output (insert blurb))
+;;                 (setq-local nobreak-char-display nil)))
+;;           (display-local-help))))
+;;     'deferred)
+
+;;   (defun +eglot-capf ()
+;;     (setq-local completion-at-point-functions
+;;                 (list (cape-capf-super
+;;                        #'eglot-completion-at-point
+;;                        #'yasnippet-capf))))
+
+;;   (defun +eglot-eldoc ()
+;;     ;; Show flymake diagnostics first.
+;;     (setq eldoc-documentation-functions
+;;           (cons #'flymake-eldoc-function
+;;                 (remove #'flymake-eldoc-function eldoc-documentation-functions)))
+;;     ;; Show all eldoc feedback.
+;;     (setq eldoc-documentation-strategy #'eldoc-documentation-compose-eagerly))
+;;   :hook
+;;   (eglot-managed-mode . (lambda () (general-define-key
+;;                                     :states '(normal)
+;;                                     :keymaps 'local
+;;                                     "K" '+eglot-describe-at-point)))
+;;   (eglot-managed-mode . +eglot-capf)
+;;   (eglot-managed-mode . +eglot-eldoc)
+;;   :general
+;;   (+leader-def
+;;     :keymaps 'eglot-mode-map
+;;     :infix "c"
+;;     "a" '(eglot-code-actions :wk "Code action")
+;;     "i" '(eglot-find-implementation :wk "Find implementation")
+;;     "k" '(+eglot-describe-at-point :wk "Show hover doc")
+;;     "o" '(+eglot-organize-imports :wk "Organize imports")
+;;     "q" '(eglot-shutdown :wk "Shutdown LSP")
+;;     "Q" '(eglot-reconnect :wk "Restart LSP")
+;;     "r" '(eglot-rename :wk "Rename"))
+;;   )
+
+;; (use-package eglot-booster
+;;   :vc (:fetcher github :repo jdtsmith/eglot-booster)
+;;   :after eglot
+;; 	:config
+;;   (eglot-booster-mode))
+
+;; (use-package consult-eglot
+;;   :general
+;;   (+leader-def
+;;     :keymaps 'eglot-mode-map
+;;     :infix "c"
+;;     "j" '(consult-eglot-symbols :wk "Find symbol")))
+#+end_src
