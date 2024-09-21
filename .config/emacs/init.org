@@ -3,16 +3,16 @@
 #+AUTO_TANGLE: t
 
 * Todos
-** yabai reset spaces
-** github forge
-** slide
-** sketchbar
 ** org-roam
+** hyperbole
+** impostman
+** plantuml
 ** copilot
+** extract persp project to module
+** smartparens do not wrap visual?
 ** extract rails commands to module/minor-mode
 ** load mode on project types (rails) to load minor mode (from projection)
 ** agenda calendar
-** plantuml
 ** extract flymake lsp modeline to module
 * Early init
 #+begin_src emacs-lisp :tangle early-init.el
@@ -184,11 +184,7 @@
 
 ;; For on-first-* hooks
 (use-package on
-  :vc (on :url "https://github.com/ajgrf/on.el" :branch "master"))
-
-#+end_src
-* Constants
-#+begin_src emacs-lisp
+  :vc (:url "https://github.com/ajgrf/on.el"))
 
 #+end_src
 * Functions
@@ -199,6 +195,11 @@
        (progn ,@forms)
      (let ((message-log-max nil))
        (with-temp-message (or (current-message) "") ,@forms))))
+
+(defun display-ansi-colors ()
+  (interactive)
+  (let ((inhibit-read-only t))
+    (ansi-color-apply-on-region (point-min) (point-max) t)))
 #+end_src
 * Custom
 #+begin_src emacs-lisp
@@ -526,6 +527,7 @@
           "\\*Embark Export:"
           "\\*Embark Collect:"
           flutter-mode
+          "\\*LSP Dart tests\\*"
           ))
   :hook
   (after-init . popper-mode)
@@ -568,7 +570,7 @@
 
 (add-hook 'after-init-hook (lambda ()
     (set-face-attribute 'default nil :family "JetBrains Mono" :height 130)
-    (set-face-attribute 'variable-pitch nil :family "Helvetica" :height 1.0)
+    (set-face-attribute 'variable-pitch nil :family "SF Pro" :height 1.0)
     (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0)
 
     (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
@@ -578,7 +580,7 @@
     (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family))
     ))
 
-(setq-default line-spacing 4)
+(setq-default line-spacing 5)
 
 (use-package default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
@@ -710,109 +712,25 @@
 
 #+end_src
 
-** Beframe
-#+begin_src emacs-lisp
-
-;; (use-package beframe
-;;   :hook
-;;   (after-init . beframe-mode)
-;;   :preface
-;;   (defun prot-project--switch (directory &optional command)
-;;     "Do the work of `project-switch-project' in the given DIRECTORY.
-;; With optional COMMAND, run it in DIRECTORY."
-;;     (let ((command (or (when (functionp command) command)
-;;                        (if (symbolp project-switch-commands)
-;;                            project-switch-commands
-;;                          (project--switch-project-command))))
-;;           (buffer (current-buffer)))
-;;       (unwind-protect
-;;           (progn
-;;             (setq-local project-current-directory-override directory)
-;;             (call-interactively command))
-;;         (with-current-buffer buffer
-;;           (kill-local-variable 'project-current-directory-override)))))
-
-;;   (defun find-frame-by-project (search my-list)
-;;     (cl-find search my-list
-;;              :test (lambda (target item)
-;;                      (string= target (car (split-string item))))))
-
-;;   (defun prot-project--frame-names ()
-;;     "Return a list of frame names."
-;;     (mapcar #'car (make-frame-names-alist)))
-
-;;   (defun prot-project-switch (directory)
-;;     "Switch to project DIRECTORY.
-;; If DIRECTORY exists in a frame, select it.  Otherwise switch to
-;; the project in DIRECTORY using `project-dired'."
-;;     (interactive (list (funcall project-prompter)))
-;;     (project--remember-dir directory)
-;;     (let ((frame-name (find-frame-by-project (file-name-nondirectory (directory-file-name directory)) (prot-project--frame-names))))
-;;       (if frame-name
-;;           (select-frame-by-name frame-name)
-;;         (prot-project--switch directory 'project-dired))))
-
-;;   ;; (defun +select-frame-by-name ()
-;;   ;;   "Select a frame by name, excluding the current frame from the options."
-;;   ;;   (interactive)
-;;   ;;   (let* ((current-frame (selected-frame))
-;;   ;;          (frames (frame-list))
-;;   ;;          (frames (remove current-frame frames)) ; Exclude current frame
-;;   ;;          (frame-names (mapcar (lambda (frame) (frame-parameter frame 'name)) frames))
-;;   ;;          (frame-name (completing-read "Select frame: " frame-names)))
-;;   ;;     (when frame-name
-;;   ;;       (select-frame-by-name frame-name))))
-
-;;   :general-config
-;;   (+leader-def
-;;     "pp" #'prot-project-switch
-;;     ;; "of" #'+select-frame-by-name
-;;     )
-;;   :config
-;;   (setq beframe-functions-in-frames '(project-prompt-project-dir))
-;;   (setq beframe-create-frame-scratch-buffer nil)
-
-;;   (with-eval-after-load 'consult
-;;     (consult-customize consult--source-buffer :hidden t :default nil)
-
-;;     (defun beframe-buffer-names-sorted (&optional frame)
-;;       "Return the list of buffers from `beframe-buffer-names' sorted by visibility.
-;; With optional argument FRAME, return the list of buffers of FRAME."
-;;       (beframe-buffer-names frame :sort #'beframe-buffer-sort-visibility))
-
-;;     (defvar beframe-consult-source
-;;       `( :name     "Workspace buffers"
-;;          :narrow   ?w
-;;          :category buffer
-;;          :default  t
-;;          :history  beframe-history
-;;          :action   ,#'switch-to-buffer
-;;          :state    ,#'consult--buffer-state
-;;          :items    ,(lambda () (consult--buffer-query
-;;                                 :predicate (lambda (x) (and (beframe--frame-buffer-p x) (not (popper-popup-p x))))
-;;                                 :sort 'visibility
-;;                                 :as #'buffer-name))
-;;          ))
-
-;;     (add-to-list 'consult-buffer-sources 'beframe-consult-source))
-;;   )
-
-#+end_src
 ** Tabs
 #+begin_src emacs-lisp
 
 (use-package tab-bar
   :ensure nil
   :commands (tab-bar-mode)
+  :general-config
+  (+leader-def
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>l" #'tab-bar-switch-to-recent-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
   :custom
   (tab-bar-close-tab-select 'recent)
   (tab-bar-close-last-tab-choice 'tab-bar-mode-disable)
   (tab-bar-close-button-show nil)
   (tab-bar-auto-width nil)
   (tab-bar-new-tab-to 'rightmost)
-  (tab-bar-format '(tab-bar-format-tabs
-                    #'+tab-bar-suffix
-                    ))
+  (tab-bar-format '(tab-bar-format-tabs #'+tab-bar-suffix))
   (tab-bar-tab-name-format-function #'+tab-bar-tab-name-format)
   :config
   (defun +tab-bar-tab-name-format (tab i)
@@ -821,7 +739,8 @@
        (concat
         (propertize " " 'display '(space :width (8)))
         (alist-get 'name tab)
-        (propertize " " 'display '(space :width (8))))
+        (propertize " " 'display '(space :width (8)))
+        )
        'face (funcall tab-bar-tab-face-function tab))))
   (defun +tab-bar-suffix ()
     "Add empty space.
@@ -834,85 +753,131 @@ of the tab bar."
 
 ** Tabspaces
 #+begin_src emacs-lisp
-(use-package tabspaces
+;; (use-package tabspaces
+;;   :custom
+;;   (tab-bar-new-tab-choice "*scratch*")
+;;   (tabspaces-use-filtered-buffers-as-default t)
+;;   (tabspaces-default-tab "scratch")
+;;   (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
+;;   (tabspaces-initialize-project-with-todo t)
+;;   :general-config
+;;   (+leader-def
+;;     "<tab>1" #'tab-bar-switch-to-default-tab
+;;     "<tab>b" #'tabspaces-switch-to-buffer
+;;     "<tab>k" #'tabspaces-kill-buffers-close-workspace
+;;     "<tab><tab>" #'tab-bar-switch-to-tab
+;;     "<tab>s" #'tabspaces-switch-or-create-workspace
+;;     "<tab>t" #'tabspaces-switch-buffer-and-tab
+;;     "<tab>n" #'tab-bar-switch-to-next-tab
+;;     "<tab>p" #'tab-bar-switch-to-prev-tab)
+;;   (+leader-def
+;;     "pp" #'tabspaces-open-or-create-project-and-workspace)
+;;   :config
+;;   (tabspaces-mode 1)
+;;   (tab-bar-mode 1)
+;;   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
+
+;;   ;; tab-name not exists
+;;   ;;  add to map, use simple name
+;;   ;; tab-name exists & same project path
+;;   ;;  use simple name
+;;   ;; tab-name exists & diff project path
+;;   ;;  rename existing tab, use complex name
+;;   (defun tabspaces-generate-descriptive-tab-name (project-path existing-tab-names)
+;;     "Generate a unique tab name from the PROJECT-PATH checking against EXISTING-TAB-NAMES."
+;;     (let* ((parts (reverse (split-string (directory-file-name project-path) "/")))
+;;            (base-name (car parts))
+;;            (parent-dir (nth 1 parts))
+;;            (grandparent-dir (nth 2 parts))
+;;            (simple-tab-name base-name)
+;;            (complex-tab-name (if parent-dir
+;;                                  (format "%s (%s/%s)" base-name (or grandparent-dir "") parent-dir)
+;;                                base-name)))
+;;       (if (member simple-tab-name existing-tab-names)
+;;           (let ((existing-path (rassoc simple-tab-name tabspaces-project-tab-map)))
+;;             (when (not (string= (car existing-path) project-path))
+;;               ;; Generate a new complex name for the existing conflict
+;;               (let ((new-name-for-existing (tabspaces-generate-complex-name (car existing-path))))
+;;                 ;; Rename the existing tab
+;;                 (tabspaces-rename-existing-tab simple-tab-name new-name-for-existing)
+;;                 ;; Update the map with the new name for the existing path
+;;                 (setcdr existing-path new-name-for-existing))
+;;               ;; Use the complex name for the new tab to avoid future conflicts
+;;               complex-tab-name)
+;;             simple-tab-name)
+;;         ;; No conflict, add to map and use the simple name
+;;         (progn
+;;           (add-to-list 'tabspaces-project-tab-map (cons project-path simple-tab-name))
+;;           simple-tab-name))))
+
+
+;;   (with-eval-after-load 'consult
+;;     (consult-customize consult--source-buffer :hidden t :default nil)
+
+;;     (defvar consult--source-workspace
+;;       (list :name     "Workspace Buffers"
+;;             :narrow   ?w
+;;             :history  'buffer-name-history
+;;             :category 'buffer
+;;             :state    #'consult--buffer-state
+;;             :default  t
+;;             :items    (lambda () (consult--buffer-query
+;;                                   :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
+;;                                   :sort 'visibility
+;;                                   :as #'buffer-name))))
+;;     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+
+;;   (defun tab-bar-switch-to-default-tab ()
+;;     (interactive)
+;;     (tab-bar-switch-to-tab tabspaces-default-tab))
+;;   )
+#+end_src
+** Perspective
+#+begin_src emacs-lisp
+(use-package perspective
   :custom
-  (tab-bar-new-tab-choice "*scratch*")
-  (tabspaces-use-filtered-buffers-as-default t)
-  (tabspaces-default-tab "scratch")
-  (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
-  (tabspaces-initialize-project-with-todo t)
+  (persp-show-modestring nil)
+  (persp-mode-prefix-key (kbd "C-c M-p"))
+  :preface
+  (defun persp-switch-project (directory)
+    "Switch to project DIRECTORY.
+If DIRECTORY exists in a pespective, select it.  Otherwise switch to
+the project in DIRECTORY."
+    (interactive (list (funcall project-prompter)))
+    (project--remember-dir directory)
+    (let ((name (file-name-nondirectory (directory-file-name directory))))
+      (if (not (member name (persp-names)))
+          (progn
+            (persp-switch name)
+            (project-switch-project directory))
+        (persp-switch name))))
+
+  :config
+  (persp-mode 1)
+
+  (defun persp-names ()
+    "Always sort persps by created time from left to right."
+    (let ((persps (hash-table-values (perspectives-hash))))
+      (mapcar 'persp-name
+                     (sort persps (lambda (a b)
+                                    (time-less-p (persp-created-time a)
+                                                 (persp-created-time b)))))))
   :general-config
   (+leader-def
-    "<tab>1" #'tab-bar-switch-to-default-tab
-    "<tab>b" #'tabspaces-switch-to-buffer
-    "<tab>k" #'tabspaces-kill-buffers-close-workspace
-    "<tab><tab>" #'tab-bar-switch-to-tab
-    "<tab>s" #'tabspaces-switch-or-create-workspace
-    "<tab>t" #'tabspaces-switch-buffer-and-tab
-    "<tab>n" #'tab-bar-switch-to-next-tab
-    "<tab>p" #'tab-bar-switch-to-prev-tab)
+    "pp" #'persp-switch-project))
+
+(use-package perspective-tabs
+  :after (perspective)
+  :vc (:url "https://git.sr.ht/~woozong/perspective-tabs")
+  :general-config
   (+leader-def
-    "pp" #'tabspaces-open-or-create-project-and-workspace)
+    "<tab><tab>" #'persp-switch
+    "<tab>b" #'persp-switch-to-buffer*
+    "<tab>k" #'perspective-tabs-close-tab)
   :config
-  (tabspaces-mode 1)
-  (tab-bar-mode 1)
-  (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
-
-  ;; tab-name not exists
-  ;;  add to map, use simple name
-  ;; tab-name exists & same project path
-  ;;  use simple name
-  ;; tab-name exists & diff project path
-  ;;  rename existing tab, use complex name
-  (defun tabspaces-generate-descriptive-tab-name (project-path existing-tab-names)
-    "Generate a unique tab name from the PROJECT-PATH checking against EXISTING-TAB-NAMES."
-    (let* ((parts (reverse (split-string (directory-file-name project-path) "/")))
-           (base-name (car parts))
-           (parent-dir (nth 1 parts))
-           (grandparent-dir (nth 2 parts))
-           (simple-tab-name base-name)
-           (complex-tab-name (if parent-dir
-                                 (format "%s (%s/%s)" base-name (or grandparent-dir "") parent-dir)
-                               base-name)))
-      (if (member simple-tab-name existing-tab-names)
-          (let ((existing-path (rassoc simple-tab-name tabspaces-project-tab-map)))
-            (when (not (string= (car existing-path) project-path))
-              ;; Generate a new complex name for the existing conflict
-              (let ((new-name-for-existing (tabspaces-generate-complex-name (car existing-path))))
-                ;; Rename the existing tab
-                (tabspaces-rename-existing-tab simple-tab-name new-name-for-existing)
-                ;; Update the map with the new name for the existing path
-                (setcdr existing-path new-name-for-existing))
-              ;; Use the complex name for the new tab to avoid future conflicts
-              complex-tab-name)
-            simple-tab-name)
-        ;; No conflict, add to map and use the simple name
-        (progn
-          (add-to-list 'tabspaces-project-tab-map (cons project-path simple-tab-name))
-          simple-tab-name))))
-
-
-  (with-eval-after-load 'consult
-    (consult-customize consult--source-buffer :hidden t :default nil)
-
-    (defvar consult--source-workspace
-      (list :name     "Workspace Buffers"
-            :narrow   ?w
-            :history  'buffer-name-history
-            :category 'buffer
-            :state    #'consult--buffer-state
-            :default  t
-            :items    (lambda () (consult--buffer-query
-                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
-                                  :sort 'visibility
-                                  :as #'buffer-name))))
-    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
-
-  (defun tab-bar-switch-to-default-tab ()
-    (interactive)
-    (tab-bar-switch-to-tab tabspaces-default-tab))
-  )
+  (perspective-tabs-mode +1))
 #+end_src
+
 * Files
 ** Files
 #+begin_src emacs-lisp
@@ -1174,8 +1139,9 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init)
-  (evil-collection-define-key 'normal 'dired-mode-map
-    "q" nil))
+  ;; (evil-collection-define-key 'normal 'dired-mode-map
+  ;;   "q" nil)
+  )
 
 (use-package evil-nerd-commenter
   :after evil
@@ -1227,16 +1193,18 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ** Pairs
 #+begin_src emacs-lisp
 
+(delete-selection-mode 1)
+
 (use-package electric-pair-mode
   :ensure nil
   :custom
   (electric-pair-skip-whitespace nil)
   :hook
-  ((prog-mode text-mode conf-mode) . electric-pair-local-mode)
   (org-mode . (lambda ()
                 (setq-local electric-pair-inhibit-predicate
                             `(lambda (c)
                                (if (char-equal c ?<) t (,electric-pair-inhibit-predicate c))))))
+  ((prog-mode text-mode conf-mode) . electric-pair-local-mode)
   :preface
   (defun +add-pairs (pairs)
     (setq-local electric-pair-pairs (append electric-pair-pairs pairs))
@@ -1317,27 +1285,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 #+end_src
 
-** Snippets
-#+begin_src emacs-lisp
-(use-package yasnippet
-  :after corfu
-  :general-config
-  (+leader-def
-    "is" '(yas-insert-snippet :wk "Snippet"))
-  :config
-  (setq yas-verbosity 2)
-  (yas-global-mode +1)
-  (define-key yas-minor-mode-map [(tab)] nil)
-  (define-key yas-minor-mode-map (kbd "TAB") nil)
-  (define-key yas-keymap [(tab)] nil)
-  (define-key yas-keymap (kbd "TAB") nil)
-  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
-)
-
-(use-package yasnippet-capf
-  :after (yasnippet cape))
-
-#+end_src
 * Completion
 ** Minibuffer
 #+begin_src emacs-lisp
@@ -1629,55 +1576,68 @@ targets."
 #+end_src
 ** Autocomplete
 #+begin_src emacs-lisp
-;; Remove ispell from default completion
-(setq text-mode-ispell-word-completion nil)
-
 (use-package cape
   :after corfu
   :config
+  (add-hook 'org-mode-hook
+            (defun +corfu-add-cape-elisp-block-h ()
+              (add-hook 'completion-at-point-functions #'cape-elisp-block 0 t)))
+
   (advice-add #'lsp-completion-at-point :around #'cape-wrap-noninterruptible)
   (advice-add #'lsp-completion-at-point :around #'cape-wrap-nonexclusive)
   (advice-add #'comint-completion-at-point :around #'cape-wrap-nonexclusive)
-  (advice-add #'pcomplete-completions-at-point :around #'cape-wrap-nonexclusive)
-
-  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+  (advice-add #'pcomplete-completions-at-point :around #'cape-wrap-nonexclusive))
 
 (use-package corfu
-  :after savehist
   :hook
-  (on-first-input . corfu-history-mode)
+  ;; (on-first-input . global-corfu-mode)
   ((prog-mode text-mode conf-mode) . corfu-mode)
   (eshell-mode . corfu-enable-in-shell)
-  (minibuffer-setup . corfu-enable-in-minibuffer)
+  (minibuffer-setup . corfu-enable-in-shell)
+  :preface
+  ;; (defun corfu-enable-in-minibuffer ()
+  ;;   "Enable Corfu in the minibuffer."
+  ;;   (when (local-variable-p 'completion-at-point-functions)
+  ;;     (setq-local corfu-auto nil) ;; Enable/disable auto completion
+  ;;     (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
+  ;;                 corfu-popupinfo-delay nil)
+  ;;     (corfu-mode 1)))
+
+  (defun corfu-enable-in-shell ()
+    (setq-local corfu-auto nil)
+    (corfu-mode 1))
   :custom
+  (text-mode-ispell-word-completion nil)
   (corfu-auto t)
-  (corfu-auto-delay 0.18)
+  (corfu-auto-delay 0.25)
   (corfu-auto-prefix 2)
   (corfu-cycle t)
-  (corfu-max-width 120)
+  (corfu-count 14)
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
+  ;; (global-corfu-modes
+  ;;  '((not help-mode eat-mode) t))
+  ;; :general-config
+  ;; (:keymaps 'corfu-map
+  ;;           (kbd "TAB") 'corfu-insert
+  ;;           [(tab)] 'corfu-insert)
   :config
   (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
-
   (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
   (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
+  ;; (setq global-corfu-minibuffer
+  ;;       (lambda ()
+  ;;         (not (or (bound-and-true-p mct--active)
+  ;;                  (bound-and-true-p vertico--input)
+  ;;                  (eq (current-local-map) read-passwd-map)))))
+  )
 
-  (defun corfu-enable-in-minibuffer ()
-    "Enable Corfu in the minibuffer."
-    (when (local-variable-p 'completion-at-point-functions)
-      (setq-local corfu-auto nil) ;; Enable/disable auto completion
-      (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
-                  corfu-popupinfo-delay nil)
-      (corfu-mode 1)))
-
-  (defun corfu-enable-in-shell ()
-    (setq-local corfu-quit-no-match t
-                corfu-on-exact-match 'insert
-                corfu-auto nil)
-    (corfu-mode 1))
-
+(use-package corfu-history
+  :ensure nil
+  :after (savehist corfu)
+  :config
+  (corfu-history-mode)
   (add-to-list 'savehist-additional-variables 'corfu-history)
 
   (defun +corfu-combined-sort (candidates)
@@ -1691,8 +1651,7 @@ targets."
           (funcall corfu-sort-function candidates)
         candidates)))
 
-  (setq corfu-sort-override-function #'+corfu-combined-sort)
-  )
+  (setq corfu-sort-override-function #'+corfu-combined-sort))
 
 (use-package nerd-icons-corfu
   :after corfu
@@ -1701,23 +1660,33 @@ targets."
 
 #+end_src
 
+** Snippets
+#+begin_src emacs-lisp
+(use-package yasnippet
+  :after corfu
+  :general-config
+  (+leader-def
+    "is" '(yas-insert-snippet :wk "Snippet"))
+  :config
+  (setq yas-use-menu nil)
+  (setq yas-verbosity 2)
+  (yas-global-mode +1)
+  (define-key yas-minor-mode-map [(tab)] nil)
+  (define-key yas-minor-mode-map (kbd "TAB") nil)
+  (define-key yas-keymap [(tab)] nil)
+  (define-key yas-keymap (kbd "TAB") nil)
+  (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
+)
+
+(use-package yasnippet-capf
+  :after (yasnippet cape)
+  :config
+  (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+
+#+end_src
 * Git
 ** Magit
 #+begin_src emacs-lisp
-(use-package git-commit
-  :after magit
-  :custom
-  (git-commit-summary-max-length 72)
-  (git-commit-style-convention-checks '(overlong-summary-line))
-  :config
-  (global-git-commit-mode 1)
-  (add-hook 'git-commit-setup-hook
-            (lambda ()
-              (when (and (bound-and-true-p evil-mode)
-                         (not (evil-emacs-state-p))
-                         (bobp) (eolp))
-                (evil-insert-state)))))
-
 (use-package magit
   :defer .3
   :general-config
@@ -1733,6 +1702,9 @@ targets."
     "U" #'magit-unstage-buffer-file
     "L" #'magit-log-buffer-file)
   :custom
+  (git-commit-summary-max-length 72)
+  (git-commit-style-convention-checks '(overlong-summary-line))
+
   (magit-auto-revert-mode nil) ;; does not need because global-auto-revert-mode is enabled
   (transient-default-level 5)
   (magit-diff-refine-hunk t)
@@ -1742,6 +1714,14 @@ targets."
   (magit-bury-buffer-function #'magit-mode-quit-window)
 
   :config
+  (global-git-commit-mode 1)
+  (add-hook 'git-commit-setup-hook
+            (lambda ()
+              (when (and (bound-and-true-p evil-mode)
+                                        ;                          (not (evil-emacs-state-p))
+                         (bobp) (eolp))
+                (evil-insert-state))))
+
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
 
@@ -1865,30 +1845,27 @@ targets."
 (use-package smerge-mode
   :ensure nil
   :after magit
-  ;; :commands +smerge-hydra/body
   :general-config
   (+leader-def
-    "gm" '(+smerge-hydra/body :wk "smerge"))
+    "gm" 'hydra-smerge/body)
   :config
-  (defhydra +smerge-hydra (:hint nil
-                                 :pre (if (not smerge-mode) (smerge-mode 1))
-                                 ;; Disable `smerge-mode' when quitting hydra if
-                                 ;; no merge conflicts remain.
+  (defhydra hydra-smerge (:color pink
+                                 :hint nil
+                                 :pre (smerge-mode 1)
                                  :post (smerge-auto-leave))
     "
-                                                         [smerge]
-  Movement   Keep           Diff              Other         │
-  ╭─────────────────────────────────────────────────────────╯
-  │  ^_g_^       [_b_] base       [_<_] upper/base    [_C_] Combine
-  │  ^_k_ ↑^     [_u_] upper      [_=_] upper/lower   [_r_] resolve
-  │  ^_j_ ↓^     [_l_] lower      [_>_] base/lower    [_R_] remove
-  │  ^_G_^       [_a_] all        [_H_] hightlight    [_n_] next in project
-  │          [_RET_] current  [_E_] ediff
-  │                                                   [_q_] quit
-  ╰─────────────────────────────────────────────────────╯
+                                                              [smerge]
+     Move        Keep             Diff              Other        │
+  ╭──────────────────────────────────────────────────────────────╯
+  │  [_p_] prev    [_u_] upper      [_<_] upper/base    [_C_] Combine
+  │  [_k_] ↑       [_l_] lower      [_=_] upper/lower   [_r_] resolve
+  │  [_j_] ↓       [_a_] all        [_>_] base/lower    [_R_] remove
+  │  [_n_] next    [_b_] base       [_H_] hightlight
+  │              _RET_ current    [_E_] ediff         [_q_] quit
+  ╰────────────────────────────────────────────────╯
 "
-    ("g" (progn (goto-char (point-min)) (smerge-next)))
-    ("G" (progn (goto-char (point-max)) (smerge-prev)))
+    ("n" (progn (goto-char (point-min)) (smerge-next)))
+    ("p" (progn (goto-char (point-max)) (smerge-prev)))
     ("j" next-line)
     ("k" previous-line)
     ("b" smerge-keep-base)
@@ -1906,12 +1883,21 @@ targets."
     ("R" smerge-kill-current)
     ;; Often after calling `smerge-vc-next-conflict', the cursor will land at
     ;; the bottom of the window
-    ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
-    ("q" nil :color blue)))
+    ;; ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
+    ("q" nil :color blue))
+  :hook
+  (find-file . (lambda ()
+                 (unless (bound-and-true-p smerge-mode)
+                   (save-excursion
+                     (goto-char (point-min))
+                     (when (re-search-forward "^<<<<<<< " nil t)
+                       (smerge-mode 1)))))))
 #+end_src
 ** Browse
 #+begin_src emacs-lisp
 (use-package browse-at-remote
+  :config
+  (add-to-list 'browse-at-remote-remote-type-regexps '(:host "^git\\.xspringas\\.com$" :type "gitlab"))
   :general
   (+leader-def
     :keymaps '(prog-mode-map text-mode-map conf-mode-map)
@@ -1949,6 +1935,7 @@ for all languages configured in `treesit-language-source-alist'."
           (csharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
+          ;; (dart "https://github.com/UserNobody14/tree-sitter-dart")
           (go "https://github.com/tree-sitter/tree-sitter-go" "master")
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
           (heex "https://github.com/phoenixframework/tree-sitter-heex")
@@ -2024,23 +2011,33 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-register-custom-settings
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)
-    ))
+     ;; ("dart.enableSnippets" t t)
+     ;; ("dart.enableServerSnippets" t t)
+     ;; ("dart.enableCompletionCommitCharacters" nil t)
+     ;; ("dart.completeFunctionCalls" t t)
+     ;; ("dart.insertArgumentPlaceholders" t t)
+     ;; ("dart.previewCommitCharacters" nil t)
+     ))
+
+  ;; (lsp-register-client (make-lsp-client
+  ;;                       :new-connection (lsp-stdio-connection '("dart" "language-server" "--client-id" "emacs.lsp-dart"))
+  ;;                       :activation-fn (lsp-activate-on "dart")
+  ;;                       :priority 1
+  ;;                       :server-id 'dart-analysis-server))
 
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
-  ;; (lsp-diagnostics-provider :flymake)
   (lsp-headerline-breadcrumb-enable nil)
   (lsp-keep-workspace-alive nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-text-document-color nil)
+  (lsp-enable-on-type-formatting nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-auto-execute-action nil)
   (lsp-eldoc-enable-hover nil)
   (lsp-disabled-clients '(rubocop-ls))
-  ;; (lsp-kotlin-compiler-jvm-target "2.1")
-  ;; (lsp-kotlin-debug-adapter-path "~/.config/emacs/.cache/adapter/kotlin/bin/kotlin-debug-adapter")
   (lsp-pylsp-plugins-ruff-enabled t)
   (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-clients-typescript-preferences '(:importModuleSpecifierPreference "non-relative" :includeCompletionsForImportStatements nil))
@@ -2050,7 +2047,7 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-javascript-suggest-complete-js-docs nil)
   :hook
   (lsp-managed-mode . (lambda () (general-define-key
-                                  :states '(normal)
+                                  :states '(normal visual)
                                   :keymaps 'local
                                   "K" 'lsp-describe-thing-at-point)))
   (lsp-completion-mode . +update-completions-list)
@@ -2100,6 +2097,8 @@ for all languages configured in `treesit-language-source-alist'."
        flycheck-errors)))
 
   :custom
+  (flycheck-idle-change-delay 1.0)
+  ;; (flycheck-display-errors-delay 0.25)
   (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
   (flycheck-checkers nil)
   (flycheck-display-errors-function nil)
@@ -2150,41 +2149,96 @@ for all languages configured in `treesit-language-source-alist'."
 #+end_src
 ** Flutter
 #+begin_src emacs-lisp
+
 (use-package dart-mode
-  :mode "\\.dart\\'")
+  :vc (:url "https://github.com/emacsorphanage/dart-mode")
+  :mode "\\.dart\\'"
+  :hook
+  (dart-mode . apheleia-mode)
+  (dart-mode . (lambda ()
+                 (setq-local syntax-propertize-function nil)))
+  :config
+  (add-hook 'dart-mode-hook 'lsp-deferred)
+  )
 
 (use-package flutter
   :init
   (put 'flutter-run-args 'safe-local-variable #'stringp)
   :general
   (+local-leader-def
-    :keymaps 'dart-mode-map
+    :keymaps '(dart-mode-map flutter-mode-map)
     "f" '(:ignore t :wk "flutter")
     "ff" #'flutter-run-or-hot-reload
     "fq" #'flutter-quit
     "fr" #'flutter-hot-reload
-    "fR" #'flutter-hot-restart)
+    "fR" #'flutter-hot-restart
+    "t" '(:ignore t :wk "test")
+    "ts" #'flutter-test-at-point
+    "tf" #'flutter-test-current-file
+    "ta" #'flutter-test-all
+    )
   :preface
+  (defun +flutter-hot-reload ()
+    "Run `flutter-hot-reload' only if flutter-mode is running."
+    (when (and (fboundp 'flutter--running-p) (flutter--running-p))
+      (flutter-hot-reload)))
   (defun +flutter-mode-setup ()
-    (add-hook 'after-save-hook 'flutter-hot-reload nil t))
+    (add-hook 'after-save-hook '+flutter-hot-reload nil t))
   :hook
   (dart-mode . +flutter-mode-setup)
   )
 
 (use-package lsp-dart
-  :custom
-  (lsp-dart-test-tree-on-run nil)
   :hook
   (dart-mode . lsp-deferred)
-  :general-config
-  (+local-leader-def
-    :keymaps 'dart-mode-map
-    "t" '(:ignore t :wk "test")
-    "ts" #'lsp-dart-run-test-at-point
-    "tt" #'lsp-dart-run-last-test
-    "ta" #'lsp-dart-run-all-tests
-    "tf" #'lsp-dart-run-test-file
-    ))
+  :custom
+  (lsp-dart-test-tree-on-run nil)
+  (lsp-dart-test-pop-to-buffer-on-run t)
+  (lsp-dart-line-length 120)
+  (lsp-dart-main-code-lens nil)
+  (lsp-dart-test-code-lens nil)
+  :config
+  ;; workaround for dart not returning completions after "."
+  (advice-add 'lsp-completion--looking-back-trigger-characterp :around
+              (defun lsp-completion--looking-back-trigger-characterp@fix-dart-trigger-characters (orig-fn trigger-characters)
+                (funcall orig-fn
+                         (if (and (derived-mode-p 'dart-mode) (not trigger-characters))
+                             ["." "(" "$"]
+                           trigger-characters))))
+
+  ;; switch to evil-mode after using Wrap with widget actions
+  (advice-add 'lsp--execute-code-action :around
+              (defun +lsp-dart-wrap-code-action-insert-mode (orig-fn &rest args)
+                (let* ((first-arg (nth 0 args))
+                       (result (apply orig-fn args))
+                       (action-name (plist-get first-arg :title)))
+                  (when (and (derived-mode-p 'dart-mode)
+                             (bound-and-true-p evil-mode)
+                             (string= "Wrap with widget..." action-name))
+                    (evil-insert-state))
+                  result)))
+
+  ;; (defun my/yas-activate-evil-visual-first-field ()
+  ;;   "Activate evil-visual-state for the first yasnippet field after snippet expansion."
+  ;;   (when (and (bound-and-true-p evil-mode)
+  ;;              yas--active-field-overlay)
+  ;;     ;; Select the region of the first field
+  ;;     (let ((start (overlay-start yas--active-field-overlay))
+  ;;           (end (overlay-end yas--active-field-overlay)))
+  ;;       (evil-visual-select start end))))
+
+  ;; Hook this to yasnippet's snippet expansion
+  ;; (add-hook 'yas-after-exit-snippet-hook #'my/yas-activate-evil-visual-first-field)
+
+  ;; (defun my/yas-activate-evil-visual ()
+  ;;   "Activate evil-visual-state for the current yasnippet field."
+  ;;   (when (bound-and-true-p evil-mode)
+  ;;     (evil-visual-select yas--field-start yas--field-end)))
+
+  ;; ;; Add this advice to trigger visual state when a yasnippet field is activated
+  ;; (advice-add 'yas-next-field :after #'my/yas-activate-evil-visual)
+  )
+
 #+end_src
 
 ** Rust
@@ -2545,6 +2599,11 @@ is available as part of \"future history\"."
   :config
   (require 'org-table))
 #+end_src
+** Lua
+#+begin_src emacs-lisp
+(use-package lua-ts-mode
+  :mode "\\.lua\\'")
+#+end_src
 ** Emacs lisp
 #+begin_src emacs-lisp
 (use-package elisp-mode
@@ -2633,6 +2692,9 @@ is available as part of \"future history\"."
 #+end_src
 ** Others
 #+begin_src emacs-lisp
+
+(add-to-list 'auto-mode-alist
+             (cons "rc\\'" 'conf-mode))
 
 (use-package jenkinsfile-mode
   :mode "\\Jenkinsfile\\'")
@@ -3275,14 +3337,15 @@ current project's root directory."
 #+end_src
 ** K8S
 #+begin_src emacs-lisp
-(use-package kubel
-  :commands (kubel)
-  :general
-  (+leader-def
-    "ok" 'kubel))
+;; (use-package kubel
+;;   :commands (kubel)
+;;   :general
+;;   (+leader-def
+;;     "ok" 'kubel))
 
-(use-package kubel-evil
-  :after kubel)
+;; (use-package kubel-evil
+;;   :after kubel)
+
 #+end_src
 ** Dictionary
 #+begin_src emacs-lisp
@@ -3319,6 +3382,9 @@ current project's root directory."
     "vg" '(verb-show-vars :wk "Show variables"))
     )
 #+end_src
+#+begin_src verb :wrap src ob-verb-response :op send get-body
+
+#+end_src
 ** Download
 #+begin_src emacs-lisp
 
@@ -3349,9 +3415,18 @@ current project's root directory."
   :config
   (elcord-mode 1))
 #+end_src
+** Calculator
+#+begin_src emacs-lisp
+(use-package calc
+  :ensure nil
+  :general
+  (+leader-def
+    "oc" #'quick-calc
+    ))
+
+#+end_src
 * Tangle
 #+begin_src emacs-lisp
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
-
 #+end_src
