@@ -1,0 +1,106 @@
+# restart yabai
+alt + ctrl - c : yabai --restart-service
+
+# switch layout to bsp
+alt + ctrl - b : yabai -m space --layout bsp
+
+# switch layout to stack
+alt + ctrl - s : yabai -m space --layout stack
+
+# switch layout to flat
+alt + ctrl - f : yabai -m space --layout float
+
+# focus space
+alt - 1  : yabai -m space --focus 1
+alt - 2  : yabai -m space --focus 2
+alt - 3  : yabai -m space --focus 3
+alt - 4  : yabai -m space --focus 4
+alt - 5  : yabai -m space --focus 5
+alt - 6  : yabai -m space --focus 6
+alt - 7  : yabai -m space --focus 7
+alt - 8  : yabai -m space --focus 8 # extra space for fullscreen
+
+# send window to monitor and follow focus
+# alt + cmd + shift - 1  : yabai -m window --display 1; yabai -m display --focus 1
+# alt + cmd + shift - 2  : yabai -m window --display 2; yabai -m display --focus 2
+
+# put window to main
+alt - f : yabai -m window --swap first
+
+# toggle window split type (vertical/horizontal)
+alt - e : yabai -m window --toggle split
+
+# mirror windows
+alt - y : yabai -m space --mirror y-axis
+
+# balance size of windows
+alt - 0 : yabai -m space --balance
+
+# focus window
+# alt - h : yabai -m window --focus west
+# alt - l : yabai -m window --focus east
+# alt - k : yabai -m window --focus north
+# alt - j : yabai -m window --focus south
+
+
+# focus window and display
+alt - h : yabai -m window --focus west  || yabai -m display --focus west
+alt - j : yabai -m window --focus south || yabai -m display --focus south
+alt - k : yabai -m window --focus north || yabai -m display --focus north
+alt - l : yabai -m window --focus east  || yabai -m display --focus east
+alt - n : yabai -m window --focus next  || yabai -m window --focus first
+alt - p : yabai -m window --focus prev  || yabai -m window --focus last
+
+
+# send window to space and follow focus
+shift + alt - 1 : yabai -m window --space 1 --focus
+shift + alt - 2 : yabai -m window --space 2 --focus
+shift + alt - 3 : yabai -m window --space 3 --focus
+shift + alt - 4 : yabai -m window --space 4 --focus
+shift + alt - 5 : yabai -m window --space 5 --focus
+shift + alt - 6 : yabai -m window --space 6 --focus
+shift + alt - 7 : yabai -m window --space 7 --focus
+shift + alt - 8 : yabai -m window --space 8 --focus
+
+# move managed window around
+# shift + alt - h : yabai -m window --warp west
+# shift + alt - l : yabai -m window --warp east
+# shift + alt - k : yabai -m window --warp north
+# shift + alt - j : yabai -m window --warp south
+# Moving windows in spaces: shift + lalt - {j, k, l, ö}
+shift + alt - h : yabai -m window --warp west || $(yabai -m window --display west && yabai -m display --focus west && yabai -m window --warp last) || yabai -m window --move rel:-10:0
+shift + alt - j : yabai -m window --warp south || $(yabai -m window --display south && yabai -m display --focus south) || yabai -m window --move rel:0:10
+shift + alt - k : yabai -m window --warp north || $(yabai -m window --display north && yabai -m display --focus north) || yabai -m window --move rel:0:-10
+shift + alt - l : yabai -m window --warp east || $(yabai -m window --display east && yabai -m display --focus east && yabai -m window --warp first) || yabai -m window --move rel:10:0
+
+# cycle through stack
+ctrl + alt - p : yabai -m window --focus stack.prev || yabai -m window --focus stack.last
+ctrl + alt - n : yabai -m window --focus stack.next || yabai -m window --focus stack.first
+
+# Set insertion point for focused container: shift + ctrl + lalt - {j, k, l, ö, s}
+shift + ctrl + alt - h : yabai -m window --insert west
+shift + ctrl + alt - j : yabai -m window --insert south
+shift + ctrl + alt - k : yabai -m window --insert north
+shift + ctrl + alt - l : yabai -m window --insert east
+shift + ctrl + alt - s : yabai -m window --insert stack
+
+# unstack
+# shift + ctrl + alt - o : yabai -m window --warp recent
+
+# increase/decrease window size
+ctrl + alt - h : yabai -m window --resize right:-20:0 || yabai -m window --resize left:-20:0
+ctrl + alt - j : yabai -m window --resize bottom:0:20 || yabai -m window --resize top:0:20
+ctrl + alt - k : yabai -m window --resize bottom:0:-20 || yabai -m window --resize top:0:-20
+ctrl + alt - l : yabai -m window --resize right:20:0 || yabai -m window --resize left:20:0
+
+# float / unfloat window and center on screen
+alt - t : yabai -m window --toggle float --grid 4:4:1:1:2:2
+
+# move floating window
+alt - left : yabai -m window --move rel:-20:0
+alt - down : yabai -m window --move rel:0:20
+alt - right : yabai -m window --move rel:20:0
+alt - up : yabai -m window --move rel:0:-20
+
+# maximize window
+# alt - f : yabai -m window --toggle zoom-fullscreen
