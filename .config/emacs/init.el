@@ -630,6 +630,12 @@ of the tab bar."
   :custom
   (persp-show-modestring nil)
   (persp-mode-prefix-key (kbd "C-c M-p"))
+  :general-config
+  (+leader-def
+    "<tab><tab>" #'persp-switch
+    "<tab>b" #'persp-switch-to-buffer*
+    "<tab>k" #'persp-kill
+    "pp" #'persp-switch-project)
   :preface
   (defun persp-switch-project (directory)
     "Switch to project DIRECTORY.
@@ -654,20 +660,13 @@ the project in DIRECTORY."
                      (sort persps (lambda (a b)
                                     (time-less-p (persp-created-time a)
                                                  (persp-created-time b)))))))
-  :general-config
-  (+leader-def
-    "pp" #'persp-switch-project))
+  )
 
 (use-package perspective-tabs
-  :after (perspective)
+  :after perspective
   :vc (:url "https://git.sr.ht/~woozong/perspective-tabs")
-  :general-config
-  (+leader-def
-    "<tab><tab>" #'persp-switch
-    "<tab>b" #'persp-switch-to-buffer*
-    "<tab>k" #'perspective-tabs-close-tab)
   :config
-  (perspective-tabs-mode +1))
+  (perspective-tabs-mode 1))
 
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
@@ -1925,25 +1924,6 @@ for all languages configured in `treesit-language-source-alist'."
                     (evil-insert-state))
                   result)))
 
-  ;; (defun my/yas-activate-evil-visual-first-field ()
-  ;;   "Activate evil-visual-state for the first yasnippet field after snippet expansion."
-  ;;   (when (and (bound-and-true-p evil-mode)
-  ;;              yas--active-field-overlay)
-  ;;     ;; Select the region of the first field
-  ;;     (let ((start (overlay-start yas--active-field-overlay))
-  ;;           (end (overlay-end yas--active-field-overlay)))
-  ;;       (evil-visual-select start end))))
-
-  ;; Hook this to yasnippet's snippet expansion
-  ;; (add-hook 'yas-after-exit-snippet-hook #'my/yas-activate-evil-visual-first-field)
-
-  ;; (defun my/yas-activate-evil-visual ()
-  ;;   "Activate evil-visual-state for the current yasnippet field."
-  ;;   (when (bound-and-true-p evil-mode)
-  ;;     (evil-visual-select yas--field-start yas--field-end)))
-
-  ;; ;; Add this advice to trigger visual state when a yasnippet field is activated
-  ;; (advice-add 'yas-next-field :after #'my/yas-activate-evil-visual)
   )
 
 (use-package rust-ts-mode
@@ -2691,6 +2671,7 @@ current project's root directory."
   (eshell-syntax-highlighting-global-mode +1))
 
 (use-package ielm
+  :commands (ielm)
   :ensure nil
   :general-config
   (:states '(insert)
@@ -3004,8 +2985,6 @@ current project's root directory."
     "vg" '(verb-show-vars :wk "Show variables"))
     )
 
-
-
 ;;;###autoload
 (defun download-file (url)
   "Download file from URL."
@@ -3023,7 +3002,7 @@ current project's root directory."
   (makefile-mode . makefile-executor-mode))
 
 (use-package elcord
-  :defer 1
+  :defer 2
   :custom
   (elcord-quiet t)
   :config
