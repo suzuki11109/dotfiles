@@ -634,7 +634,7 @@ of the tab bar."
   (+leader-def
     "<tab><tab>" #'persp-switch
     "<tab>b" #'persp-switch-to-buffer*
-    "<tab>k" #'persp-kill
+    "<tab>k" #'persp-kill-current
     "pp" #'persp-switch-project)
   :preface
   (defun persp-switch-project (directory)
@@ -650,16 +650,36 @@ the project in DIRECTORY."
             (project-switch-project directory))
         (persp-switch name))))
 
-  :config
-  (persp-mode 1)
-
-  (defun persp-names ()
+  (defun +persp-names-sorted-by-created ()
     "Always sort persps by created time from left to right."
     (let ((persps (hash-table-values (perspectives-hash))))
       (mapcar 'persp-name
                      (sort persps (lambda (a b)
                                     (time-less-p (persp-created-time a)
                                                  (persp-created-time b)))))))
+  (defun persp-kill-current ()
+    "Kill current perspecitve."
+    (interactive)
+    (persp-kill (persp-current-name)))
+  :config
+  (advice-add 'persp-names :override #'+persp-names-sorted-by-created)
+  (persp-mode 1)
+
+  (with-eval-after-load 'consult
+    (consult-customize consult--source-buffer :hidden t :default nil)
+
+    (defvar consult--source-workspace
+      (list :name     "Workspace Buffers"
+            :narrow   ?w
+            :history  'buffer-name-history
+            :category 'buffer
+            :state    #'consult--buffer-state
+            :default  t
+            :items    (lambda () (consult--buffer-query
+                                  :predicate (lambda (x) (and (persp-is-current-buffer x) (not (popper-popup-p x))))
+                                  :sort 'visibility
+                                  :as #'buffer-name))))
+    (add-to-list 'consult-buffer-sources 'consult--source-workspace))
   )
 
 (use-package perspective-tabs
@@ -698,8 +718,6 @@ the project in DIRECTORY."
   (auto-revert-interval 3)
   :hook
   (on-first-file . global-auto-revert-mode))
-
-;;  funtions put to custom lisp file
 
 ;;;###autoload
 (defun +delete-this-file (&optional forever)
@@ -857,11 +875,11 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :hook
   (on-first-buffer . global-visual-line-mode))
 
-(setq
- ;; Cull duplicates in the kill ring to reduce bloat and make the kill ring easier to peruse
- kill-do-not-save-duplicates t)
+;; Cull duplicates in the kill ring to reduce bloat and make the kill ring easier to peruse
+(setq kill-do-not-save-duplicates t)
+
  ;; Save existing clipboard text into the kill ring before replacing it.
- ;; save-interprogram-paste-before-kill t)
+(setq save-interprogram-paste-before-kill t)
 
 (use-package evil
   :defer .2
@@ -2763,11 +2781,6 @@ current project's root directory."
   (defun +org-project-notes-file ()
     (expand-file-name ".project-notes.org" (project-root (project-current t))))
 
-  ;; (defun +org-agenda-project ()
-  ;;   (interactive)
-  ;;   (let* ((org-agenda-files (list (+org-project-notes-file))))
-  ;;     (org-todo-list)))
-
   (defun +org-capture-project ()
     (interactive)
     (let* ((org-capture-templates
@@ -2947,14 +2960,14 @@ current project's root directory."
     "od" #'docker)
   )
 
-;; (use-package kubel
-;;   :commands (kubel)
-;;   :general
-;;   (+leader-def
-;;     "ok" 'kubel))
+(use-package kubel
+  :commands (kubel)
+  :general
+  (+leader-def
+    "ok" 'kubel))
 
-;; (use-package kubel-evil
-;;   :after kubel)
+(use-package kubel-evil
+  :after kubel)
 
 (setq dictionary-use-single-buffer t)
 (setq dictionary-server "dict.org")
