@@ -39,7 +39,7 @@
 
 ;; For on-first-* hooks
 (use-package on
-  :vc (:url "https://github.com/ajgrf/on.el"))
+  :vc (:url "https://github.com/ajgrf/on.el" :branch "master"))
 
 (defmacro quiet! (&rest forms)
   "Run FORMS without making any noise."
@@ -236,11 +236,6 @@
 
 (use-package pixel-scroll
   :ensure nil
-  ;; (setq mouse-wheel-scroll-amount '(2 ((shift) . hscroll))
-  ;;       mouse-wheel-scroll-amount-horizontal 2)
-
-  ;; (setq-default scroll-down-aggressively 0.01)
-  ;; (setq-default scroll-up-aggressively 0.01)
   :hook
   ((prog-mode text-mode conf-mode) . pixel-scroll-precision-mode))
 
@@ -257,8 +252,7 @@
 (use-package saveplace
   :ensure nil
   :hook
-  (on-first-file . save-place-mode)
-  )
+  (on-first-file . save-place-mode))
 
 ;; Frame title
 (setq frame-title-format
@@ -269,7 +263,6 @@
              (format "%s — " (project-name project)))))
        '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
        ))
-;; (setq icon-title-format frame-title-format)
 
 ;; Resize a frame by pixel
 (setq frame-resize-pixelwise t)
@@ -391,7 +384,7 @@
     (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family))
     ))
 
-(setq-default line-spacing 5)
+(setq-default line-spacing 0.3)
 
 (use-package default-text-scale
   :commands (default-text-scale-increase default-text-scale-decrease)
@@ -430,9 +423,9 @@
     '(matches eldoc bar workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
     '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time " "))
 
-  (doom-modeline-def-modeline 'vcs
-    '(matches bar window-number modals buffer-info remote-host selection-info parrot)
-    '(compilation misc-info battery irc mu4e gnus github debug minor-modes buffer-encoding major-mode process time " "))
+  ;; (doom-modeline-def-modeline 'vcs
+  ;;   '(matches bar window-number modals buffer-info remote-host selection-info parrot)
+  ;;   '(compilation misc-info battery irc mu4e gnus github debug minor-modes buffer-encoding major-mode process time " "))
 
 ;;   (defun +modeline-flymake-counter (type)
 ;;     "Compute number of diagnostics in buffer with TYPE's severity.
@@ -484,8 +477,7 @@
 ;; Specific to the current window's mode line.")
 ;;   (add-to-list 'mode-line-misc-info +modeline-flymake)
   :hook
-  (after-init . doom-modeline-mode)
-  )
+  (after-init . doom-modeline-mode))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -715,7 +707,7 @@ the project in DIRECTORY."
   :custom
   (auto-revert-verbose nil)
   (global-auto-revert-non-file-buffers t)
-  (auto-revert-interval 3)
+  (auto-revert-interval 2)
   :hook
   (on-first-file . global-auto-revert-mode))
 
@@ -778,7 +770,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
 ;; Suppress large file opening confirmation
 (setq large-file-warning-threshold nil)
 
-;; Persistemt scratch
+;; Persistent scratch
 (setq remember-notes-buffer-name "*scratch*"
       initial-buffer-choice (lambda ()
                               (kill-buffer remember-notes-buffer-name)
@@ -864,7 +856,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (hl-todo-highlight-punctuation ":")
   :hook
-  ((prog-mode text-mode conf-mode) . hl-todo-mode))
+  (on-first-file . global-hl-todo-mode))
 
 (setq-default truncate-lines t)
 (setq truncate-partial-width-windows nil)
@@ -1471,9 +1463,14 @@ targets."
   (add-hook 'git-commit-setup-hook
             (lambda ()
               (when (and (bound-and-true-p evil-mode)
-                                        ;                          (not (evil-emacs-state-p))
                          (bobp) (eolp))
                 (evil-insert-state))))
+
+  (with-eval-after-load 'magit-mode
+    (add-hook 'after-save-hook 'magit-after-save-refresh-status t))
+
+  (transient-append-suffix 'magit-pull "-r"
+    '("-a" "Autostash" "--autostash"))
 
   (add-hook 'magit-process-mode-hook #'goto-address-mode)
   (add-hook 'magit-popup-mode-hook #'hide-mode-line-mode)
@@ -1745,12 +1742,6 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-register-custom-settings
    '(("gopls.completeUnimported" t t)
      ("gopls.staticcheck" t t)
-     ;; ("dart.enableSnippets" t t)
-     ;; ("dart.enableServerSnippets" t t)
-     ;; ("dart.enableCompletionCommitCharacters" nil t)
-     ;; ("dart.completeFunctionCalls" t t)
-     ;; ("dart.insertArgumentPlaceholders" t t)
-     ;; ("dart.previewCommitCharacters" nil t)
      ))
 
   ;; (lsp-register-client (make-lsp-client
@@ -1762,11 +1753,13 @@ for all languages configured in `treesit-language-source-alist'."
   :custom
   (lsp-keymap-prefix nil)
   (lsp-completion-provider :none)
-  (lsp-headerline-breadcrumb-enable nil)
+  ;; (lsp-diagnostics-provider :flymake)
   (lsp-keep-workspace-alive nil)
+  (lsp-enable-folding nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-text-document-color nil)
   (lsp-enable-on-type-formatting nil)
+  (lsp-headerline-breadcrumb-enable nil)
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-auto-execute-action nil)
@@ -1827,15 +1820,15 @@ for all languages configured in `treesit-language-source-alist'."
        flycheck-errors)))
 
   :custom
+  (flycheck-checkers nil)
   (flycheck-idle-change-delay 1.0)
   ;; (flycheck-display-errors-delay 0.25)
-  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
-  (flycheck-checkers nil)
   (flycheck-display-errors-function nil)
-  (flycheck-help-echo-function nil)
+  ;; (flycheck-help-echo-function nil)
   (flycheck-buffer-switch-check-intermediate-buffers t)
-  (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
+  (flycheck-emacs-lisp-load-path 'inherit)
+  (eldoc-documentation-strategy 'eldoc-documentation-compose-eagerly)
   :hook
   (flycheck-mode . (lambda ()
                      (add-hook 'eldoc-documentation-functions #'+flycheck-eldoc 0 t)))
@@ -2575,43 +2568,6 @@ current project's root directory."
   (eshell-load . eat-eshell-mode)
   (eshell-load . eat-eshell-visual-command-mode))
 
-;; (use-package vterm
-;;   :commands (vterm)
-;;   :custom
-;;   (vterm-kill-buffer-on-exit t)
-;;   (vterm-max-scrollback 5000)
-;;   :preface
-;;   (defun project-vterm ()
-;;     (interactive)
-;;     (defvar vterm-buffer-name)
-;;     (let* ((default-directory (project-root     (project-current t)))
-;;            (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
-;;            (vterm-buffer (get-buffer vterm-buffer-name)))
-;;       (if (and vterm-buffer (not current-prefix-arg))
-;;           (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
-;;         (vterm))))
-;;   :hook
-;;   (vterm-mode . (lambda ()
-;;                   (setq confirm-kill-processes nil)
-;;                   (setq hscroll-margin 0)))
-;;   :general-config
-;;   (:states '(normal visual)
-;;            :keymaps 'vterm-mode-map
-;;            "<return>" #'evil-insert-resume)
-;;   (:states '(insert)
-;;            :keymaps 'vterm-mode-map
-;;            "C-y" #'vterm-yank)
-;;   :general
-;;   (+leader-def
-;;     "pt" #'project-vterm
-;;     "ot" #'vterm))
-
-;; (use-package eshell-vterm
-;;   :ensure (eshell-vterm :host github :repo "iostapyshyn/eshell-vterm")
-;;   :after eshell
-;;   :config
-;;   (eshell-vterm-mode))
-
 (use-package eshell
   :ensure nil
   :general
@@ -2700,27 +2656,36 @@ current project's root directory."
 (use-package org
   :ensure nil
   :init
-  (setq org-directory "~/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/") ;; don't know why but custom not load on init
+  (setq org-directory "~/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/") ;; don't know why custom doesn not work
   :custom
-  (org-hide-emphasis-markers t)
-  (org-pretty-entities t)
-  (org-cycle-separator-lines 2)
-  (org-fold-core-style 'overlays)
-  (imenu-auto-rescan t)
-  (org-src-fontify-natively t)
   (org-src-window-setup 'current-window)
+  ;; (org-src-fontify-natively t)
+  (org-src-preserve-indentation t)
   (org-src-tab-acts-natively t)
   (org-edit-src-content-indentation 0)
+  ;; (org-hide-emphasis-markers t)
+  (org-fontify-quote-and-verse-blocks t)
+  (org-fontify-whole-heading-line t)
+  (org-hide-leading-stars t)
+  (org-pretty-entities t)
+  ;; (org-cycle-separator-lines 2)
+  ;; (org-fold-core-style 'overlays)
+  (org-priority-faces
+   '((?A . error)
+     (?B . warning)
+     (?C . success)))
+  (org-use-sub-superscripts '{})
+  (org-tags-column 0)
+  (org-startup-indented t)
+  ;; (org-special-ctrl-a/e t)
+  ;; (imenu-auto-rescan t)
   (org-confirm-babel-evaluate nil)
   :config
-  (require 'org-indent)
   ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-  (dolist (face '(org-table org-list-dt org-tag org-quote
-                            org-code org-link org-todo org-formula
-                            org-verbatim org-checkbox
-                            org-cite org-date org-hide))
+  (dolist (face '(org-table org-tag org-verbatim org-list-dt org-hide
+                            org-date org-todo org-done org-formula
+                            org-checkbox org-special-keyword))
     (set-face-attribute face nil :inherit 'fixed-pitch))
-
   (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
   (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
 
@@ -2729,10 +2694,21 @@ current project's root directory."
     :keymaps '(org-mode-map)
     "'" #'org-edit-special
     "." #'consult-org-heading
-    "l" #'org-insert-link)
+    "x" #'org-toggle-checkbox
+    "i" #'org-toggle-item
+    "l" #'org-insert-link
+    "b" '(:ignore t :wk "table")
+    "bc" #'org-table-create-or-convert-from-region
+    "bs" #'org-table-sort-lines
+    "b-" #'org-table-insert-hline
+    )
   :hook
-  (org-mode . org-indent-mode)
   (org-mode . variable-pitch-mode))
+
+(use-package org-indent
+  :ensure nil
+  :hook
+  (org-mode . org-indent-mode))
 
 (use-package evil-org
   :after (org evil)
@@ -2754,7 +2730,6 @@ current project's root directory."
 
 (use-package org-superstar
   :custom
-  (org-superstar-special-todo-items t)
   (org-superstar-remove-leading-stars t)
   :hook
   (org-mode . org-superstar-mode))
@@ -2764,33 +2739,19 @@ current project's root directory."
   :ensure nil
   :config
   (org-babel-do-load-languages
-    'org-babel-load-languages
-    '((emacs-lisp . t)
-      (shell . t)
-      (js . t)))
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (shell . t)
+     (js . t)))
   (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
   (add-to-list 'org-structure-template-alist '("js" . "src js"))
   (add-to-list 'org-structure-template-alist '("py" . "src python"))
   (add-to-list 'org-structure-template-alist '("rb" . "src ruby"))
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-)
+  )
 
 (use-package org-agenda
   :ensure nil
-  :preface
-  (defun +org-project-notes-file ()
-    (expand-file-name ".project-notes.org" (project-root (project-current t))))
-
-  (defun +org-capture-project ()
-    (interactive)
-    (let* ((org-capture-templates
-            `(("t" "Tasks" entry (file+olp +org-project-notes-file "Tasks")
-               "* TODO %?")
-              ("n" "Notes" entry (file+olp +org-project-notes-file "Notes")
-               "* %?")
-              ))
-           )
-      (org-capture)))
   :custom
   (org-agenda-sorting-strategy '((agenda habit-down time-up priority-down category-keep)
                                  (todo tag-up priority-down category-keep)
@@ -2804,12 +2765,9 @@ current project's root directory."
                         ))
   (org-agenda-files `(,(expand-file-name "tasks.org" org-directory)))
   (org-agenda-confirm-kill nil)
-  (org-agenda-window-setup 'only-window)
+  (org-agenda-window-setup 'current-window)
   (org-agenda-restore-windows-after-quit t)
-  ;; (org-agenda-custom-commands
-  ;;  '(("v" "Vocabulary" search ""
-  ;;     ((org-agenda-files
-  ;;       `(,(expand-file-name "vocab.org" org-directory)))))))
+  (org-agenda-inhibit-startup t)
   (org-capture-templates
    `(("t" "Task" entry (file "tasks.org")
       "* TODO %?")
@@ -2818,18 +2776,22 @@ current project's root directory."
      ("v" "Vocalubary" entry (file "vocab.org")
       "* %?")
      ))
-  :general
-  (+leader-def
-    "px"  '((lambda () (interactive) (find-file (+org-project-notes-file))) :wk "Edit .project-notes.org")
-    "pX" '+org-capture-project)
+
   :general-config
   (:keymaps 'org-agenda-mode-map
             "q" 'org-agenda-exit)
   :hook
-  (org-capture-mode . evil-insert-state)
   (org-agenda-mode . hl-line-mode)
   (org-agenda-mdoe . (lambda ()
                        (interactive) (org-element-cache-reset 'all)))
+  (org-capture-mode . evil-insert-state)
+  (org-capture-mode . (lambda ()
+                        (setq header-line-format
+                              (format "%s%s%s"
+                                      (propertize (abbreviate-file-name (buffer-file-name (buffer-base-buffer)))
+                                                  'face 'font-lock-string-face)
+                                      " → "
+                                      header-line-format))))
   :config
   ;; Refresh agenda after capturing.
   (add-hook 'org-capture-after-finalize-hook 'org-agenda-maybe-redo)
@@ -2969,8 +2931,8 @@ current project's root directory."
 (use-package kubel-evil
   :after kubel)
 
-(setq dictionary-use-single-buffer t)
-(setq dictionary-server "dict.org")
+;; (setq dictionary-use-single-buffer t)
+;; (setq dictionary-server "dict.org")
 
 (use-package devdocs
   :commands (devdocs-lookup devdocs-install devdocs-update-all devdocs-delete devdocs-persue)
