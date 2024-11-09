@@ -7,6 +7,7 @@ export PATH=$HOME/.local/bin:$PATH
 export PATH=/usr/local/go1.22.5/bin:$PATH
 export PATH=$HOME/go/bin:$PATH
 export PATH=$HOME/flutter/bin:$PATH
+export PATH=$HOME/.pub-cache/bin:$PATH
 
 export PATH=$HOME/.pyenv/shims:$PATH
 export PATH=$HOME/.rbenv/shims:$PATH

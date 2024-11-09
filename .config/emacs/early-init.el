@@ -121,4 +121,6 @@
 ;; ;; Improve `lsp-mode' performances
 (setenv "LSP_USE_PLISTS" "true")
 
+(setq package-enable-at-startup nil)
+
 ;;; early-init.el ends here

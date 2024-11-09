@@ -1,21 +1,63 @@
 ;;; init.el --- init file -*- lexical-binding: t; no-byte-compile: t; -*-
 
-(setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
-                         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-                         ("melpa" . "https://melpa.org/packages/")))
+;; (setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
+;;                          ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+;;                          ("melpa" . "https://melpa.org/packages/")))
 
-;; Highest number gets priority (what is not mentioned has priority 0)
-(setq package-archive-priorities
-      '(("gnu" . 3)
-        ("melpa" . 2)
-        ("nongnu" . 1)))
+;; ;; Highest number gets priority (what is not mentioned has priority 0)
+;; (setq package-archive-priorities
+;;       '(("gnu" . 3)
+;;         ("melpa" . 2)
+;;         ("nongnu" . 1)))
 
 (setq package-install-upgrade-built-in nil)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
 
-(eval-when-compile
-  (require 'use-package))
+(defvar elpaca-installer-version 0.8)
+(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
+(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
+(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
+                              :ref nil :depth 1
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca--activate-package)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+       (build (expand-file-name "elpaca/" elpaca-builds-directory))
+       (order (cdr elpaca-order))
+       (default-directory repo))
+  (add-to-list 'load-path (if (file-exists-p build) build repo))
+  (unless (file-exists-p repo)
+    (make-directory repo t)
+    (when (< emacs-major-version 28) (require 'subr-x))
+    (condition-case-unless-debug err
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
+      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
+  (unless (require 'elpaca-autoloads nil t)
+    (require 'elpaca)
+    (elpaca-generate-autoloads "elpaca" repo)
+    (load "./elpaca-autoloads")))
+(add-hook 'after-init-hook #'elpaca-process-queues)
+(elpaca `(,@elpaca-order))
+
+
+;; Install use-package support
+(elpaca elpaca-use-package
+  ;; Enable use-package :ensure support for Elpaca.
+  (elpaca-use-package-mode))
 
 ;; Set exec-path
 (use-package exec-path-from-shell
@@ -25,6 +67,8 @@
 
 ;; Load general for :general
 (use-package general
+  :ensure (:wait t)
+  :demand t
   :config
   (general-create-definer +leader-def
     :states '(visual normal motion)
@@ -41,6 +85,8 @@
 (use-package on
   :vc (:url "https://github.com/ajgrf/on.el" :branch "master"))
 
+(add-hook 'package-menu-mode-hook 'hl-line-mode)
+
 (defmacro quiet! (&rest forms)
   "Run FORMS without making any noise."
   `(if init-file-debug
@@ -55,7 +101,7 @@
 
 ;; Save custom vars to separate file from init.el.
 (setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(add-hook 'after-init-hook (lambda () (load custom-file 'noerror)))
+(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
 
 (use-package gcmh
   :defer 1
@@ -112,6 +158,7 @@
               (let ((default-directory "~/"))
                 (call-interactively 'find-file))) :wk "Find in home")
     "fi"  '((lambda () (interactive) (find-file (expand-file-name "init.org" user-emacs-directory))) :wk "Edit init.org")
+    "fj"  #'+json-playground
     "fl"  #'locate
     "fr"  '(recentf :wk "Recent files")
     "fR"  '(+rename-this-file :wk "Rename/move file")
@@ -342,19 +389,11 @@
           "\\*Embark Collect:"
           flutter-mode
           "\\*LSP Dart tests\\*"
+          "\\*LSP Dart commands\\*"
           ))
-  :hook
-  (after-init . popper-mode)
-  (after-init . popper-echo-mode)
+  (popper-mode 1)
+  (popper-echo-mode 1)
   )
-
-(use-package transient
-  :ensure nil
-  :defer t
-  :config
-  ;; Map ESC and q to quit transient
-  (keymap-set transient-map "<escape>" 'transient-quit-one)
-  (keymap-set transient-map "q" 'transient-quit-one))
 
 (use-package display-line-numbers
   :ensure nil
@@ -372,16 +411,16 @@
   (setq catppuccin-height-title-3 1.1)
   (load-theme 'catppuccin t))
 
-(add-hook 'after-init-hook (lambda ()
-    (set-face-attribute 'default nil :family "JetBrains Mono" :height 130)
-    (set-face-attribute 'variable-pitch nil :family "SF Pro" :height 1.0)
-    (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0)
+(add-hook 'emacs-startup-hook (lambda ()
+    (set-face-attribute 'default nil :family "JetBrains Mono" :height 130 :weight 'regular)
+    (set-face-attribute 'variable-pitch nil :family "SF Pro" :height 1.0 :weight 'regular)
+    (set-face-attribute 'fixed-pitch nil :family (face-attribute 'default :family) :height 1.0 :weight 'regular)
 
     (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
     (set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
     (set-face-attribute 'mode-line nil :family (face-attribute 'variable-pitch :family))
 
-    (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family))
+    (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family) :weight 'regular)
     ))
 
 (setq-default line-spacing 0.3)
@@ -415,6 +454,19 @@
   (doom-modeline-buffer-encoding 'nondefault)
   (doom-modeline-indent-info t)
   :config
+  ;; new logic make major-mode become normal weight in inactive
+;;   (defun doom-modeline-face (&optional face inactive-face)
+;;   "Display FACE in active window, and INACTIVE-FACE in inactive window.
+;; IF FACE is nil, `mode-line' face will be used.
+;; If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
+;;   (if (doom-modeline--active)
+;;       (or (and (facep face) `(:inherit (doom-modeline ,face)))
+;;           (and (facep 'mode-line-active) '(:inherit (doom-modeline mode-line-active)))
+;;           '(:inherit (doom-modeline mode-line)))
+;;     (or (and (facep face) `(:inherit (doom-modeline mode-line-inactive ,face)))
+;;         (and (facep inactive-face) `(:inherit (doom-modeline ,inactive-face)))
+;;         '(:inherit (doom-modeline mode-line-inactive)))))
+
   (doom-modeline-mode 1)
   (line-number-mode 1)
   (column-number-mode 1)
@@ -477,7 +529,7 @@
 ;; Specific to the current window's mode line.")
 ;;   (add-to-list 'mode-line-misc-info +modeline-flymake)
   :hook
-  (after-init . doom-modeline-mode))
+  (elpaca-after-init . doom-modeline-mode))
 
 ;; Show search count in modeline
 (use-package anzu
@@ -539,123 +591,63 @@ of the tab bar."
     " ")
   )
 
-;; (use-package tabspaces
-;;   :custom
-;;   (tab-bar-new-tab-choice "*scratch*")
-;;   (tabspaces-use-filtered-buffers-as-default t)
-;;   (tabspaces-default-tab "scratch")
-;;   (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
-;;   (tabspaces-initialize-project-with-todo t)
-;;   :general-config
-;;   (+leader-def
-;;     "<tab>1" #'tab-bar-switch-to-default-tab
-;;     "<tab>b" #'tabspaces-switch-to-buffer
-;;     "<tab>k" #'tabspaces-kill-buffers-close-workspace
-;;     "<tab><tab>" #'tab-bar-switch-to-tab
-;;     "<tab>s" #'tabspaces-switch-or-create-workspace
-;;     "<tab>t" #'tabspaces-switch-buffer-and-tab
-;;     "<tab>n" #'tab-bar-switch-to-next-tab
-;;     "<tab>p" #'tab-bar-switch-to-prev-tab)
-;;   (+leader-def
-;;     "pp" #'tabspaces-open-or-create-project-and-workspace)
-;;   :config
-;;   (tabspaces-mode 1)
-;;   (tab-bar-mode 1)
-;;   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
-
-;;   ;; tab-name not exists
-;;   ;;  add to map, use simple name
-;;   ;; tab-name exists & same project path
-;;   ;;  use simple name
-;;   ;; tab-name exists & diff project path
-;;   ;;  rename existing tab, use complex name
-;;   (defun tabspaces-generate-descriptive-tab-name (project-path existing-tab-names)
-;;     "Generate a unique tab name from the PROJECT-PATH checking against EXISTING-TAB-NAMES."
-;;     (let* ((parts (reverse (split-string (directory-file-name project-path) "/")))
-;;            (base-name (car parts))
-;;            (parent-dir (nth 1 parts))
-;;            (grandparent-dir (nth 2 parts))
-;;            (simple-tab-name base-name)
-;;            (complex-tab-name (if parent-dir
-;;                                  (format "%s (%s/%s)" base-name (or grandparent-dir "") parent-dir)
-;;                                base-name)))
-;;       (if (member simple-tab-name existing-tab-names)
-;;           (let ((existing-path (rassoc simple-tab-name tabspaces-project-tab-map)))
-;;             (when (not (string= (car existing-path) project-path))
-;;               ;; Generate a new complex name for the existing conflict
-;;               (let ((new-name-for-existing (tabspaces-generate-complex-name (car existing-path))))
-;;                 ;; Rename the existing tab
-;;                 (tabspaces-rename-existing-tab simple-tab-name new-name-for-existing)
-;;                 ;; Update the map with the new name for the existing path
-;;                 (setcdr existing-path new-name-for-existing))
-;;               ;; Use the complex name for the new tab to avoid future conflicts
-;;               complex-tab-name)
-;;             simple-tab-name)
-;;         ;; No conflict, add to map and use the simple name
-;;         (progn
-;;           (add-to-list 'tabspaces-project-tab-map (cons project-path simple-tab-name))
-;;           simple-tab-name))))
-
-
-;;   (with-eval-after-load 'consult
-;;     (consult-customize consult--source-buffer :hidden t :default nil)
-
-;;     (defvar consult--source-workspace
-;;       (list :name     "Workspace Buffers"
-;;             :narrow   ?w
-;;             :history  'buffer-name-history
-;;             :category 'buffer
-;;             :state    #'consult--buffer-state
-;;             :default  t
-;;             :items    (lambda () (consult--buffer-query
-;;                                   :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
-;;                                   :sort 'visibility
-;;                                   :as #'buffer-name))))
-;;     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
-
-;;   (defun tab-bar-switch-to-default-tab ()
-;;     (interactive)
-;;     (tab-bar-switch-to-tab tabspaces-default-tab))
-;;   )
-
-(use-package perspective
+(use-package tabspaces
   :custom
-  (persp-show-modestring nil)
-  (persp-mode-prefix-key (kbd "C-c M-p"))
+  (tab-bar-new-tab-choice "*scratch*")
+  (tabspaces-use-filtered-buffers-as-default t)
+  (tabspaces-default-tab "scratch")
+  (tabspaces-include-buffers '("*scratch*" "*dashboard*" "*Messages*"))
+  (tabspaces-initialize-project-with-todo nil)
   :general-config
   (+leader-def
-    "<tab><tab>" #'persp-switch
-    "<tab>b" #'persp-switch-to-buffer*
-    "<tab>k" #'persp-kill-current
-    "pp" #'persp-switch-project)
-  :preface
-  (defun persp-switch-project (directory)
-    "Switch to project DIRECTORY.
-If DIRECTORY exists in a pespective, select it.  Otherwise switch to
-the project in DIRECTORY."
-    (interactive (list (funcall project-prompter)))
-    (project--remember-dir directory)
-    (let ((name (file-name-nondirectory (directory-file-name directory))))
-      (if (not (member name (persp-names)))
-          (progn
-            (persp-switch name)
-            (project-switch-project directory))
-        (persp-switch name))))
-
-  (defun +persp-names-sorted-by-created ()
-    "Always sort persps by created time from left to right."
-    (let ((persps (hash-table-values (perspectives-hash))))
-      (mapcar 'persp-name
-                     (sort persps (lambda (a b)
-                                    (time-less-p (persp-created-time a)
-                                                 (persp-created-time b)))))))
-  (defun persp-kill-current ()
-    "Kill current perspecitve."
-    (interactive)
-    (persp-kill (persp-current-name)))
+    "<tab>1" #'tab-bar-switch-to-default-tab
+    "<tab>b" #'tabspaces-switch-to-buffer
+    "<tab>k" #'tabspaces-kill-buffers-close-workspace
+    "<tab><tab>" #'tab-bar-switch-to-tab
+    "<tab>s" #'tabspaces-switch-or-create-workspace
+    "<tab>t" #'tabspaces-switch-buffer-and-tab
+    "<tab>n" #'tab-bar-switch-to-next-tab
+    "<tab>p" #'tab-bar-switch-to-prev-tab)
+  (+leader-def
+    "pp" #'tabspaces-open-or-create-project-and-workspace)
   :config
-  (advice-add 'persp-names :override #'+persp-names-sorted-by-created)
-  (persp-mode 1)
+  (tabspaces-mode 1)
+  (tab-bar-mode 1)
+  (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
+
+  ;; tab-name not exists
+  ;;  add to map, use simple name
+  ;; tab-name exists & same project path
+  ;;  use simple name
+  ;; tab-name exists & diff project path
+  ;;  rename existing tab, use complex name
+  ;; (defun tabspaces-generate-descriptive-tab-name (project-path existing-tab-names)
+  ;;   "Generate a unique tab name from the PROJECT-PATH checking against EXISTING-TAB-NAMES."
+  ;;   (let* ((parts (reverse (split-string (directory-file-name project-path) "/")))
+  ;;          (base-name (car parts))
+  ;;          (parent-dir (nth 1 parts))
+  ;;          (grandparent-dir (nth 2 parts))
+  ;;          (simple-tab-name base-name)
+  ;;          (complex-tab-name (if parent-dir
+  ;;                                (format "%s (%s/%s)" base-name (or grandparent-dir "") parent-dir)
+  ;;                              base-name)))
+  ;;     (if (member simple-tab-name existing-tab-names)
+  ;;         (let ((existing-path (rassoc simple-tab-name tabspaces-project-tab-map)))
+  ;;           (when (not (string= (car existing-path) project-path))
+  ;;             ;; Generate a new complex name for the existing conflict
+  ;;             (let ((new-name-for-existing (tabspaces-generate-complex-name (car existing-path))))
+  ;;               ;; Rename the existing tab
+  ;;               (tabspaces-rename-existing-tab simple-tab-name new-name-for-existing)
+  ;;               ;; Update the map with the new name for the existing path
+  ;;               (setcdr existing-path new-name-for-existing))
+  ;;             ;; Use the complex name for the new tab to avoid future conflicts
+  ;;             complex-tab-name)
+  ;;           simple-tab-name)
+  ;;       ;; No conflict, add to map and use the simple name
+  ;;       (progn
+  ;;         (add-to-list 'tabspaces-project-tab-map (cons project-path simple-tab-name))
+  ;;         simple-tab-name))))
+
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -668,17 +660,77 @@ the project in DIRECTORY."
             :state    #'consult--buffer-state
             :default  t
             :items    (lambda () (consult--buffer-query
-                                  :predicate (lambda (x) (and (persp-is-current-buffer x) (not (popper-popup-p x))))
+                                  :predicate (lambda (x) (and (tabspaces--local-buffer-p x) (not (popper-popup-p x))))
                                   :sort 'visibility
                                   :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+
+  (defun tab-bar-switch-to-default-tab ()
+    (interactive)
+    (tab-bar-switch-to-tab tabspaces-default-tab))
   )
 
-(use-package perspective-tabs
-  :after perspective
-  :vc (:url "https://git.sr.ht/~woozong/perspective-tabs")
-  :config
-  (perspective-tabs-mode 1))
+;; (use-package perspective
+;;   :custom
+;;   (persp-show-modestring nil)
+;;   (persp-mode-prefix-key (kbd "C-c M-p"))
+;;   :general-config
+;;   (+leader-def
+;;     "<tab><tab>" #'persp-switch
+;;     "<tab>b" #'persp-switch-to-buffer*
+;;     "<tab>k" #'persp-kill-current
+;;     "pp" #'persp-switch-project)
+;;   :preface
+;;   (defun persp-switch-project (directory)
+;;     "Switch to project DIRECTORY.
+;; If DIRECTORY exists in a pespective, select it.  Otherwise switch to
+;; the project in DIRECTORY."
+;;     (interactive (list (funcall project-prompter)))
+;;     (project--remember-dir directory)
+;;     (let ((name (file-name-nondirectory (directory-file-name directory))))
+;;       (if (not (member name (persp-names)))
+;;           (progn
+;;             (persp-switch name)
+;;             (project-switch-project directory))
+;;         (persp-switch name))))
+
+;;   (defun +persp-names-sorted-by-created ()
+;;     "Always sort persps by created time from left to right."
+;;     (let ((persps (hash-table-values (perspectives-hash))))
+;;       (mapcar 'persp-name
+;;                      (sort persps (lambda (a b)
+;;                                     (time-less-p (persp-created-time a)
+;;                                                  (persp-created-time b)))))))
+;;   (defun persp-kill-current ()
+;;     "Kill current perspecitve."
+;;     (interactive)
+;;     (persp-kill (persp-current-name)))
+;;   :config
+;;   (advice-add 'persp-names :override #'+persp-names-sorted-by-created)
+;;   (persp-mode 1)
+
+;;   (with-eval-after-load 'consult
+;;     (consult-customize consult--source-buffer :hidden t :default nil)
+
+;;     (defvar consult--source-workspace
+;;       (list :name     "Workspace Buffers"
+;;             :narrow   ?w
+;;             :history  'buffer-name-history
+;;             :category 'buffer
+;;             :state    #'consult--buffer-state
+;;             :default  t
+;;             :items    (lambda () (consult--buffer-query
+;;                                   :predicate (lambda (x) (and (persp-is-current-buffer x) (not (popper-popup-p x))))
+;;                                   :sort 'visibility
+;;                                   :as #'buffer-name))))
+;;     (add-to-list 'consult-buffer-sources 'consult--source-workspace))
+;;   )
+
+;; (use-package perspective-tabs
+;;   :after perspective
+;;   :vc (:url "https://git.sr.ht/~woozong/perspective-tabs")
+;;   :config
+;;   (perspective-tabs-mode 1))
 
 ;; Move stuff to trash
 (setq delete-by-moving-to-trash t)
@@ -704,12 +756,43 @@ the project in DIRECTORY."
 ;; Auto load files changed on disk
 (use-package autorevert
   :ensure nil
+  :preface
+  (defun +visible-buffers (&optional buffer-list all-frames)
+    "Return a list of visible buffers (i.e. not buried)."
+    (let ((buffers
+           (delete-dups
+            (cl-loop for frame in (if all-frames (visible-frame-list) (list (selected-frame)))
+                     if (window-list frame)
+                     nconc (mapcar #'window-buffer it)))))
+      (if buffer-list
+          (cl-loop for buf in buffers
+                   unless (memq buf buffer-list)
+                   collect buffers)
+        buffers)))
+
+  (defun +auto-revert-buffer ()
+    "Auto revert current buffer, if necessary."
+    (unless (or auto-revert-mode (active-minibuffer-window))
+      (let ((auto-revert-mode t))
+        (auto-revert-handler))))
+
+  (defun +auto-revert-buffers ()
+    "Auto revert stale buffers in visible windows, if necessary."
+    (dolist (buf (+visible-buffers))
+      (with-current-buffer buf
+        (+auto-revert-buffer))))
   :custom
-  (auto-revert-verbose nil)
-  (global-auto-revert-non-file-buffers t)
-  (auto-revert-interval 2)
+  ;; (global-auto-revert-non-file-buffers t)
+  (auto-revert-verbose t)
+  (auto-revery-use-notify nil)
+  (auto-revert-stop-on-user-input nil)
+  (revert-without-query (list ".")) ;; Only prompts for confirmation when buffer is unsaved.
   :hook
-  (on-first-file . global-auto-revert-mode))
+  (focus-in . +auto-revert-buffers)
+  (on-switch-buffer . +auto-revert-buffer)
+  (on-switch-window . +auto-revert-buffer)
+  ;; (on-first-file . global-auto-revert-mode)
+  )
 
 ;;;###autoload
 (defun +delete-this-file (&optional forever)
@@ -1043,17 +1126,19 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
         show-paren-when-point-inside-paren t
         show-paren-when-point-in-periphery t))
 
-(use-package undo-fu
-  :custom
-  (undo-limit 400000)
-  (undo-strong-limit 3000000)
-  (undo-outer-limit 48000000))
+;; (use-package undo-fu
+  ;; :custom
+  ;; (undo-limit 400000)
+  ;; (undo-strong-limit 3000000)
+  ;; (undo-outer-limit 48000000)
+  ;; )
 
-(use-package undo-fu-session
-  :config
-  (undo-fu-session-global-mode)
-  :custom
-  (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
+;; (use-package undo-fu-session
+;;   :config
+;;   (undo-fu-session-global-mode)
+  ;; :custom
+  ;; (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
+  ;; )
 
 (use-package minibuffer
   :ensure nil
@@ -1126,6 +1211,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (read-extended-command-predicate #'command-completion-default-include-p) ;; hide commands that does not work
   (vertico-resize nil)
+  (vertico-count 14)
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
@@ -1432,7 +1518,15 @@ targets."
   :config
   (add-to-list 'completion-at-point-functions #'yasnippet-capf))
 
+(use-package transient
+  :config
+  ;; Map ESC and q to quit transient
+  (keymap-set transient-map "<escape>" 'transient-quit-one)
+  (keymap-set transient-map "q" 'transient-quit-one)
+  )
+
 (use-package magit
+  :after transient
   :defer .3
   :general-config
   (+leader-def :infix "g"
@@ -1580,9 +1674,9 @@ targets."
   (transient-append-suffix 'forge-dispatch "c f"
     '("c m" "merge pull request" forge-merge))
   :general-config
-  ;; (+leader-def
-  ;;   :keymaps '(magit-mode-map)
-  ;;   "gw" 'forge-browse)
+  (+leader-def
+    :keymaps '(magit-mode-map)
+    "gw" 'forge-browse)
   (general-define-key
     :keymaps 'forge-topic-list-mode-map
     "q" #'kill-current-buffer)
@@ -1692,6 +1786,7 @@ for all languages configured in `treesit-language-source-alist'."
           (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
 
   (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
+  (add-to-list 'major-mode-remap-alist '(yaml-mode . yaml-ts-mode))
   )
 
 ;; Use only spaces
@@ -1845,6 +1940,19 @@ for all languages configured in `treesit-language-source-alist'."
     (setq tab-width 4)
     (add-hook 'before-save-hook 'lsp-organize-imports nil t)
     (+add-pairs '((?` . ?`))))
+
+  (defun +go-run (&optional args)
+    "Launch go run on current buffer file."
+    (interactive)
+    (async-shell-command (go-test--go-run-get-program (go-test--go-run-arguments))
+             (pcase current-prefix-arg
+               ((or `(16) `(64)) t)))
+    )
+  :general-config
+  (+local-leader-def
+    :keymaps 'go-ts-mode-map
+    "b" '(:ignore t :wk "build")
+    "br" '+go-run)
   :hook
   (go-ts-mode . apheleia-mode)
   (go-ts-mode . +go-mode-setup)
@@ -1858,8 +1966,6 @@ for all languages configured in `treesit-language-source-alist'."
   :general-config
   (+local-leader-def
     :keymaps 'go-ts-mode-map
-    "b" '(:ignore t :wk "build")
-    "br" 'go-run
     "t" '(:ignore t :wk "test")
     "ts" 'go-test-current-test
     "tt" 'go-test-current-test-cache
@@ -1889,10 +1995,10 @@ for all languages configured in `treesit-language-source-alist'."
     "fq" #'flutter-quit
     "fr" #'flutter-hot-reload
     "fR" #'flutter-hot-restart
-    "t" '(:ignore t :wk "test")
-    "ts" #'flutter-test-at-point
-    "tf" #'flutter-test-current-file
-    "ta" #'flutter-test-all
+    ;; "t" '(:ignore t :wk "test")
+    ;; "ts" #'flutter-test-at-point
+    ;; "tf" #'flutter-test-current-file
+    ;; "ta" #'flutter-test-all
     )
   :preface
   (defun +flutter-hot-reload ()
@@ -1906,6 +2012,18 @@ for all languages configured in `treesit-language-source-alist'."
   )
 
 (use-package lsp-dart
+  :general
+  (+local-leader-def
+    :keymaps '(dart-mode-map)
+    "pg" #'lsp-dart-pub-get
+    "pd" #'lsp-dart-pub-outdated)
+  (+local-leader-def
+    :keymaps '(dart-mode-map)
+    "t" '(:ignore t :wk "test")
+    "ts" #'lsp-dart-run-test-at-point
+    "tf" #'lsp-dart-run-test-file
+    "ta" #'lsp-dart-run-all-tests
+    "tt" #'lsp-dart-run-last-test)
   :hook
   (dart-mode . lsp-deferred)
   :custom
@@ -1915,6 +2033,11 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-dart-main-code-lens nil)
   (lsp-dart-test-code-lens nil)
   :config
+  (defun lsp-dart--run-command (command args)
+    "Run COMMAND with ARGS from the project root."
+    (lsp-dart-from-project-root
+     (async-shell-command (format "%s %s" (string-join command " ") args) lsp-dart-commands-buffer-name)))
+
   ;; workaround for dart not returning completions after "."
   (advice-add 'lsp-completion--looking-back-trigger-characterp :around
               (defun lsp-completion--looking-back-trigger-characterp@fix-dart-trigger-characters (orig-fn trigger-characters)
@@ -2279,6 +2402,7 @@ is available as part of \"future history\"."
   (require 'org-table))
 
 (use-package lua-ts-mode
+  :ensure nil
   :mode "\\.lua\\'")
 
 (use-package elisp-mode
@@ -2361,6 +2485,33 @@ is available as part of \"future history\"."
 ;;                 "<script>document.addEventListener('DOMContentLoaded', () => { document.body.classList.add('markdown-body'); document.querySelectorAll('pre[lang] > code').forEach((code) => { code.classList.add(code.parentElement.lang); }); document.querySelectorAll('pre > code').forEach((code) => { hljs.highlightBlock(code); }); });</script>"))
 ;;   )
 
+(use-package json-ts-mode
+  :ensure nil
+  :preface
+  (defun +json-mode-setup ()
+    (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
+  :hook
+  (json-ts-mode . +json-mode-setup)
+  :mode "\\.prettierrc\\'")
+
+(defun +json-playground ()
+  "Open a json playground file in json-ts-mode."
+  (interactive)
+  (find-file "~/playground.json")
+  (erase-buffer)
+  (save-buffer))
+
+;; (use-package cov
+;;   :commands cov-mode
+  ;; :preface
+  ;; (defun lcov-patterns-function (filedir filename)
+  ;;   (let ((dir (project-root (project-current t))))
+  ;;     (concat dir "coverage/*.info")
+  ;;     ))
+  ;; :init
+  ;; (setq cov-lcov-patterns '("*.info" "../../coverage/*.info"))
+  ;; (setq cov-coverage-mode t))
+
 (add-to-list 'auto-mode-alist
              (cons "rc\\'" 'conf-mode))
 
@@ -2372,19 +2523,6 @@ is available as part of \"future history\"."
   :mode "[/\\]\\(?:Containerfile\\|Dockerfile\\)\\(?:\\.[^/\\]*\\)?\\'"
   :hook
   (dockerfile-ts-mode . lsp-deferred))
-
-(use-package yaml-ts-mode
-  :ensure nil
-  :mode "\\.ya?ml\\'")
-
-(use-package json-ts-mode
-  :ensure nil
-  :preface
-  (defun +json-mode-setup ()
-    (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
-  :hook
-  (json-ts-mode . +json-mode-setup)
-  :mode "\\.prettierrc\\'")
 
 (use-package terraform-mode
   :mode "\\.tf\\'")
@@ -2402,17 +2540,17 @@ is available as part of \"future history\"."
 (use-package compile
   :ensure nil
   :preface
-  (defun +project-compilation-buffer-name (compilation-mode)
-    "Meant to be used for `compilation-buffer-name-function`.
-Argument COMPILATION-MODE is the name of the major mode used for the
-compilation buffer."
-    (concat (+compilation-buffer-name-function compilation-mode)
-            (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
-
   (defun +compilation-buffer-name (arg)
     "Rename buffer to whatever command was used.
 eg. *python main.py*"
     (concat "*" compile-command "*"))
+
+  (defun +project-compilation-buffer-name (compilation-mode)
+    "Meant to be used for `compilation-buffer-name-function`.
+Argument COMPILATION-MODE is the name of the major mode used for the
+compilation buffer."
+    (concat (+compilation-buffer-name compilation-mode)
+            (if (project-current) (concat "<" (project-name (project-current)) ">") "")))
   :custom
   (compile-command "make ")
   (compilation-always-kill t)
@@ -2931,7 +3069,8 @@ current project's root directory."
 (use-package kubel-evil
   :after kubel)
 
-;; (setq dictionary-use-single-buffer t)
+(setq dictionary-use-single-buffer t)
+(setq switch-to-buffer-obey-display-actions t)
 ;; (setq dictionary-server "dict.org")
 
 (use-package devdocs
@@ -2989,6 +3128,10 @@ current project's root directory."
   (+leader-def
     "oc" #'quick-calc
     ))
+
+(use-package jwt
+  :vc (:url "https://github.com/joshbax189/jwt-el")
+  :commands (jwt-decode jwt-decode-at-point))
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
