@@ -1,15 +1,5 @@
 ;;; init.el --- init file -*- lexical-binding: t; no-byte-compile: t; -*-
 
-;; (setq package-archives '(("gnu" . "https://elpa.gnu.org/packages/")
-;;                          ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-;;                          ("melpa" . "https://melpa.org/packages/")))
-
-;; ;; Highest number gets priority (what is not mentioned has priority 0)
-;; (setq package-archive-priorities
-;;       '(("gnu" . 3)
-;;         ("melpa" . 2)
-;;         ("nongnu" . 1)))
-
 (setq package-install-upgrade-built-in nil)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
@@ -31,7 +21,7 @@
     (make-directory repo t)
     (when (< emacs-major-version 28) (require 'subr-x))
     (condition-case-unless-debug err
-        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+        (if-let ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
                   ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
                                                   ,@(when-let* ((depth (plist-get order :depth)))
                                                       (list (format "--depth=%d" depth) "--no-single-branch"))
@@ -83,7 +73,7 @@
 
 ;; For on-first-* hooks
 (use-package on
-  :vc (:url "https://github.com/ajgrf/on.el" :branch "master"))
+  :ensure (:host github :repo "ajgrf/on.el"))
 
 (add-hook 'package-menu-mode-hook 'hl-line-mode)
 
@@ -127,6 +117,8 @@
     "u"   '(universal-argument :wk "C-u")
 
     "<tab>"   '(nil :wk "workspaces")
+
+    "a"  '(nil :wk "app")
 
     "b"   '(nil :wk "buffer")
     "bb"  '(switch-to-buffer :wk "Switch buffer")
@@ -226,8 +218,6 @@
 
     "s"  '(nil :wk "search")
     "si" #'imenu
-    "st" #'dictionary-lookup-definition
-    "sT" #'dictionary
 
     "t"  '(nil :wk "toggle")
     "tc" '(global-display-fill-column-indicator-mode :wk "Fill column indicator")
@@ -390,6 +380,7 @@
           flutter-mode
           "\\*LSP Dart tests\\*"
           "\\*LSP Dart commands\\*"
+          "\\*sdcv"
           ))
   (popper-mode 1)
   (popper-echo-mode 1)
@@ -471,9 +462,9 @@
   (line-number-mode 1)
   (column-number-mode 1)
 
-  (doom-modeline-def-modeline 'main
-    '(matches eldoc bar workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
-    '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time " "))
+  ;; (doom-modeline-def-modeline 'main
+  ;;   '(matches eldoc bar workspace-name window-number modals follow buffer-info remote-host buffer-position selection-info word-count parrot)
+  ;;   '(compilation objed-state misc-info persp-name battery grip irc mu4e gnus github debug repl lsp minor-modes input-method indent-info buffer-encoding major-mode process check time " "))
 
   ;; (doom-modeline-def-modeline 'vcs
   ;;   '(matches bar window-number modals buffer-info remote-host selection-info parrot)
@@ -614,40 +605,6 @@ of the tab bar."
   (tabspaces-mode 1)
   (tab-bar-mode 1)
   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
-
-  ;; tab-name not exists
-  ;;  add to map, use simple name
-  ;; tab-name exists & same project path
-  ;;  use simple name
-  ;; tab-name exists & diff project path
-  ;;  rename existing tab, use complex name
-  ;; (defun tabspaces-generate-descriptive-tab-name (project-path existing-tab-names)
-  ;;   "Generate a unique tab name from the PROJECT-PATH checking against EXISTING-TAB-NAMES."
-  ;;   (let* ((parts (reverse (split-string (directory-file-name project-path) "/")))
-  ;;          (base-name (car parts))
-  ;;          (parent-dir (nth 1 parts))
-  ;;          (grandparent-dir (nth 2 parts))
-  ;;          (simple-tab-name base-name)
-  ;;          (complex-tab-name (if parent-dir
-  ;;                                (format "%s (%s/%s)" base-name (or grandparent-dir "") parent-dir)
-  ;;                              base-name)))
-  ;;     (if (member simple-tab-name existing-tab-names)
-  ;;         (let ((existing-path (rassoc simple-tab-name tabspaces-project-tab-map)))
-  ;;           (when (not (string= (car existing-path) project-path))
-  ;;             ;; Generate a new complex name for the existing conflict
-  ;;             (let ((new-name-for-existing (tabspaces-generate-complex-name (car existing-path))))
-  ;;               ;; Rename the existing tab
-  ;;               (tabspaces-rename-existing-tab simple-tab-name new-name-for-existing)
-  ;;               ;; Update the map with the new name for the existing path
-  ;;               (setcdr existing-path new-name-for-existing))
-  ;;             ;; Use the complex name for the new tab to avoid future conflicts
-  ;;             complex-tab-name)
-  ;;           simple-tab-name)
-  ;;       ;; No conflict, add to map and use the simple name
-  ;;       (progn
-  ;;         (add-to-list 'tabspaces-project-tab-map (cons project-path simple-tab-name))
-  ;;         simple-tab-name))))
-
 
   (with-eval-after-load 'consult
     (consult-customize consult--source-buffer :hidden t :default nil)
@@ -799,7 +756,7 @@ of the tab bar."
   "Delete the file associated with `current-buffer'.
 If FOREVER is non-nil, the file is deleted without being moved to trash."
   (interactive "P")
-  (when-let ((file (or (buffer-file-name)
+  (when-let* ((file (or (buffer-file-name)
                        (user-error "Current buffer is not visiting a file")))
              ((y-or-n-p "Delete this file? ")))
     (delete-file file (not forever))
@@ -991,7 +948,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-set-initial-state 'messages-buffer-mode 'normal)
   (evil-set-initial-state 'shell-command-mode 'normal)
 
-  (evil-set-undo-system 'undo-fu)
+  (setq evil-undo-system 'undo-fu)
   (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-mode 1)
   )
@@ -1002,8 +959,6 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init)
-  ;; (evil-collection-define-key 'normal 'dired-mode-map
-  ;;   "q" nil)
   )
 
 (use-package evil-nerd-commenter
@@ -1126,19 +1081,17 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
         show-paren-when-point-inside-paren t
         show-paren-when-point-in-periphery t))
 
-;; (use-package undo-fu
-  ;; :custom
-  ;; (undo-limit 400000)
-  ;; (undo-strong-limit 3000000)
-  ;; (undo-outer-limit 48000000)
-  ;; )
+(use-package undo-fu
+  :config
+  (setq undo-limit 400000
+        undo-strong-limit 3000000
+        undo-outer-limit 48000000))
 
-;; (use-package undo-fu-session
-;;   :config
-;;   (undo-fu-session-global-mode)
-  ;; :custom
-  ;; (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))
-  ;; )
+(use-package undo-fu-session
+  :hook (on-first-buffer . global-undo-fu-session-mode)
+  :config
+  (setq undo-fu-session-directory (expand-file-name "undo-fu-session/" user-emacs-directory))
+  (setq undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'")))
 
 (use-package minibuffer
   :ensure nil
@@ -1211,7 +1164,7 @@ If FOREVER is non-nil, the file is deleted without being moved to trash."
   :custom
   (read-extended-command-predicate #'command-completion-default-include-p) ;; hide commands that does not work
   (vertico-resize nil)
-  (vertico-count 14)
+  (vertico-count 12)
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
@@ -1429,19 +1382,10 @@ targets."
 
 (use-package corfu
   :hook
-  ;; (on-first-input . global-corfu-mode)
   ((prog-mode text-mode conf-mode) . corfu-mode)
   (eshell-mode . corfu-enable-in-shell)
   (minibuffer-setup . corfu-enable-in-shell)
   :preface
-  ;; (defun corfu-enable-in-minibuffer ()
-  ;;   "Enable Corfu in the minibuffer."
-  ;;   (when (local-variable-p 'completion-at-point-functions)
-  ;;     (setq-local corfu-auto nil) ;; Enable/disable auto completion
-  ;;     (setq-local corfu-echo-delay nil ;; Disable automatic echo and popup
-  ;;                 corfu-popupinfo-delay nil)
-  ;;     (corfu-mode 1)))
-
   (defun corfu-enable-in-shell ()
     (setq-local corfu-auto nil)
     (corfu-mode 1))
@@ -1455,21 +1399,10 @@ targets."
   (corfu-preview-current nil)
   (corfu-preselect 'first)
   (corfu-on-exact-match 'show)
-  ;; (global-corfu-modes
-  ;;  '((not help-mode eat-mode) t))
-  ;; :general-config
-  ;; (:keymaps 'corfu-map
-  ;;           (kbd "TAB") 'corfu-insert
-  ;;           [(tab)] 'corfu-insert)
   :config
   (set-face-attribute 'corfu-default nil :family (face-attribute 'default :family))
   (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
   (add-hook 'evil-insert-state-exit-hook #'corfu-quit)
-  ;; (setq global-corfu-minibuffer
-  ;;       (lambda ()
-  ;;         (not (or (bound-and-true-p mct--active)
-  ;;                  (bound-and-true-p vertico--input)
-  ;;                  (eq (current-local-map) read-passwd-map)))))
   )
 
 (use-package corfu-history
@@ -1522,8 +1455,7 @@ targets."
   :config
   ;; Map ESC and q to quit transient
   (keymap-set transient-map "<escape>" 'transient-quit-one)
-  (keymap-set transient-map "q" 'transient-quit-one)
-  )
+  (keymap-set transient-map "q" 'transient-quit-one))
 
 (use-package magit
   :after transient
@@ -1544,13 +1476,13 @@ targets."
   (git-commit-summary-max-length 72)
   (git-commit-style-convention-checks '(overlong-summary-line))
 
-  (magit-auto-revert-mode nil) ;; does not need because global-auto-revert-mode is enabled
+  (magit-auto-revert-mode nil)
   (transient-default-level 5)
   (magit-diff-refine-hunk t)
   (magit-save-repository-buffers nil)
   (magit-revision-show-gravatars t)
   (magit-revision-insert-related-refs nil)
-  (magit-bury-buffer-function #'magit-mode-quit-window)
+  ;; (magit-bury-buffer-function #'magit-mode-quit-window)
 
   :config
   (global-git-commit-mode 1)
@@ -1764,19 +1696,17 @@ for all languages configured in `treesit-language-source-alist'."
           (cmake "https://github.com/uyha/tree-sitter-cmake")
           (cpp "https://github.com/tree-sitter/tree-sitter-cpp")
           (css "https://github.com/tree-sitter/tree-sitter-css")
-          (csharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
+          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
-          ;; (dart "https://github.com/UserNobody14/tree-sitter-dart")
           (go "https://github.com/tree-sitter/tree-sitter-go" "master")
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
           (heex "https://github.com/phoenixframework/tree-sitter-heex")
           (html "https://github.com/tree-sitter/tree-sitter-html")
           (java "https://github.com/tree-sitter/tree-sitter-java")
-          (js . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
+          (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
-          (php "https://github.com/tree-sitter/tree-sitter-php")
           (python "https://github.com/tree-sitter/tree-sitter-python")
           (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
@@ -1868,10 +1798,12 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-javascript-implicit-project-config-check-js t)
   (lsp-javascript-suggest-complete-js-docs nil)
   :hook
-  (lsp-managed-mode . (lambda () (general-define-key
-                                  :states '(normal visual)
-                                  :keymaps 'local
-                                  "K" 'lsp-describe-thing-at-point)))
+  (lsp-managed-mode . (lambda()
+                        (setq-local evil-lookup-func 'lsp-describe-thing-at-point)))
+  ;; (lsp-managed-mode . (lambda () (general-define-key
+  ;;                                 :states '(normal visual)
+  ;;                                 :keymaps 'local
+  ;;                                 "K" 'lsp-describe-thing-at-point)))
   (lsp-completion-mode . +update-completions-list)
   :general-config
   (+leader-def
@@ -1897,7 +1829,7 @@ for all languages configured in `treesit-language-source-alist'."
   :config
   (defun +flycheck-eldoc (callback &rest _ignored)
     "Print flycheck messages at point by calling CALLBACK."
-    (when-let ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
+    (when-let* ((flycheck-errors (and flycheck-mode (flycheck-overlay-errors-at (point)))))
       (mapc
        (lambda (err)
          (funcall callback
@@ -1974,7 +1906,7 @@ for all languages configured in `treesit-language-source-alist'."
     "tb" 'go-test-current-benchmark))
 
 (use-package dart-mode
-  :vc (:url "https://github.com/emacsorphanage/dart-mode")
+  :ensure (:host github :repo "emacsorphanage/dart-mode")
   :mode "\\.dart\\'"
   :hook
   (dart-mode . apheleia-mode)
@@ -2405,6 +2337,11 @@ is available as part of \"future history\"."
   :ensure nil
   :mode "\\.lua\\'")
 
+(use-package csharp-ts-mode
+  :mode "\\.cs\\'"
+  :ensure nil
+  )
+
 (use-package elisp-mode
   :ensure nil
   :hook
@@ -2570,35 +2507,29 @@ compilation buffer."
 
 (use-package shell-command-pro
   :load-path "~/code/shell-command-pro"
-  :commands (async-shell-command-in-dir async-shell-command-from-history
-             project-or-cwd-async-shell-command project-or-cwd-async-shell-command-from-history
-             project-run-project project-or-cwd-compile project-or-cwd-compile-from-history)
+  :commands (compile-in-dir compile-from-history
+                            async-shell-command-in-dir async-shell-command-from-history
+                            project-or-cwd-async-shell-command project-or-cwd-async-shell-command-from-history
+                            project-run-project project-or-cwd-compile project-or-cwd-compile-from-history)
   :preface
-  (defun project-or-cwd-compile ()
-    "Run `compile' in the current project's root directory."
-    (declare (interactive-only compile))
-    (interactive)
-    (let ((project (project-current)))
-      (if project
-          (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'project-compile))
-        (call-interactively #'compile))))
-
-  (defun project-or-cwd-compile-from-history ()
-    "Run `compile' with a choice from its command history in
-current project's root directory."
-    (interactive)
-    (let ((project (project-current)))
-      (if project
-          (let ((default-directory (project-root (project-current t))))
-            (call-interactively #'compile-from-history))
-        (call-interactively #'compile-from-history))))
-
   (defun +project-or-cwd-default-directory ()
     (let ((project (project-current)))
       (if project
           (project-root (project-current t))
         default-directory)))
+
+  (defun project-or-cwd-compile (&optional command)
+    "Run `compile' in the current project's root directory."
+    (declare (interactive-only compile))
+    (interactive)
+    (compile-in-dir (+project-or-cwd-default-directory) command))
+
+  (defun project-or-cwd-compile-from-history ()
+    "Run `compile' with a choice from its command history in
+current project's root directory."
+    (interactive)
+    (let ((default-directory (+project-or-cwd-default-directory)))
+      (call-interactively #'compile-from-history)))
 
   (defun project-or-cwd-async-shell-command (&optional command)
     "Run `async-shell-command' in the current project's root directory or in the current directory."
@@ -2613,12 +2544,12 @@ current project's root directory."
     (let ((default-directory (+project-or-cwd-default-directory)))
       (call-interactively #'async-shell-command-from-history)))
 
-  (defun project-run-project ()
-    "Run project's run command with `async-shell-command'."
-    (interactive)
-    (project-or-cwd-async-shell-command project-commands-run-command))
-  :init
-  (put 'project-commands-run-command 'safe-local-variable #'stringp)
+  ;; (defun project-run-project ()
+  ;;   "Run project's run command with `async-shell-command'."
+  ;;   (interactive)
+  ;;   (project-or-cwd-async-shell-command project-commands-run-command))
+  ;; :init
+  ;; (put 'project-commands-run-command 'safe-local-variable #'stringp)
   :bind
   ([remap shell-command] . project-or-cwd-async-shell-command)
   ("M-r" . project-or-cwd-async-shell-command-from-history)
@@ -2629,8 +2560,9 @@ current project's root directory."
     "pc" #'project-or-cwd-compile
     "!"  #'project-or-cwd-async-shell-command
     "p!" #'project-or-cwd-async-shell-command
-    "pR" #'project-run-project
-    "@"  #'async-shell-command-in-dir))
+    ;; "pR" #'project-run-project
+    "@"  #'async-shell-command-in-dir
+    "#"  #'compile-in-dir))
 
 (use-package shell
   :ensure nil
@@ -2850,10 +2782,22 @@ current project's root directory."
 
 (use-package evil-org
   :after (org evil)
+  :preface
+  (defun evil-org-goto-last-heading ()
+    "Go to the last heading in the current Org buffer, append a space if needed, and enter insert mode."
+    (interactive)
+    (goto-char (point-max))
+    (when (re-search-backward org-heading-regexp nil t)
+      (end-of-line)
+      (unless (looking-back " " 1)
+        (insert " "))
+      (evil-org-append-line 1)))
+
   :init
   (setf evil-org-key-theme '(textobjects insert navigation additional todo))
   :config
   (evil-define-key '(normal insert) 'evil-org-mode
+    (kbd "<C-M-return>") 'evil-org-goto-last-heading
     (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading-after-current)
     (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
   :hook
@@ -3047,6 +2991,13 @@ current project's root directory."
   :commands (envrc-global-mode)
   :hook (on-first-buffer . envrc-global-mode))
 
+(use-package dir-config
+  :custom
+  (dir-config-file-names '(".dir-config.el"))
+  (dir-config-allowed-directories '("~/code"))
+  :config
+  (dir-config-mode 1))
+
 (use-package docker
   :config
   (setq docker-show-messages nil)
@@ -3057,21 +3008,30 @@ current project's root directory."
       ))
   :general
   (+leader-def
-    "od" #'docker)
+    "ad" #'docker)
   )
 
 (use-package kubel
   :commands (kubel)
   :general
   (+leader-def
-    "ok" 'kubel))
+    "ak" 'kubel))
 
 (use-package kubel-evil
   :after kubel)
 
 (setq dictionary-use-single-buffer t)
 (setq switch-to-buffer-obey-display-actions t)
-;; (setq dictionary-server "dict.org")
+
+(use-package quick-sdcv
+  :ensure (:host github :repo "jamescherti/quick-sdcv.el")
+  :general
+  (+leader-def
+    "sv" #'quick-sdcv-search-at-point
+    "sV" #'quick-sdcv-search-input)
+  :custom
+  (quick-sdcv-dictionary-prefix-symbol "►")
+  (quick-sdcv-ellipsis " ▼ "))
 
 (use-package devdocs
   :commands (devdocs-lookup devdocs-install devdocs-update-all devdocs-delete devdocs-persue)
@@ -3113,7 +3073,23 @@ current project's root directory."
   (+leader-def
     "pm" 'makefile-executor-execute-project-target)
   :hook
-  (makefile-mode . makefile-executor-mode))
+  (makefile-mode . makefile-executor-mode)
+  :config
+  (defun makefile-executor-execute-target (filename &optional target)
+    "Execute a Makefile target from FILENAME.
+
+FILENAME defaults to current buffer."
+    (interactive
+     (list (file-truename buffer-file-name)))
+
+    (let ((target (or target (makefile-executor-select-target filename))))
+      (makefile-executor-store-cache filename target)
+      (project-or-cwd-compile (format "make -f %s -C %s %s"
+                                      (shell-quote-argument filename)
+                                      (shell-quote-argument (file-name-directory filename))
+                                      target))))
+
+  )
 
 (use-package elcord
   :defer 2
@@ -3130,8 +3106,22 @@ current project's root directory."
     ))
 
 (use-package jwt
-  :vc (:url "https://github.com/joshbax189/jwt-el")
+  :ensure (:host github :repo "joshbax189/jwt-el")
   :commands (jwt-decode jwt-decode-at-point))
+
+(use-package gptel
+  :general
+  (+leader-def
+    "ag" 'gptel)
+  :config
+  (setq
+   gptel-default-mode 'org-mode
+   gptel-model 'mistral:latest
+   gptel-backend (gptel-make-ollama "Mistral"
+                                    :host "localhost:11434"
+                                    :stream t
+                                    :models '(mistral:latest)))
+  )
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))

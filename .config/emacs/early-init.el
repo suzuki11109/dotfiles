@@ -8,9 +8,6 @@
 
 ;; Increase the garbage collection (GC) threshold for faster startup.
 (setq gc-cons-threshold most-positive-fixnum)
-(add-hook 'emacs-startup-hook
-          (lambda ()
-            (setq gc-cons-threshold (* 32 1024 1024))))
 
 ;; Don't use precious startup time checking mtime on elisp bytecode.
 (setq load-prefer-newer noninteractive)
@@ -76,6 +73,9 @@
 ;; Inhibits fontification while receiving input
 (setq redisplay-skip-fontification-on-input t)
 
+;; Bump the chunk value so it can fontify more src block
+(setq jit-lock-chunk-size 15000)
+
 ;; Remove some unneeded UI elements
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
@@ -91,10 +91,14 @@
   ;;   without warning, but will always respect `menu-bar-mode'.
   (setcdr (assq 'menu-bar-lines default-frame-alist) 'tty)
   (add-hook 'after-make-frame-functions
-    (defun init-menu-bar-on-macos-h (&optional frame)
-      (if (eq (frame-parameter frame 'menu-bar-lines) 'tty)
-          (set-frame-parameter frame 'menu-bar-lines
-                               (if (display-graphic-p frame) 1 0))))))
+            (defun init-menu-bar-on-macos-h (&optional frame)
+              (if (eq (frame-parameter frame 'menu-bar-lines) 'tty)
+                  (set-frame-parameter frame 'menu-bar-lines
+                                       (if (display-graphic-p frame) 1 0))))))
+
+;; Unset a non-trivial list of command line options that aren't relevant to this session
+(unless (memq initial-window-system '(x pgtk))
+  (setq command-line-x-option-alist nil))
 
 (set-language-environment "UTF-8")
 (setq default-input-method nil)
