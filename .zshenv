@@ -11,7 +11,6 @@ export PATH=$HOME/.pub-cache/bin:$PATH
 
 export PATH=$HOME/.pyenv/shims:$PATH
 export PATH=$HOME/.rbenv/shims:$PATH
-export PATH=$HOME/.nodenv/shims:$PATH
 
 export PNPM_HOME="/Users/aki/Library/pnpm"
 case ":$PATH:" in

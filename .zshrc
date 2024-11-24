@@ -41,7 +41,6 @@ alias vim="nvim"
 alias k="kubectl"
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
-command -v nodenv >/dev/null && eval "$(nodenv init -)"
 command -v rbenv >/dev/null && eval "$(pyenv init -)"
 command -v rbenv >/dev/null && eval "$(rbenv init -)"
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"
