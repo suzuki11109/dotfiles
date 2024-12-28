@@ -8,6 +8,12 @@ export PATH=/usr/local/go1.22.5/bin:$PATH
 export PATH=$HOME/go/bin:$PATH
 export PATH=$HOME/flutter/bin:$PATH
 export PATH=$HOME/.pub-cache/bin:$PATH
+export PATH=$HOME/.cargo/bin:$PATH
+
+if [ -d "/Applications/Emacs.app/Contents/MacOS/bin" ]; then
+  export PATH="/Applications/Emacs.app/Contents/MacOS/bin:$PATH"
+  alias emacs="/Applications/Emacs.app/Contents/MacOS/./Emacs"
+fi
 
 export PATH=$HOME/.pyenv/shims:$PATH
 export PATH=$HOME/.rbenv/shims:$PATH
