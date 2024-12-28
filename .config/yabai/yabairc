@@ -36,7 +36,7 @@ adjust_spaces() {
 rearrange_spaces() {
   num_displays=$(yabai -m query --displays | jq 'length')
   if [[ "$num_displays" -eq 2 ]]; then
-    adjust_spaces 4 2
+    adjust_spaces 5 1
   elif [[ "$num_displays" -eq 1 ]]; then
     adjust_spaces 6
   fi
@@ -51,12 +51,12 @@ setup_space 1 www
 setup_space 2 emacs
 setup_space 3 dev
 setup_space 4 docs
-setup_space 5 social
-setup_space 6 media
+setup_space 5 media
+setup_space 6 social
 
 yabai -m config layout bsp
 yabai -m config --space 1 layout stack
-yabai -m config --space 5 layout stack
+yabai -m config --space 6 layout stack
 
 yabai -m config mouse_follows_focus        off            \
                 focus_follows_mouse        off            \
@@ -82,10 +82,10 @@ yabai -m rule --add app="^(Safari|Brave Browser|Mail)$" space=^1
 yabai -m rule --add app="Emacs" role="AXTextField" subrole="AXStandardWindow" manage=on
 yabai -m rule --add app="^Simulator$" manage=on space=^2
 yabai -m rule --add app="^(iTerm|Terminal)$" space=^2
-yabai -m rule --add app="^(DBeaver)$" space=^3
+yabai -m rule --add app="^(DBeaver|Postman)$" space=^3
 yabai -m rule --add app="^(Pages|Numbers|Keynote)$" space=^4
-yabai -m rule --add app="^(Microsoft Teams|Discord|Basecamp 3|Gather)$" space=^5
-yabai -m rule --add app="^Spotify$" space=^6
+yabai -m rule --add app="^(Spotify|Music)$" space=^6
+yabai -m rule --add app="^(Microsoft Teams|Discord|Basecamp 3|Gather)$" space=^6
 
 # focus remaining windows after close a window
 yabai -m signal --add event=window_destroyed action="yabai -m query --windows --window &> /dev/null || yabai -m window --focus mouse"
