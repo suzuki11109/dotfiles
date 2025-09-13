@@ -1,18 +1,6 @@
-function map(mode, keys, func, opts)
-   local options = { noremap = true, silent = true }
-   if opts then
-      options = vim.tbl_extend('force', options, opts)
-   end
+require("options")
+require("keymaps")
 
-   vim.keymap.set(mode, keys, func, opts)
-end
-
--- treesitter
--- comment
--- noswap file
--- surround/autopairs
-
--- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -29,34 +17,21 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- Make sure to setup `mapleader` and `maplocalleader` before
--- loading lazy.nvim so that mappings are correct.
--- This is also a good place to setup other settings (vim.opt)
-vim.g.mapleader = " "
-vim.g.maplocalleader = "\\"
-
--- Setup lazy.nvim
 require("lazy").setup({
   spec = {
-    { "catppuccin/nvim", name = "catppuccin", priority = 1000 },
+    { import = "plugins" },
   },
-  checker = { enabled = true },
+  change_detection = { enabled = false },
+  checker = { enabled = false },
 })
 
-vim.cmd.colorscheme "catppuccin"
-
-vim.opt.expandtab = true
-vim.opt.shiftwidth = 2
-vim.opt.tabstop = 2
-vim.opt.softtabstop = 2
-vim.opt.termguicolors = true
-vim.opt.list = true
-vim.opt.listchars = "tab:  ,trail:·,eol: ,nbsp:_"
-vim.opt.cmdheight = 1
-vim.opt.clipboard = "unnamedplus"
-vim.opt.number = true
-vim.opt.relativenumber = true
-
--- [[ Basic Keymaps ]]
-map('', ';', ':')
-
+-- diagnostic virtual text?
+-- neotest popup
+-- telescope ui
+-- telescope files
+-- hoverpopup
+-- lastplace?
+-- overseer
+-- 'jghauser/mkdir.nvim',
+-- minimal init
+-- statusline
