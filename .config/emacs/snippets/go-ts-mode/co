@@ -1,5 +1,0 @@
-# -*- mode: snippet -*-
-# name: const name = value
-# key: co
-# --
-const ${1:name} = ${2:value}

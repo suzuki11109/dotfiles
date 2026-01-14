@@ -1,7 +1,0 @@
-# -*- mode: snippet -*-
-# name: var ( name = value )
-# key: vas
-# --
-var (
-    ${1:name} = ${2:value}
-)

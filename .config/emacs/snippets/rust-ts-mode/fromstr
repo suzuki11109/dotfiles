@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: String::from()
+# key: strfrom
+# --
+String::from(${1})$0

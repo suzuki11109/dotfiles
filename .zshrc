@@ -3,15 +3,14 @@ ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 [ ! -d $ZINIT_HOME/.git ] && git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
 source "${ZINIT_HOME}/zinit.zsh"
 
-zinit light zdharma-continuum/fast-syntax-highlighting
-zinit light zsh-users/zsh-completions
-zinit light hlissner/zsh-autopair
-
-zinit snippet OMZP::git
+zi light zdharma-continuum/fast-syntax-highlighting
+zi light zsh-users/zsh-completions
+zi light hlissner/zsh-autopair
+zi snippet OMZP::git
 
 autoload -U compinit && compinit
 
-zinit cdreplay -q
+zi cdreplay -q
 
 bindkey -e
 
@@ -38,7 +37,9 @@ PS1='%F{blue}%~ %(?.%F{green}.%F{red})%#%f '
 alias ls="ls --color"
 alias vi="nvim"
 alias vim="nvim"
-alias k="kubectl"
+# alias k="kubectl"
+alias kubectl="kubecolor"
+alias k="kubecolor"
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 
 command -v rbenv >/dev/null && eval "$(pyenv init -)"
