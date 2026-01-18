@@ -1,98 +1,27 @@
-function setup_space {
-  local idx="$1"
-  local name="$2"
-  local space=
-  echo "setup space $idx : $name"
-
-  space=$(yabai -m query --spaces --space "$idx")
-  if [ -z "$space" ]; then
-    yabai -m space --create
-  fi
-
-  yabai -m space "$idx" --label "$name"
-}
-
-adjust_spaces() {
-  local desired_spaces=("$@")
-  local display=1
-  for desired_space in "${desired_spaces[@]}"; do
-    local actual_space=$(yabai -m query --spaces | jq 'map(select(.display == '$display')) | length')
-    yabai -m display --focus $display
-    while (( actual_space != desired_space )); do
-      if (( actual_space < desired_space )); then
-        yabai -m space --create
-        ((actual_space++))
-      else
-        local last_space_index=$(yabai -m query --spaces | jq '.[].index | select(. == '$spaces_on_display')')
-        yabai -m space --focus $last_space_index
-        yabai -m space --destroy
-        ((actual_space--))
-      fi
-    done
-    ((display++))
-  done
-}
-
-rearrange_spaces() {
-  num_displays=$(yabai -m query --displays | jq 'length')
-  if [[ "$num_displays" -eq 2 ]]; then
-    adjust_spaces 5 1
-  elif [[ "$num_displays" -eq 1 ]]; then
-    adjust_spaces 6
-  fi
-}
-
 yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa"
 sudo yabai --load-sa
 
-rearrange_spaces
+yabai -m config layout float
 
-setup_space 1 www
-setup_space 2 emacs
-setup_space 3 dev
-setup_space 4 docs
-setup_space 5 media
-setup_space 6 social
+# yabai -m config --space 1 layout stack
+# yabai -m config --space 4 layout stack
 
-yabai -m config layout bsp
-yabai -m config --space 1 layout stack
-yabai -m config --space 6 layout stack
+# yabai -m config mouse_drop_action   stack
 
-yabai -m config mouse_follows_focus        off            \
-                focus_follows_mouse        off            \
-                window_zoom_persist        off            \
-                window_placement           second_child   \
-                window_shadow              float          \
-                split_ratio                0.50           \
-                auto_balance               off            \
-                mouse_modifier             fn             \
-                mouse_action1              move           \
-                mouse_action2              resize         \
-                mouse_drop_action          stack          \
-                top_padding                8              \
-                bottom_padding             8              \
-                left_padding               8              \
-                right_padding              8              \
-                window_gap                 10
-
-# external_bar               all:32:0
 # assign applications into spaces
 yabai -m rule --add app="^(Calculator|System Settings|App Store)$" manage=off
 yabai -m rule --add app="^(Safari|Brave Browser|Mail)$" space=^1
-yabai -m rule --add app="Emacs" role="AXTextField" subrole="AXStandardWindow" manage=on
+yabai -m rule --add app="Emacs" role="AXTextField" subrole="AXStandardWindow" manage=on space=^2
 yabai -m rule --add app="^Simulator$" manage=on space=^2
-yabai -m rule --add app="^(iTerm|Terminal)$" space=^2
-yabai -m rule --add app="^(DBeaver|Postman)$" space=^3
-yabai -m rule --add app="^(Pages|Numbers|Keynote)$" space=^4
-yabai -m rule --add app="^(Spotify|Music)$" space=^6
-yabai -m rule --add app="^(Microsoft Teams|Discord|Basecamp 3|Gather)$" space=^6
+yabai -m rule --add app="^(iTerm|Terminal|Ghostty|Visual Studio Code)$" space=^2
+yabai -m rule --add app="^(Microsoft Teams|Discord|Basecamp 3|Gather)$" space=^3
+yabai -m rule --add app="^(DBeaver|Postman|MongoDB Compass)$" space=^4
+yabai -m rule --add app="^(Pages|Numbers|Keynote|Calendar|Finder)$" space=^5
+yabai -m rule --add app="^(Music)$" space=^6
 
 # focus remaining windows after close a window
 yabai -m signal --add event=window_destroyed action="yabai -m query --windows --window &> /dev/null || yabai -m window --focus mouse"
 yabai -m signal --add event=application_terminated action="yabai -m query --windows --window &> /dev/null || yabai -m window --focus mouse"
 
-# adjust spaces when display added or removed
-# yabai -m signal --add event=display_added action="rearrange_spaces"
-
-# set up border color
-borders background_color=0x302c2e34 active_color=0xc0e2e2e3 inactive_color=0xc02c2e34 width=4.0 &
+# raycast integration
+yabai -m signal --add event=space_changed action="nohup open -g raycast://extensions/krzysztoff1/yabai/screens-menu-bar?launchType=background > /dev/null 2>&1 &"
