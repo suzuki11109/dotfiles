@@ -1,15 +1,10 @@
-alias f find-file $1
-alias ff find-file-other-window $1
-alias d dired $1
-alias rg rg --color=always $*
-alias l ls -lh $*
-alias ll ls -lah $*
-alias git git --no-pager $*
-alias gg magit-status
+alias clear clear-scrollback
+alias l ls -lhGo $*
+alias ll ls -lAhGo $*
+alias less view-file $1
 alias glgg git log --graph
 alias glog git log --oneline --decorate --graph --all
 alias glod git log --graph --pretty="%Cred%h%Creset%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset" --date=short
+alias dot git --git-dir=$HOME/.cfg/ --work-tree=$HOME $*
 alias k kubecolor $*
 alias kubectl kubecolor $*
-alias dot git --git-dir=$HOME/.cfg/ --work-tree=$HOME $*
-alias clear clear-scrollback

@@ -409,7 +409,7 @@
 
 ;;   (defun +eglot-organize-imports ()
 ;;     (interactive)
-;; 	  (eglot-code-actions nil nil "source.organizeImports" t))
+;;        (eglot-code-actions nil nil "source.organizeImports" t))
 
 ;;   (defvar +eglot--help-buffer nil)
 ;;   (defun +eglot-describe-at-point ()
@@ -469,7 +469,7 @@
 ;; (use-package eglot-booster
 ;;   :vc (:fetcher github :repo jdtsmith/eglot-booster)
 ;;   :after eglot
-;; 	:config
+;;      :config
 ;;   (eglot-booster-mode))
 
 ;; (use-package consult-eglot
@@ -478,4 +478,289 @@
 ;;     :keymaps 'eglot-mode-map
 ;;     :infix "c"
 ;;     "j" '(consult-eglot-symbols :wk "Find symbol")))
+#+end_src
+
+* Rails
+#+begin_src emacs-lisp
+
+;; (defvar rails-command-prefix "bundle exec rails")
+
+;; (defvar rails-generators
+;;   '(("assets" (("app/assets/"
+;;                 "app/assets/\\(?:stylesheets\\|javascripts\\)/\\(.+?\\)\\..+$")))
+;;     ("controller" (("app/controllers/" "app/controllers/\\(.+\\)_controller\\.rb$")))
+;;     ("generator" (("lib/generator/" "lib/generators/\\(.+\\)$")))
+;;     ("helper" (("app/helpers/" "app/helpers/\\(.+\\)_helper.rb$")))
+;;     ("integration_test" (("test/integration/" "test/integration/\\(.+\\)_test\\.rb$")))
+;;     ("job" (("app/jobs/" "app/jobs/\\(.+\\)_job\\.rb$")))
+;;     ("mailer" (("app/mailers/" "app/mailers/\\(.+\\)\\.rb$")))
+;;     ("migration" (("db/migrate/" "db/migrate/[0-9]+_\\(.+\\)\\.rb$")))
+;;     ("model" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
+;;     ("resource" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
+;;     ("scaffold" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
+;;     ("task" (("lib/tasks/" "lib/tasks/\\(.+\\)\\.rake$")))))
+
+;; (defun rails-generate ()
+;;   "Execute Rails generate COMMAND with input completion."
+;;   (interactive)
+;;   (let ((default-directory (project-root (project-current t))))
+;;     (async-shell-command (rails-command-with-completion " generate "))))
+
+;; (defun rails-destroy ()
+;;   "Execute Rails destroy COMMAND with input completion."
+;;   (interactive)
+;;   (let ((default-directory (project-root (project-current t))))
+;;     (async-shell-command (rails-command-with-completion " destroy "))))
+
+;; (defun rails-command-with-completion (command)
+;;   "Build Rails command from COMMAND with input completion."
+;;   (let ((keymap (copy-keymap minibuffer-local-map))
+;;         (command-prefix (concat rails-command-prefix command)))
+;;     (define-key keymap (kbd "<tab>") 'rails--completion-in-region)
+;;     (concat command-prefix (read-from-minibuffer command-prefix nil keymap))))
+
+;; (defun rails--completion-in-region ()
+;;   "Apply Rails generators for text completion in region."
+;;   (interactive)
+;;   (let ((generators (--map (concat (car it) " ") rails-generators)))
+;;     (when (<= (minibuffer-prompt-end) (point))
+;;       (completion-in-region (minibuffer-prompt-end) (point-max)
+;;                             generators))))
+
+;; (defun rails-server ()
+;;   "Run rails server command."
+;;   (interactive)
+;;   (let ((default-directory (project-root (project-current t))))
+;;     (async-shell-command (concat rails-command-prefix " server"))))
+
+;; (defun rails-console ()
+;;   "Start a rails console at project root."
+;;   (interactive)
+;;   (inf-ruby-console-rails (project-root (project-current t))))
+
+;; (defun project-find-file-in-dir (dir)
+;;   "Visit a file (with completion) in the current project.
+;; The filename at point (determined by `thing-at-point'), if any,
+;; is available as part of \"future history\"."
+;;   (interactive)
+;;   (let* ((pr (project-current t))
+;;          (dirs (list (expand-file-name dir (project-root pr)))))
+;;     (project-find-file-in (thing-at-point 'filename) dirs pr)))
+
+;; (defun rails-find-controller ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/controllers/"))
+
+;; ;; refactor to macro?
+;; (defun rails-find-model ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/models/"))
+
+;; (defun rails-find-view ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/views/"))
+
+;; (defun rails-find-helper ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/helpers/"))
+
+;; (defun rails-find-test ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/tests/"))
+
+;; (defun rails-find-javascript ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/javascript/"))
+
+;; (defun rails-find-job ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/jobs/"))
+
+;; (defun rails-find-mailer ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/mailers/"))
+
+;; ;; non macro
+;; (defun rails-find-spec ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/spec/"))
+
+;; (defun rails-find-migration ()
+;;   (interactive)
+;;   (project-find-file-in-dir "db/migrate/"))
+
+;; (defun rails-find-stylesheet ()
+;;   (interactive)
+;;   (project-find-file-in-dir "app/assets/stylesheets/"))
+
+;; (defun rails-find-initializer ()
+;;   (interactive)
+;;   (project-find-file-in-dir "config/initializers/"))
+
+;; (defun rails-find-locale ()
+;;   (interactive)
+;;   (project-find-file-in-dir "config/locales/"))
+
+;; (defvar rails-command-map
+;;   (let ((map (make-sparse-keymap)))
+;;     (define-key map (kbd "a") 'rails-find-locale)
+;;     (define-key map (kbd "b") 'rails-find-job)
+;;     (define-key map (kbd "c") 'rails-find-controller)
+;;     (define-key map (kbd "d") 'rails-destroy)
+;;     (define-key map (kbd "g") 'rails-generate)
+;;     (define-key map (kbd "h") 'rails-find-helper)
+;;     (define-key map (kbd "i") 'rails-find-initializer)
+;;     (define-key map (kbd "j") 'rails-find-javascript)
+;;     (define-key map (kbd "m") 'rails-find-model)
+;;     (define-key map (kbd "n") 'rails-find-migration)
+;;     (define-key map (kbd "p") 'rails-find-spec)
+;;     (define-key map (kbd "r") 'rails-console)
+;;     (define-key map (kbd "R") 'rails-server)
+;;     (define-key map (kbd "s") 'rails-find-stylesheet)
+;;     (define-key map (kbd "t") 'rails-find-test)
+;;     (define-key map (kbd "u") 'rails-find-fixture)
+;;     (define-key map (kbd "v") 'rails-find-view)
+;;     (define-key map (kbd "w") 'rails-find-component)
+;;     (define-key map (kbd "@") 'rails-find-mailer)
+;;     map)
+;;   "Keymap after `rails-keymap-prefix'.")
+;; (fset 'rails-command-map rails-command-map)
+#+end_src
+
+* Java
+#+begin_src emacs-lisp
+
+;; (use-package lsp-java
+;;   :preface
+;;   (defun +java-mode-setup ()
+;;     (setq tab-width 4)
+;;     (add-hook 'before-save-hook 'lsp-format-buffer nil t)
+;;     (setq-local lsp-enable-snippet nil)
+;;     )
+;;   :init
+;;   (setq lsp-java-save-actions-organize-imports t)
+;;   (setq lsp-java-completion-max-results 10)
+;;   (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m"))
+;;   :config
+;;   (require 'lsp-java-boot)
+
+;;   ;; workaround completions not showing up after .
+;;   ;; (advice-add 'lsp-completion--looking-back-trigger-characterp :around
+;;   ;;             (defun lsp-completion--looking-back-trigger-characterp@fix-dart-trigger-characters (orig-fn trigger-characters)
+;;   ;;               (funcall orig-fn
+;;   ;;                        (if (and (derived-mode-p 'java-ts-mode) (not trigger-characters))
+;;   ;;                            ["."]
+;;   ;;                          trigger-characters))))
+;;   :hook
+;;   (conf-javaprop-mode . lsp-deferred)
+;;   ((java-mode java-ts-mode) . lsp-deferred)
+;;   ((java-mode java-ts-mode) . +java-mode-setup))
+
+
+#+end_src
+
+* Agenda
+#+begin_src emacs-lisp
+
+(use-package org-agenda
+  :ensure nil
+  :init
+  (setq org-agenda-sorting-strategy '((agenda habit-down time-up priority-down category-keep)
+                                      (todo tag-up priority-down category-keep)
+                                      (tags priority-down category-keep)
+                                      (search category-keep)))
+  (setq org-todo-keywords
+        '((sequence "TODO(t)" "PROJ(p)" "|" "DONE(d!)")
+          (sequence "[ ](T)" "|" "[X](x!)")))
+  (setq org-refile-use-outline-path 'file)
+  (setq org-refile-targets '(("tasks.org" :maxlevel . 1)))
+  (setq org-agenda-files nil)
+  (setq org-agenda-confirm-kill nil)
+  (setq org-agenda-window-setup 'current-window)
+  (setq org-agenda-restore-windows-after-quit t)
+  (setq org-agenda-inhibit-startup t)
+  (setq org-agenda-skip-deadline-if-done t)
+  (setq org-agenda-skip-scheduled-if-done t)
+  (setq org-agenda-skip-timestamp-if-done t)
+  (setq org-capture-templates
+        `(("t" "Task" entry (file "tasks.org")
+           "* TODO %?\nSCHEDULED: %(org-insert-time-stamp (org-read-date nil t))")
+          ("e" "Emacs todo" entry (file+olp "~/.config/emacs/init.org" "Todos")
+           "* %?")
+          ("v" "Vocalubary" entry (file "vocab.org")
+           "* %?")
+          ))
+
+  :hook
+  (org-agenda-mode . hl-line-mode)
+  (org-agenda-mode . (lambda ()
+                       (interactive) (org-element-cache-reset 'all)))
+  (org-capture-mode . evil-insert-state)
+  (org-capture-mode . (lambda ()
+                        (setq header-line-format
+                              (format "%s%s%s"
+                                      (propertize (abbreviate-file-name (buffer-file-name (buffer-base-buffer)))
+                                                  'face 'font-lock-string-face)
+                                      " → "
+                                      header-line-format))))
+  :config
+  ;; Refresh agenda after capturing.
+  (add-hook 'org-capture-after-finalize-hook 'org-agenda-maybe-redo)
+
+  ;; Save agenda buffers after doing these actions
+  (dolist (hook '(org-refile
+                  org-agenda-archive
+                  org-agenda-add-note
+                  org-agenda-deadline
+                  org-agenda-kill
+                  org-agenda-todo
+                  org-agenda-refile
+                  org-agenda-schedule
+                  org-agenda-set-property
+                  org-agenda-set-tags))
+    ;; https://github.com/bbatsov/helm-projectile/issues/51
+    (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
+
+  ;; need this because syncing updates from cloud show categories as ???
+  (advice-add #'org-agenda-redo :after (lambda (&rest _) (org-element-cache-reset t)))
+
+  (with-eval-after-load 'evil
+    (evil-define-key 'emacs org-agenda-mode-map
+      "j" 'org-agenda-next-line
+      "k" 'org-agenda-previous-line
+      "x" 'org-agenda-bulk-action
+      "q" 'org-agenda-exit
+
+      "M-j" 'org-agenda-drag-line-forward
+      "M-k" 'org-agenda-drag-line-backward
+
+      "dd" 'org-agenda-kill
+      "dA" 'org-agenda-archive
+      )
+    )
+  )
+
+;; (use-package org-super-agenda
+;;   :after (org-agenda)
+;;   :config
+;;   (setq org-agenda-span 'day)
+;;   (setq org-agenda-time-grid '((daily) () "" ""))
+;;   (setq org-agenda-prefix-format
+;;         '(
+;;           (agenda . " %i %-12:c%?-12t ")
+;;           (todo . " %i %-12:c")
+;;           (tags . " %i %-12:c")
+;;           (search . " %i %-12:c")
+;;           ))
+;;   (setq org-super-agenda-groups
+;;         '(
+;;           (:name "Habits" :and(:category "habits" :todo "TODO")) ;; warning
+;;           (:name "Today" :time-grid t)
+;;           (:name "Emacs" :tag "emacs")
+;;           (:name "Shopping" :tag "shopping")
+;;           (:name "Others" :todo "TODO")
+;;           ))
+;;   (setq org-super-agenda-header-map (make-sparse-keymap))
+;;   (org-super-agenda-mode 1)
+;;   )
 #+end_src

@@ -36,19 +36,20 @@
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
 
+
 ;; Disable bidirectional text scanning
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
 (setq bidi-inhibit-bpa t)
 
 (push '(fullscreen . maximized) default-frame-alist)
+;; (push '(background-color . "#1e1e2e") default-frame-alist)
+(push '(ns-transparent-titlebar . t) default-frame-alist)
+(push '(ns-appearance . dark) default-frame-alist)
 
 (setq native-comp-async-report-warnings-errors 'silent)
 
-;; (add-hook 'emacs-startup-hook
-;;           (lambda ()
-;;             (message "Emacs loaded in %s with %d garbage collections."
-;;                      (format "%.03fs" (float-time (time-subtract elpaca-after-init-time before-init-time))) gcs-done)))
+(setq command-line-x-option-alist nil)
 
 (setenv "LSP_USE_PLISTS" "true")
 

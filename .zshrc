@@ -37,7 +37,6 @@ PS1='%F{blue}%~ %(?.%F{green}.%F{red})%#%f '
 alias ls="ls --color"
 alias vi="nvim"
 alias vim="nvim"
-# alias k="kubectl"
 alias kubectl="kubecolor"
 alias k="kubecolor"
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'

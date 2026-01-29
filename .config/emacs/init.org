@@ -2,16 +2,11 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
-** smerge normal-mode, insert-mode
-** practice tramp in all scenarios docker, server, sftp
-** face attribute vs custom faces
-** put compile functions to a package compile-pro (project compile with project-specific compile-history)
-** detache
-** project bookmark
+** mise
+** present
 ** org notes solution (supertag, ekg, noter, roam)
 ** khoj
-** extract rar file
-** presentation
+** consult-ripgrep then wgrep
 ** outline mode
 ** smartparens
 ** minor mode only under type of project (projection?)
@@ -56,19 +51,20 @@
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
 
+
 ;; Disable bidirectional text scanning
 (setq-default bidi-display-reordering 'left-to-right
               bidi-paragraph-direction 'left-to-right)
 (setq bidi-inhibit-bpa t)
 
 (push '(fullscreen . maximized) default-frame-alist)
+;; (push '(background-color . "#1e1e2e") default-frame-alist)
+(push '(ns-transparent-titlebar . t) default-frame-alist)
+(push '(ns-appearance . dark) default-frame-alist)
 
 (setq native-comp-async-report-warnings-errors 'silent)
 
-;; (add-hook 'emacs-startup-hook
-;;           (lambda ()
-;;             (message "Emacs loaded in %s with %d garbage collections."
-;;                      (format "%.03fs" (float-time (time-subtract elpaca-after-init-time before-init-time))) gcs-done)))
+(setq command-line-x-option-alist nil)
 
 (setenv "LSP_USE_PLISTS" "true")
 
@@ -150,10 +146,6 @@
      (let ((message-log-max nil))
        (with-temp-message (or (current-message) "") ,@forms))))
 
-(defun +org-agenda-today ()
-  (interactive)
-  (org-agenda nil "a"))
-
 (defun +find-notes ()
   (interactive)
   (let ((default-directory org-directory))
@@ -163,10 +155,6 @@
   "Open init.org file."
   (interactive)
   (find-file (expand-file-name "init.org" user-emacs-directory)))
-
-(defun +go-playground ()
-  (interactive)
-  (find-file "~/code/exp/playground/main.go"))
 
 (defun +download-file (url)
   "Download file from URL."
@@ -203,14 +191,15 @@
 #+begin_src emacs-lisp
 (use-package exec-path-from-shell
   :custom
-  (exec-path-from-shell-arguments nil)
-  (exec-path-from-shell-variables '("PATH" "MANPATH" "JAVA_HOME" "KUBECONFIG"))
+  (exec-path-from-shell-arguments '("-l"))
+  (exec-path-from-shell-variables '("PATH" "MANPATH" "JAVA_HOME" "KUBECONFIG" "NPM_TOKEN" "PNPM_HOME"))
   :init
   (exec-path-from-shell-initialize))
 
 (setenv "EDITOR" "emacsclient")
 (setenv "VISUAL" "emacsclient")
 (setenv "GIT_EDITOR" "emacsclient")
+(setenv "PAGER" "cat")
 
 #+end_src
 * Server
@@ -245,9 +234,9 @@
   (evil-symbol-word-search t)
   (evil-visual-state-cursor '(hollow))
   (evil-goto-definition-functions '(evil-goto-definition-xref
-                                         evil-goto-definition-imenu
-                                         evil-goto-definition-semantic
-                                         evil-goto-definition-search))
+                                    evil-goto-definition-imenu
+                                    evil-goto-definition-semantic
+                                    evil-goto-definition-search))
   :config
   (evil-mode 1)
   (modify-syntax-entry ?_ "w")
@@ -274,12 +263,22 @@
     ":" 'pp-eval-expression
     "u" '("C-u" . universal-argument)
 
+    "a" '(:ignore t :wk "ai")
+
     "b" '(:ignore t :wk "buffer")
     "bb" 'switch-to-buffer
     "bd" 'kill-current-buffer
     "bi" 'ibuffer
     "bm" '((lambda () (interactive) (switch-to-buffer "*Messages*")) :wk "Open Messages")
+    "bl" #'evil-switch-to-windows-last-buffer
+    "br" 'rename-buffer
     "bx" 'remember-notes
+    "bz" 'bury-buffer
+
+    "c" '(:ignore t :wk "code")
+    "cd" 'xref-find-definitions
+    "cD" 'xref-find-definitions-other-window
+    "cR" 'xref-find-references
 
     "f" '(:ignore t :wk "file")
     "fd" 'dired
@@ -292,10 +291,7 @@
     "fW" '((lambda () (interactive) (dired "~/Downloads")) :wk "Go to Downloads")
     "fy" '+save-buffer-absolute-path
 
-    "c" '(:ignore t :wk "code")
-    "cd" 'xref-find-definitions
-    "cD" 'xref-find-definitions-other-window
-    "cR" 'xref-find-references
+    "g" '(:ignore t :wk "git")
 
     "n" '(:ignore t :wk "notes")
     "nt" 'org-todo-list
@@ -309,7 +305,6 @@
     "si" 'imenu
     "so" 'occur
 
-    "g" '(:ignore t :wk "git")
     "w" '(:keymap evil-window-map :wk "window"))
   )
 
@@ -318,8 +313,7 @@
   :custom
   (evil-collection-key-blacklist '("C-y"))
   :config
-  (evil-collection-init)
-  )
+  (evil-collection-init))
 
 (use-package evil-nerd-commenter
   :general
@@ -333,6 +327,12 @@
   :config
   (global-evil-surround-mode 1))
 
+(use-package evil-matchit
+  :defer 1
+  :after evil
+  :config
+  (global-evil-matchit-mode 1))
+
 (use-package avy
   :general
   (:states '(normal visual)
@@ -341,6 +341,14 @@
             "C-j" 'avy-isearch)
   :custom
   (avy-background t))
+
+(use-package better-jumper
+  :defer 1
+  :after evil
+  :custom
+  (better-jumper-use-evil-jump-advice t)
+  :config
+  (better-jumper-mode 1))
 
 (repeat-mode 1)
 #+end_src
@@ -392,7 +400,7 @@
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
 (setq scroll-preserve-screen-position t)
-(setq scroll-conservatively 10)
+(setq scroll-conservatively 3)
 
 (use-package ultra-scroll
   :when (fboundp 'pixel-scroll-precision-mode)
@@ -412,7 +420,7 @@
   :hook ((prog-mode conf-mode text-mode) . display-line-numbers-mode)
   :hook ((org-mode markdown-mode) . (lambda () (display-line-numbers-mode 0)))
   :custom
-  (display-line-numbers-type 'relative)
+  (display-line-numbers-type 'visual)
   )
 
 (setq-default truncate-lines t)
@@ -435,6 +443,8 @@
   :custom-face
   (aw-leading-char-face
    ((t (:inherit ace-jump-face-foreground :height 2.8))))
+  :init
+  (global-set-key [remap other-window] #'ace-window)
   :custom
   (aw-scope 'frame)
   (aw-background nil)
@@ -514,20 +524,11 @@
 #+end_src
 * Themes
 #+begin_src emacs-lisp
-(add-to-list 'default-frame-alist '(ns-transparent-titlebar . t))
-(add-to-list 'default-frame-alist '(ns-appearance . dark))
-
 (use-package catppuccin-theme
   :custom
   (catppuccin-height-title-3 1.1)
   :init
   (load-theme 'catppuccin :no-confirm)
-  (custom-set-faces
-   `(diff-hl-change ((t (:background unspecified :foreground ,(catppuccin-get-color 'blue))))))
-  (custom-set-faces
-   `(diff-hl-delete ((t (:background unspecified :foreground ,(catppuccin-get-color 'red))))))
-  (custom-set-faces
-   `(diff-hl-insert ((t (:background unspecified :foreground ,(catppuccin-get-color 'green))))))
   )
 #+end_src
 * Modeline
@@ -553,17 +554,17 @@
   (doom-modeline-check 'simple)
   :config
   ;; new logic makes some texts become normal weight in inactive
-  (defun doom-modeline-face (&optional face inactive-face)
-    "Display FACE in active window, and INACTIVE-FACE in inactive window.
-IF FACE is nil, `mode-line' face will be used.
-If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
-    (if (doom-modeline--active)
-        (or (and (facep face) `(:inherit (doom-modeline ,face)))
-            (and (facep 'mode-line-active) '(:inherit (doom-modeline mode-line-active)))
-            '(:inherit (doom-modeline mode-line)))
-      (or (and (facep face) `(:inherit (doom-modeline mode-line-inactive ,face)))
-          (and (facep inactive-face) `(:inherit (doom-modeline ,inactive-face)))
-          '(:inherit (doom-modeline mode-line-inactive)))))
+;;   (defun doom-modeline-face (&optional face inactive-face)
+;;     "Display FACE in active window, and INACTIVE-FACE in inactive window.
+;; IF FACE is nil, `mode-line' face will be used.
+;; If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
+;;     (if (doom-modeline--active)
+;;         (or (and (facep face) `(:inherit (doom-modeline ,face)))
+;;             (and (facep 'mode-line-active) '(:inherit (doom-modeline mode-line-active)))
+;;             '(:inherit (doom-modeline mode-line)))
+;;       (or (and (facep face) `(:inherit (doom-modeline mode-line-inactive ,face)))
+;;           (and (facep inactive-face) `(:inherit (doom-modeline ,inactive-face)))
+;;           '(:inherit (doom-modeline mode-line-inactive)))))
 
   ;; show compiling
   (doom-modeline-def-segment compilation
@@ -628,6 +629,7 @@ If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
 (setq kill-whole-line t)
 (delete-selection-mode 1)
 
+(setq image-animate-loop t)
 #+end_src
 * Files
 #+begin_src emacs-lisp
@@ -635,11 +637,10 @@ If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
 (use-package autorevert
   :ensure nil
   :custom
-  (global-auto-revert-non-file-buffers t)
   (auto-revert-verbose nil)
   (auto-revert-use-notify nil)
   :config
-  ;; global-auto-revert-mode can slow things down. try to enable it per active window.
+  ;; global-auto-revert-mode can slow for non-file buffers. try to enable it per active window.
   (add-to-list 'window-state-change-functions
                (defun ar/window-state-state-change (state)
                  (let* ((old-selected-window (old-selected-window))
@@ -650,11 +651,12 @@ If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
                                       (window-buffer selected-window))))
                    (when old-buffer
                      (with-current-buffer old-buffer
-                       (when buffer-file-name
+                       (when (or buffer-file-name (derived-mode-p '(dired-mode)))
                          (auto-revert-mode -1))))
+
                    (when new-buffer
                      (with-current-buffer new-buffer
-                       (when buffer-file-name
+                       (when (or buffer-file-name (derived-mode-p '(dired-mode)))
                          (auto-revert-mode +1))))))))
 
 (use-package emacs
@@ -718,6 +720,7 @@ If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
   :custom
   (dired-use-ls-dired nil)
   (dired-dwim-target t)
+  (dired-vc-rename-file t)
   (dired-auto-revert-buffer t)
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
@@ -858,6 +861,7 @@ of the tab bar."
   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
 
   (define-key tabspaces-command-map (kbd "TAB") 'tab-bar-switch-to-tab)
+  (define-key tabspaces-command-map (kbd "m") 'tab-move)
   (define-key tabspaces-command-map (kbd "n") 'tab-bar-switch-to-next-tab)
   (define-key tabspaces-command-map (kbd "p") 'tab-bar-switch-to-prev-tab)
 
@@ -902,6 +906,7 @@ of the tab bar."
 #+end_src
 * Help
 #+begin_src emacs-lisp
+(setq echo-keystrokes 0.02)
 (setq echo-keystrokes-help nil)
 
 (use-package help
@@ -962,8 +967,13 @@ of the tab bar."
   (leader-def
     "gB" 'magit-blame-addition
     "gC" 'magit-clone
+    "gD" 'magit-file-delete
+    "gf" 'magit-find-file
+    "gg" 'magit-status
+    "gG" 'dotfiles-magit-status
+    "gi" 'magit-init
     "gL" 'magit-log-buffer-file
-    "gg" 'magit-status)
+    )
   :bind (:map magit-diff-section-map
               ("RET" . magit-diff-visit-worktree-file)
               ("<C-return>" . magit-diff-visit-file))
@@ -974,10 +984,8 @@ of the tab bar."
   (magit-uniquify-buffer-names nil)
   (magit-display-buffer-function #'magit-display-buffer-fullcolumn-most-v1)
   (magit-bury-buffer-function #'magit-restore-window-configuration)
-
-  (dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
-  (dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
-
+  (magit-section-initial-visibility-alist '((stashes . hide)
+                                            (untracked . show)))
   :config
   (add-to-list 'magit-no-confirm 'stage-all-changes)
   (transient-replace-suffix 'magit-branch "b"
@@ -991,7 +999,40 @@ of the tab bar."
     (add-hook 'magit-post-clone-hook #'+magit-open-project-workspace))
 
   :hook
-  (magit-process-mode . goto-address-mode) ;; Turn ref links into clickable buttons.
+  (magit-process-mode . goto-address-mode)
+  )
+
+;;; For dotfiles
+(use-package magit
+  :defer t
+  :ensure nil
+  :general
+  (leader-def
+    "gG" 'dotfiles-magit-status)
+  :config
+  (setq dotfiles-git-dir (concat "--git-dir=" (expand-file-name "~/.cfg")))
+  (setq dotfiles-work-tree (concat "--work-tree=" (expand-file-name "~")))
+
+  (defun dotfiles-magit-status ()
+    "Calls `magit-status'on a git bare repo with set appropriate bare-git-dir and bare-work-tree."
+    (interactive)
+    (require 'magit-git)
+    (let ((magit-git-global-arguments (append magit-git-global-arguments (list dotfiles-git-dir dotfiles-work-tree))))
+      (call-interactively 'magit-status)))
+
+  (defun +magit-process-environment (env)
+    "Add GIT_DIR and GIT_WORK_TREE to ENV when in a special directory.
+  https://github.com/magit/magit/issues/460 (@cpitclaudel)."
+    (let ((default (file-name-as-directory (expand-file-name default-directory)))
+          (home (expand-file-name "~/")))
+      (when (string= default home)
+        (let ((gitdir (expand-file-name "~/.cfg")))
+          (push (format "GIT_WORK_TREE=%s" home) env)
+          (push (format "GIT_DIR=%s" gitdir) env))))
+    env)
+
+  (advice-add 'magit-process-environment
+              :filter-return #'+magit-process-environment)
   )
 
 (use-package git-commit
@@ -1061,7 +1102,9 @@ of the tab bar."
     ;; Often after calling `smerge-vc-next-conflict', the cursor will land at
     ;; the bottom of the window
     ;; ("n" (progn (smerge-vc-next-conflict) (recenter-top-bottom (/ (window-height) 8))))
-    ("q" nil :color blue))
+    ("q" nil :color blue)
+    ("<escape>" nil :color blue)
+    )
   :hook
   (find-file . (lambda ()
                  (unless (bound-and-true-p smerge-mode)
@@ -1087,11 +1130,9 @@ of the tab bar."
   (history-length 500)
   (savehist-save-minibuffer-history t)
   (savehist-autosave-interval nil)
-  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring))
+  (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring compile-pro--history-alist))
   :config
-  (add-to-list 'savehist-additional-variables 'project-compile-history-alist)
-  :hook
-  (elpaca-after-init . savehist-mode))
+  (savehist-mode 1))
 
 #+end_src
 * Vertico
@@ -1102,12 +1143,16 @@ of the tab bar."
   (read-extended-command-predicate #'command-completion-default-include-p) ;; hide commands that does not work
   (vertico-resize nil)
   (vertico-count 15)
+  (vertico-multiform-commands
+   '((consult-ripgrep buffer)
+     (compile-pro-compile-from-history (vertico-sort-function . nil))))
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
   :hook
   (elpaca-after-init . vertico-mode)
+  (vertico-mode . vertico-multiform-mode)
   (rfn-eshadow-update-overlay . vertico-directory-tidy)
   )
 
@@ -1127,6 +1172,7 @@ of the tab bar."
   (leader-def
     "sB" #'consult-line-thing-at-point
     "sb" #'consult-line
+    "sI" #'consult-imenu-multi
     "sj" #'consult-outline
     "sP" #'consult-ripgrep-in-dir
     "sp" #'consult-ripgrep)
@@ -1312,7 +1358,7 @@ targets."
   (minibuffer-setup . corfu-enable-in-shell)
   :preface
   (defun corfu-enable-in-shell ()
-    (setq-local corfu-auto t)
+    (setq-local corfu-auto nil)
     (corfu-mode 1))
   :init
   (setq text-mode-ispell-word-completion nil)
@@ -1324,6 +1370,10 @@ targets."
   (setq corfu-preview-current nil)
   (setq corfu-preselect 'first)
   (setq corfu-on-exact-match 'show)
+  (setq global-corfu-minibuffer
+      (lambda ()
+        (not (or (bound-and-true-p vertico--input)
+                 (eq (current-local-map) read-passwd-map)))))
   :config
   (set-face-attribute 'corfu-default nil :inherit 'default)
   (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
@@ -1382,6 +1432,8 @@ targets."
   (define-key yas-keymap [(tab)] nil)
   (define-key yas-keymap (kbd "TAB") nil)
   (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
+  (add-hook 'yas-before-expand-snippet-hook #'evil-insert-state)
+  (add-hook 'yas-after-exit-snippet-hook    #'evil-force-normal-state)
   )
 
 (use-package yasnippet-capf
@@ -1394,7 +1446,9 @@ targets."
 #+begin_src emacs-lisp
 (use-package orderless
   :init
+  (setq completions-detailed t)
   (setq completion-ignore-case t
+        ;; completion-pcm-leading-wildcard t ;; emacs 31
         completion-styles '(orderless partial-completion basic)
         completion-category-defaults nil
         completion-category-overrides '((file (styles orderless partial-completion)))
@@ -1406,34 +1460,9 @@ targets."
 #+end_src
 * Org
 #+begin_src emacs-lisp
-(defun +org-insert-item-after-current ()
-  (interactive)
-  (org-beginning-of-line)
-  (org-insert-item)
-  (org-move-item-down)
-  (end-of-line 1)
-  (evil-insert-state))
-
-(defun +org-insert-heading-after-current ()
-  (interactive)
-  (org-insert-heading-after-current)
-  (evil-insert-state))
-
-(defun +org-smart-insert-after-current ()
-  (interactive)
-  (cond
-   ((org-at-heading-p)
-    (+org-insert-heading-after-current))
-   ((org-at-item-p)
-    (+org-insert-item-after-current))
-   (t
-    (org-return)))
-  )
-
 (use-package org
   :ensure nil
   :defer t
-  :hook (org-mode . variable-pitch-mode)
   :init
   (setq org-directory "~/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/") ;; don't know why custom doesn not work
   (setq org-use-fast-todo-selection 'expert)
@@ -1460,75 +1489,62 @@ targets."
   (setq org-confirm-babel-evaluate nil)
   (setq org-log-into-drawer t)
   :config
-  ;; Resize Org headings
-  (dolist (face '((org-document-title . 1.44)
-                  (org-level-1 . 1.3)
-                  (org-level-2 . 1.2)
-                  (org-level-3 . 1.2)
-                  (org-level-4 . 1.1)
-                  (org-level-5 . 1.1)
-                  (org-level-6 . 1.0)
-                  (org-level-7 . 1.0)
-                  (org-level-8 . 1.0)))
-    (set-face-attribute (car face) nil :height (cdr face)))
-
-  ;; Ensure that anything that should be fixed-pitch in Org files appears that way
-  (dolist (face '(org-table org-tag org-verbatim org-list-dt org-hide
-                            org-date org-todo org-done org-formula
-                            org-checkbox org-special-keyword))
-    (set-face-attribute face nil :inherit 'fixed-pitch))
-  (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
-  (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
-
   (add-to-list 'org-modules 'org-habit t)
+  :preface
+  (defun +org-mode-setup ()
+    ;; Resize Org headings
+    (dolist (face '((org-document-title . 1.44)
+                    (org-level-1 . 1.3)
+                    (org-level-2 . 1.2)
+                    (org-level-3 . 1.2)
+                    (org-level-4 . 1.1)
+                    (org-level-5 . 1.1)
+                    (org-level-6 . 1.0)
+                    (org-level-7 . 1.0)
+                    (org-level-8 . 1.0)))
+      (set-face-attribute (car face) nil :height (cdr face)))
 
-  (define-key org-src-mode-map (kbd "C-c C-c") #'org-edit-src-exit)
-
-  ;; (with-eval-after-load 'evil
-  ;;   (evil-define-key '(normal insert) org-mode-map
-  ;;     (kbd "C-<return>") '+org-smart-insert-after-current
-  ;;     )
-  ;;   )
+    ;; Ensure that anything that should be fixed-pitch in Org files appears that way
+    (dolist (face '(org-table org-tag org-verbatim org-list-dt org-hide
+                              org-date org-todo org-done org-formula
+                              org-checkbox org-special-keyword))
+      (set-face-attribute face nil :inherit 'fixed-pitch))
+    (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
+    (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
+    )
+  :hook (org-mode . variable-pitch-mode)
+  :hook (org-mode . +org-mode-setup)
   )
 
 
 (use-package org-indent
   :ensure nil
+  :custom-face (org-indent ((t (:inherit fixed-pitch))))
   :hook
   (org-mode . org-indent-mode))
 
 (use-package evil-org
   :after (org evil)
-  ;; :preface
-  ;; (defun evil-org-goto-last-heading ()
-  ;;   "Go to the last heading in the current Org buffer, append a space if needed, and enter insert mode."
-  ;;   (interactive)
-  ;;   (goto-char (point-max))
-  ;;   (when (re-search-backward org-heading-regexp nil t)
-  ;;     (end-of-line)
-  ;;     (unless (looking-back " " 1)
-  ;;       (insert " "))
-  ;;     (evil-org-append-line 1)))
   :config
   (setf evil-org-key-theme '(textobjects insert navigation additional todo))
-  ;; (evil-define-key '(normal insert) 'evil-org-mode
-  ;;   (kbd "<C-s-return>") 'evil-org-goto-last-heading
-  ;;   (kbd "<C-return>") (evil-org-define-eol-command org-insert-heading-after-current)
-  ;;   (kbd "<C-S-return>") (evil-org-define-bol-command org-insert-heading))
   :hook
-  (org-mode . evil-org-mode)
-  (org-agenda-mode . (lambda ()
-                       (require 'evil-org-agenda)
-                       (evil-org-agenda-set-keys))))
+  (org-mode . evil-org-mode))
 
 (use-package org-appear
+  :custom
+  (org-hide-emphasis-markers t)
+  (org-appear-trigger 'manual)
   :hook
+  (org-mode . (lambda ()
+                (add-hook 'evil-insert-state-entry-hook
+                          #'org-appear-manual-start nil t)
+                (add-hook 'evil-insert-state-exit-hook
+                          #'org-appear-manual-stop nil t)))
   (org-mode . org-appear-mode))
 
 (use-package org-modern
   :hook
   (org-mode . org-modern-mode)
-  (org-agenda-finalize . org-modern-agenda)
   :custom
   (org-modern-table nil)
   (org-modern-hide-stars nil)
@@ -1549,121 +1565,17 @@ targets."
   (org-babel-do-load-languages
    'org-babel-load-languages
    '((emacs-lisp . t)
+     (shell . t)
      (js . t)))
-  (add-to-list 'org-structure-template-alist '("js" . "src js"))
   (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+  (add-to-list 'org-structure-template-alist '("js" . "src js"))
   )
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
 
 #+end_src
-* Agenda
-#+begin_src emacs-lisp
-
-(use-package org-agenda
-  :ensure nil
-  :init
-  (setq org-agenda-sorting-strategy '((agenda habit-down time-up priority-down category-keep)
-                                      (todo tag-up priority-down category-keep)
-                                      (tags priority-down category-keep)
-                                      (search category-keep)))
-  (setq org-todo-keywords
-        '((sequence "TODO(t)" "PROJ(p)" "|" "DONE(d!)")
-          (sequence "[ ](T)" "|" "[X](x!)")))
-  (setq org-refile-use-outline-path 'file)
-  (setq org-refile-targets '(("tasks.org" :maxlevel . 1)))
-  (setq org-agenda-files nil)
-  (setq org-agenda-confirm-kill nil)
-  (setq org-agenda-window-setup 'current-window)
-  (setq org-agenda-restore-windows-after-quit t)
-  (setq org-agenda-inhibit-startup t)
-  (setq org-agenda-skip-deadline-if-done t)
-  (setq org-agenda-skip-scheduled-if-done t)
-  (setq org-agenda-skip-timestamp-if-done t)
-  (setq org-capture-templates
-        `(("t" "Task" entry (file "tasks.org")
-           "* TODO %?\nSCHEDULED: %(org-insert-time-stamp (org-read-date nil t))")
-          ("e" "Emacs todo" entry (file+olp "~/.config/emacs/init.org" "Todos")
-           "* %?")
-          ("v" "Vocalubary" entry (file "vocab.org")
-           "* %?")
-          ))
-
-  :hook
-  (org-agenda-mode . hl-line-mode)
-  (org-agenda-mode . (lambda ()
-                       (interactive) (org-element-cache-reset 'all)))
-  (org-capture-mode . evil-insert-state)
-  (org-capture-mode . (lambda ()
-                        (setq header-line-format
-                              (format "%s%s%s"
-                                      (propertize (abbreviate-file-name (buffer-file-name (buffer-base-buffer)))
-                                                  'face 'font-lock-string-face)
-                                      " → "
-                                      header-line-format))))
-  :config
-  ;; Refresh agenda after capturing.
-  (add-hook 'org-capture-after-finalize-hook 'org-agenda-maybe-redo)
-
-  ;; Save agenda buffers after doing these actions
-  (dolist (hook '(org-refile
-                  org-agenda-archive
-                  org-agenda-add-note
-                  org-agenda-deadline
-                  org-agenda-kill
-                  org-agenda-todo
-                  org-agenda-refile
-                  org-agenda-schedule
-                  org-agenda-set-property
-                  org-agenda-set-tags))
-    ;; https://github.com/bbatsov/helm-projectile/issues/51
-    (advice-add hook :after (lambda (&rest _) (org-save-all-org-buffers))))
-
-  ;; need this because syncing updates from cloud show categories as ???
-  (advice-add #'org-agenda-redo :after (lambda (&rest _) (org-element-cache-reset t)))
-
-  (with-eval-after-load 'evil
-    (evil-define-key 'emacs org-agenda-mode-map
-      "j" 'org-agenda-next-line
-      "k" 'org-agenda-previous-line
-      "x" 'org-agenda-bulk-action
-      "q" 'org-agenda-exit
-
-      "M-j" 'org-agenda-drag-line-forward
-      "M-k" 'org-agenda-drag-line-backward
-
-      "dd" 'org-agenda-kill
-      "dA" 'org-agenda-archive
-      )
-    )
-  )
-
-;; (use-package org-super-agenda
-;;   :after (org-agenda)
-;;   :config
-;;   (setq org-agenda-span 'day)
-;;   (setq org-agenda-time-grid '((daily) () "" ""))
-;;   (setq org-agenda-prefix-format
-;;         '(
-;;           (agenda . " %i %-12:c%?-12t ")
-;;           (todo . " %i %-12:c")
-;;           (tags . " %i %-12:c")
-;;           (search . " %i %-12:c")
-;;           ))
-;;   (setq org-super-agenda-groups
-;;         '(
-;;           (:name "Habits" :and(:category "habits" :todo "TODO")) ;; warning
-;;           (:name "Today" :time-grid t)
-;;           (:name "Emacs" :tag "emacs")
-;;           (:name "Shopping" :tag "shopping")
-;;           (:name "Others" :todo "TODO")
-;;           ))
-;;   (setq org-super-agenda-header-map (make-sparse-keymap))
-;;   (org-super-agenda-mode 1)
-;;   )
-#+end_src
-
 * Eldoc
 #+begin_src emacs-lisp
 (use-package eldoc
@@ -1688,6 +1600,7 @@ targets."
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
           (go "https://github.com/tree-sitter/tree-sitter-go")
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
+          (gowork "https://github.com/omertuc/tree-sitter-go-work")
           (heex "https://github.com/phoenixframework/tree-sitter-heex")
           (java "https://github.com/tree-sitter/tree-sitter-java")
           (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
@@ -2033,53 +1946,43 @@ for all languages configured in `treesit-language-source-alist'."
   :commands jtsx-install-treesit-language
   :custom
   ;; (js-chain-indent t)
-  ;; (js-indent-level 2)
-  ;; (typescript-ts-mode-indent-offset 2)
+  (js-indent-level 2)
+  (typescript-ts-mode-indent-offset 2)
   (jtsx-enable-jsx-element-tags-auto-sync t)
   (jtsx-indent-statement-block-regarding-standalone-parent t)
-  ;; :preface
-  ;; (defun +jsx-comment-or-uncomment-region (beg end)
-  ;;   (cond
-  ;;    ((jtsx-jsx-attribute-context-p)
-  ;;     (let* ((comment-start "/* ")
-  ;;            (comment-end " */")
-  ;;            (comment-use-syntax nil)
-  ;;            (comment-start-skip "\\(?:/\\*+\\)\\s-*")
-  ;;            (comment-end-skip "\\s-*\\(\\*+/\\)"))
-  ;;       (evilnc-comment-or-uncomment-region-internal beg end)))
-  ;;    ((jtsx-jsx-context-p)
-  ;;     (let* ((comment-start "{/* ")
-  ;;            (comment-end " */}")
-  ;;            (comment-use-syntax nil)
-  ;;            (comment-start-skip "\\(?:{?/\\*+\\)\\s-*")
-  ;;            (comment-end-skip "\\s-*\\(\\*+/}?\\)"))
-  ;;       (evilnc-comment-or-uncomment-region-internal beg end)))
-  ;;    (t (evilnc-comment-or-uncomment-region-internal beg end))))
-
-  ;; (defun jsx-jump-item ()
-  ;;   "Smart jumping using jtsx for JSX tags, evil-jump-item for braces and JS expressions."
-  ;;   (interactive)
-  ;;   (if (and (jtsx-jsx-context-p)
-  ;;            (not (jtsx-js-nested-in-jsx-context-p))
-  ;;            (not (memq (char-after) '(?{ ?})))
-  ;;            (not (memq (char-before) '(?{ ?}))))
-  ;;       (jtsx-jump-jsx-element-tag-dwim)
-  ;;     (evil-jump-item)))
+  :preface
+  (defun +jtsx-evilnc-comment (beg end)
+    "Wrapper to make `jtsx-comment-dwim' work with `evil-nerd-commenter'."
+    (let ((mark-active t))
+      (save-excursion
+        (goto-char beg)
+        (set-mark (point))
+        (goto-char end)
+        (jtsx-comment-dwim nil))))
   :hook
-  ;; ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
-  ;;                                                         (setq-local evilnc-comment-or-uncomment-region-function '+jsx-comment-or-uncomment-region)))
+  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
+                                                          (setq-local evilnc-comment-or-uncomment-region-function '+jtsx-evilnc-comment)))
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
                                                           (+add-pairs '((?` . ?`)))))
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . lsp-deferred)
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . apheleia-mode)
-  ;; :general
-  ;; (:states '(normal visual)
-  ;;          :keymaps 'jtsx-tsx-mode-map
-  ;;          "%" #'jsx-jump-item)
+  :config
+  (defun evilmi-jsx-get-tag ()
+    '("jsx"))
+
+  (defun evilmi-jsx-jump (info num)
+    (jtsx-jump-jsx-element-tag-dwim))
+
+  (evilmi-load-plugin-rules '(jtsx-tsx-mode jtsx-jsx-mode) '(simple javascript jsx))
+  (evilmi-load-plugin-rules '(jtsx-typescript-mode) '(simple javascript html))
   )
 
-(use-package web-mode
+(use-package html-ts-mode
   :mode "\\.[px]?html?\\'"
+  :ensure nil)
+
+(use-package web-mode
+  ;; :mode "\\.[px]?html?\\'"
   :init
   (setq web-mode-enable-html-entities-fontification t)
   (setq web-mode-markup-indent-offset 2)
@@ -2152,186 +2055,6 @@ for all languages configured in `treesit-language-source-alist'."
 
 (use-package ruby-end
   :after (ruby-ts-mode))
-
-;; (use-package rspec-mode
-;;   :mode ("/\\.rspec\\'" . text-mode))
-
-#+end_src
-** Rails
-#+begin_src emacs-lisp
-
-;; (defvar rails-command-prefix "bundle exec rails")
-
-;; (defvar rails-generators
-;;   '(("assets" (("app/assets/"
-;;                 "app/assets/\\(?:stylesheets\\|javascripts\\)/\\(.+?\\)\\..+$")))
-;;     ("controller" (("app/controllers/" "app/controllers/\\(.+\\)_controller\\.rb$")))
-;;     ("generator" (("lib/generator/" "lib/generators/\\(.+\\)$")))
-;;     ("helper" (("app/helpers/" "app/helpers/\\(.+\\)_helper.rb$")))
-;;     ("integration_test" (("test/integration/" "test/integration/\\(.+\\)_test\\.rb$")))
-;;     ("job" (("app/jobs/" "app/jobs/\\(.+\\)_job\\.rb$")))
-;;     ("mailer" (("app/mailers/" "app/mailers/\\(.+\\)\\.rb$")))
-;;     ("migration" (("db/migrate/" "db/migrate/[0-9]+_\\(.+\\)\\.rb$")))
-;;     ("model" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
-;;     ("resource" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
-;;     ("scaffold" (("app/models/" "app/models/\\(.+\\)\\.rb$")))
-;;     ("task" (("lib/tasks/" "lib/tasks/\\(.+\\)\\.rake$")))))
-
-;; (defun rails-generate ()
-;;   "Execute Rails generate COMMAND with input completion."
-;;   (interactive)
-;;   (let ((default-directory (project-root (project-current t))))
-;;     (async-shell-command (rails-command-with-completion " generate "))))
-
-;; (defun rails-destroy ()
-;;   "Execute Rails destroy COMMAND with input completion."
-;;   (interactive)
-;;   (let ((default-directory (project-root (project-current t))))
-;;     (async-shell-command (rails-command-with-completion " destroy "))))
-
-;; (defun rails-command-with-completion (command)
-;;   "Build Rails command from COMMAND with input completion."
-;;   (let ((keymap (copy-keymap minibuffer-local-map))
-;;         (command-prefix (concat rails-command-prefix command)))
-;;     (define-key keymap (kbd "<tab>") 'rails--completion-in-region)
-;;     (concat command-prefix (read-from-minibuffer command-prefix nil keymap))))
-
-;; (defun rails--completion-in-region ()
-;;   "Apply Rails generators for text completion in region."
-;;   (interactive)
-;;   (let ((generators (--map (concat (car it) " ") rails-generators)))
-;;     (when (<= (minibuffer-prompt-end) (point))
-;;       (completion-in-region (minibuffer-prompt-end) (point-max)
-;;                             generators))))
-
-;; (defun rails-server ()
-;;   "Run rails server command."
-;;   (interactive)
-;;   (let ((default-directory (project-root (project-current t))))
-;;     (async-shell-command (concat rails-command-prefix " server"))))
-
-;; (defun rails-console ()
-;;   "Start a rails console at project root."
-;;   (interactive)
-;;   (inf-ruby-console-rails (project-root (project-current t))))
-
-;; (defun project-find-file-in-dir (dir)
-;;   "Visit a file (with completion) in the current project.
-;; The filename at point (determined by `thing-at-point'), if any,
-;; is available as part of \"future history\"."
-;;   (interactive)
-;;   (let* ((pr (project-current t))
-;;          (dirs (list (expand-file-name dir (project-root pr)))))
-;;     (project-find-file-in (thing-at-point 'filename) dirs pr)))
-
-;; (defun rails-find-controller ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/controllers/"))
-
-;; ;; refactor to macro?
-;; (defun rails-find-model ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/models/"))
-
-;; (defun rails-find-view ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/views/"))
-
-;; (defun rails-find-helper ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/helpers/"))
-
-;; (defun rails-find-test ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/tests/"))
-
-;; (defun rails-find-javascript ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/javascript/"))
-
-;; (defun rails-find-job ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/jobs/"))
-
-;; (defun rails-find-mailer ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/mailers/"))
-
-;; ;; non macro
-;; (defun rails-find-spec ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/spec/"))
-
-;; (defun rails-find-migration ()
-;;   (interactive)
-;;   (project-find-file-in-dir "db/migrate/"))
-
-;; (defun rails-find-stylesheet ()
-;;   (interactive)
-;;   (project-find-file-in-dir "app/assets/stylesheets/"))
-
-;; (defun rails-find-initializer ()
-;;   (interactive)
-;;   (project-find-file-in-dir "config/initializers/"))
-
-;; (defun rails-find-locale ()
-;;   (interactive)
-;;   (project-find-file-in-dir "config/locales/"))
-
-;; (defvar rails-command-map
-;;   (let ((map (make-sparse-keymap)))
-;;     (define-key map (kbd "a") 'rails-find-locale)
-;;     (define-key map (kbd "b") 'rails-find-job)
-;;     (define-key map (kbd "c") 'rails-find-controller)
-;;     (define-key map (kbd "d") 'rails-destroy)
-;;     (define-key map (kbd "g") 'rails-generate)
-;;     (define-key map (kbd "h") 'rails-find-helper)
-;;     (define-key map (kbd "i") 'rails-find-initializer)
-;;     (define-key map (kbd "j") 'rails-find-javascript)
-;;     (define-key map (kbd "m") 'rails-find-model)
-;;     (define-key map (kbd "n") 'rails-find-migration)
-;;     (define-key map (kbd "p") 'rails-find-spec)
-;;     (define-key map (kbd "r") 'rails-console)
-;;     (define-key map (kbd "R") 'rails-server)
-;;     (define-key map (kbd "s") 'rails-find-stylesheet)
-;;     (define-key map (kbd "t") 'rails-find-test)
-;;     (define-key map (kbd "u") 'rails-find-fixture)
-;;     (define-key map (kbd "v") 'rails-find-view)
-;;     (define-key map (kbd "w") 'rails-find-component)
-;;     (define-key map (kbd "@") 'rails-find-mailer)
-;;     map)
-;;   "Keymap after `rails-keymap-prefix'.")
-;; (fset 'rails-command-map rails-command-map)
-#+end_src
-** Java
-#+begin_src emacs-lisp
-
-;; (use-package lsp-java
-;;   :preface
-;;   (defun +java-mode-setup ()
-;;     (setq tab-width 4)
-;;     (add-hook 'before-save-hook 'lsp-format-buffer nil t)
-;;     (setq-local lsp-enable-snippet nil)
-;;     )
-;;   :init
-;;   (setq lsp-java-save-actions-organize-imports t)
-;;   (setq lsp-java-completion-max-results 10)
-;;   (setq lsp-java-vmargs '("-XX:+UseParallelGC" "-XX:GCTimeRatio=4" "-XX:AdaptiveSizePolicyWeight=90" "-Dsun.zip.disableMemoryMapping=true" "-Xmx2G" "-Xms100m"))
-;;   :config
-;;   (require 'lsp-java-boot)
-
-;;   ;; workaround completions not showing up after .
-;;   ;; (advice-add 'lsp-completion--looking-back-trigger-characterp :around
-;;   ;;             (defun lsp-completion--looking-back-trigger-characterp@fix-dart-trigger-characters (orig-fn trigger-characters)
-;;   ;;               (funcall orig-fn
-;;   ;;                        (if (and (derived-mode-p 'java-ts-mode) (not trigger-characters))
-;;   ;;                            ["."]
-;;   ;;                          trigger-characters))))
-;;   :hook
-;;   (conf-javaprop-mode . lsp-deferred)
-;;   ((java-mode java-ts-mode) . lsp-deferred)
-;;   ((java-mode java-ts-mode) . +java-mode-setup))
-
 
 #+end_src
 ** Flutter
@@ -2446,6 +2169,10 @@ for all languages configured in `treesit-language-source-alist'."
   :hook
   (emacs-lisp-mode . eros-mode))
 
+(use-package elisp-def
+  :hook
+  (emacs-lisp-mode . elisp-def-mode))
+
 #+end_src
 ** Markdown
 #+begin_src emacs-lisp
@@ -2456,7 +2183,7 @@ for all languages configured in `treesit-language-source-alist'."
   (markdown-mode . apheleia-mode)
   :custom
   (markdown-command "multimarkdown")
-  (markdown-asymmetric-header t)
+  (markdown-header-scaling t)
   (markdown-fontify-whole-heading-line t)
   (markdown-fontify-code-blocks-natively t)
   (markdown-mouse-follow-link nil)
@@ -2510,12 +2237,15 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package dockerfile-ts-mode
   :ensure nil
   :mode "[/\\]\\(?:Containerfile\\|Dockerfile\\)\\(?:\\.[^/\\]*\\)?\\'"
+  :preface
+  (defun +dockerfile-ts-mode-setup ()
+    (add-hook 'before-save-hook 'lsp-format-buffer nil t))
   :hook
+  (dockerfile-ts-mode . +dockerfile-ts-mode-setup)
   (dockerfile-ts-mode . lsp-deferred))
 #+end_src
 ** Others
 #+begin_src emacs-lisp
-
 (use-package bazel
   :mode ("\\Tiltfile\\'" . bazel-starlark-mode))
 
@@ -2615,44 +2345,14 @@ for all languages configured in `treesit-language-source-alist'."
   (compilation-filter . comint-truncate-buffer)
   (compilation-filter . ansi-color-compilation-filter)
   (shell-command-mode . compilation-shell-minor-mode)
-  :bind
-  ("M-o" . project-or-cwd-compile-from-history)
-  ("M-O" . compile-in-dir)
   :general
   (leader-def
-    "!" 'project-or-cwd-compile
-    "pc" 'project-or-cwd-compile
+    "@" #'compile-region
     "pt" #'project-test-project
     "pg" #'project-configure-project
     "pR" #'project-run-project
     )
   )
-
-(defvar project-compile-history-alist nil
-  "Alist of project roots to their compile histories.")
-
-(defun get-project-compile-history ()
-  "Get compile history for current project."
-  (let* ((project (project-current))
-         (project-root (when project (project-root project)))
-         (history-key (or project-root default-directory)))
-    (alist-get history-key project-compile-history-alist nil nil #'string=)))
-
-(defun save-project-compile-history (history)
-  "Save compile history for current project."
-  (let* ((project (project-current))
-         (project-root (when project (project-root project)))
-         (history-key (or project-root default-directory)))
-    (setf (alist-get history-key project-compile-history-alist nil nil #'string=)
-          history)))
-
-(defun project-compile-read-command (orig-fun &rest args)
-  "Advice to use project-specific compile history."
-  (let ((compile-history (get-project-compile-history)))
-    (prog1 (apply orig-fun args)
-      (save-project-compile-history compile-history))))
-
-(advice-add 'compilation-read-command :around #'project-compile-read-command)
 
 (defun compile-region (start end)
   "Send region from START to END to `compile'and display the result."
@@ -2661,63 +2361,6 @@ for all languages configured in `treesit-language-source-alist'."
     (user-error "No region"))
   (let ((cmd (string-trim (buffer-substring-no-properties start end))))
     (compile cmd)))
-
-(defun project-or-cwd-compile-from-history ()
-  "Run `compile' with a choice from compile history or project's compile history."
-  (interactive)
-  (let ((project (project-current)))
-    (if project
-        (project-compile-from-history)
-      (compile-from-history))))
-
-(defun compile-from-history ()
-  "Run `compile' with a choice from compile history."
-  (interactive)
-  (let* ((initial-text (when (use-region-p)
-                         (string-trim (buffer-substring-no-properties (region-beginning) (region-end)))))
-         (command (completing-read
-                   (format-message "Compile command in `%s': " (abbreviate-file-name default-directory))
-                   compile-history nil nil initial-text 'compile-history)))
-    (when (and command (not (string-empty-p command)))
-      (compile command))))
-
-(defun project-compile-from-history ()
-  "Run `compile' with a choice from project's compile history."
-  (interactive)
-  (let* ((project-history (get-project-compile-history))
-         (project (project-current))
-         (compile-dir (when project (project-root project)))
-         (compilation-buffer-name-function project-compilation-buffer-name-function)
-         (initial-text (when (use-region-p)
-                         (string-trim (buffer-substring-no-properties (region-beginning) (region-end)))))
-         (command (completing-read
-                   (format-message "Compile command in `%s': " (abbreviate-file-name compile-dir))
-                   (or project-history '()) nil nil initial-text 'compile-history)))
-    (when (and command (not (string-empty-p command)))
-      (compile-in-dir compile-dir command)
-      (let ((updated-history (cons command (remove command (or project-history '())))))
-        (save-project-compile-history updated-history)))))
-
-(defun compile-in-dir (dir &optional command)
-  "Run `compile' in the selected directory."
-  (interactive "DCompile in: ")
-  (let ((default-directory dir))
-    (if command
-        (compile command)
-      (call-interactively #'compile))))
-
-(defun project-or-cwd-compile (&optional command)
-  "Run `compile' in the current project's root directory or current working directory."
-  (interactive)
-  (let* ((project-history (get-project-compile-history))
-         (project (project-current))
-         (compilation-buffer-name-function (if project project-compilation-buffer-name-function compilation-buffer-name-function))
-         (compile-dir (if project (project-root project) default-directory)))
-    (compile-in-dir compile-dir command)
-    (when project
-      (let ((updated-history (cons command (remove command (or project-history '())))))
-        (save-project-compile-history updated-history))))
-  )
 
 (defmacro define-project-command (name variable docstring)
   "Define a function to run a preconfigured command in project root.
@@ -2743,87 +2386,37 @@ DOCSTRING describes what the command does."
 (define-project-command run project-run-command "run")
 (define-project-command configure project-configure-command "configure")
 
+(use-package compile-pro
+  :load-path "~/code/compile-pro"
+  :bind
+  ("M-o" . compile-pro-compile-from-history)
+  ("M-O" . compile-pro-compile-in-dir)
+  :general
+  (leader-def
+    "!" 'compile-pro-compile
+    "pc" 'compile-pro-compile
+    )
+  )
 
 #+end_src
 * Shell
 #+begin_src emacs-lisp
-
 (use-package fish-completion
   :if (executable-find "fish")
   :custom
-  (fish-completion-fallback-on-bash-p t)
   (fish-completion-inhibit-missing-fish-command-warning t)
   :hook
-  (minibuffer-setup . fish-completion-mode)
+  (minibuffer-setup . (lambda ()
+                        (when (memq this-command '(compile compile-pro-compile))
+                          (fish-completion-mode 1))))
   (eshell-mode . fish-completion-mode))
-
-;; (use-package shell-command-pro
-;;   :load-path "~/code/shell-command-pro"
-;;   :commands (compile-in-dir compile-from-history
-;;                             async-shell-command-in-dir async-shell-command-from-history
-;;                             project-or-cwd-async-shell-command project-or-cwd-async-shell-command-from-history
-;;                             project-run-project project-or-cwd-compile project-or-cwd-compile-from-history)
-;;   :preface
-;;   (defun +project-or-cwd-default-directory ()
-;;     (let ((project (project-current)))
-;;       (if project
-;;           (project-root (project-current t))
-;;         default-directory)))
-
-;;   (defun project-or-cwd-compile (&optional command)
-;;     "Run `compile' in the current project's root directory."
-;;     (declare (interactive-only compile))
-;;     (interactive)
-;;     (compile-in-dir (+project-or-cwd-default-directory) command))
-
-;;   (defun project-or-cwd-compile-from-history ()
-;;     "Run `compile' with a choice from its command history in
-;; current project's root directory."
-;;     (interactive)
-;;     (let ((default-directory (+project-or-cwd-default-directory)))
-;;       (call-interactively #'compile-from-history)))
-
-;;   (defun project-or-cwd-async-shell-command (&optional command)
-;;     "Run `async-shell-command' in the current project's root directory or in the current directory."
-;;     (declare (interactive-only async-shell-command))
-;;     (interactive)
-;;     (async-shell-command-in-dir (+project-or-cwd-default-directory) command))
-
-;;   (defun project-or-cwd-async-shell-command-from-history ()
-;;     "Run `async-shell-command' with a choice from its command history in
-;; current project's root directory."
-;;     (interactive)
-;;     (let ((default-directory (+project-or-cwd-default-directory)))
-;;       (call-interactively #'async-shell-command-from-history)))
-
-;;   :bind
-;;   ("M-r" . project-or-cwd-async-shell-command-from-history)
-;;   ("M-o" . project-or-cwd-compile-from-history)
-;;   ("M-O" . project-or-cwd-compile)
-;;   ("M-*" . compile-in-dir)
-;;   :general
-;;   (leader-def
-;;     "p!" 'project-or-cwd-async-shell-command-from-history
-;;     "pc" 'project-or-cwd-compile-from-history)
-;;   )
 
 (use-package shell
   :ensure nil
-  :bind
-  ([remap shell-command-on-region] . async-shell-command-region)
-  :init
-  (setq async-shell-command-display-buffer nil)
-  (setq async-shell-command-buffer 'new-buffer)
-  (setq shell-command-prompt-show-cwd t)
-  :preface
-  (defun async-shell-command-region (start end)
-    "Send region from START to END to `async-shell-command'and display the result."
-    (interactive "r")
-    (unless (region-active-p)
-      (user-error "No region"))
-    (let ((cmd (string-trim (buffer-substring-no-properties start end))))
-      (async-shell-command cmd)))
-  )
+  :custom
+  (async-shell-command-display-buffer nil)
+  (async-shell-command-buffer 'new-buffer)
+  (shell-command-prompt-show-cwd t))
 
 (use-package shell-command-x
   :after shell
@@ -2974,24 +2567,24 @@ DOCSTRING describes what the command does."
 #+end_src
 * Diff
 #+begin_src emacs-lisp
-(use-package ediff
-  :ensure nil
-  :defer t
-  :init
-  ;; These need to be set before ediff loads
-  (setq ediff-diff-options "-w"
-        ediff-split-window-function #'split-window-horizontally
-        ediff-window-setup-function #'ediff-setup-windows-plain)
-  :config
-  (defvar +ediff-saved-wconf nil)
-  (add-hook 'ediff-before-setup-hook
-            (lambda ()
-              (setq +ediff-saved-wconf (current-window-configuration))))
-  (defun +ediff-restore-wconf-h ()
-    (when (window-configuration-p +ediff-saved-wconf)
-      (set-window-configuration +ediff-saved-wconf)))
-  (add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
-  (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h))
+;; (use-package ediff
+;;   :ensure nil
+;;   :defer t
+;;   :init
+;;   ;; These need to be set before ediff loads
+;;   (setq ediff-diff-options "-w"
+;;         ediff-split-window-function #'split-window-horizontally
+;;         ediff-window-setup-function #'ediff-setup-windows-plain)
+;;   :config
+;;   (defvar +ediff-saved-wconf nil)
+;;   (add-hook 'ediff-before-setup-hook
+;;             (lambda ()
+;;               (setq +ediff-saved-wconf (current-window-configuration))))
+;;   (defun +ediff-restore-wconf-h ()
+;;     (when (window-configuration-p +ediff-saved-wconf)
+;;       (set-window-configuration +ediff-saved-wconf)))
+;;   (add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
+;;   (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h))
 #+end_src
 * Search
 #+begin_src emacs-lisp
@@ -3047,24 +2640,23 @@ DOCSTRING describes what the command does."
 #+end_src
 * Http
 #+begin_src emacs-lisp
-;; (use-package verb
-;;   :after org
-;;   :custom
-;;   (verb-auto-kill-response-buffers t)
-;;   (verb-json-use-mode 'json-ts-mode)
-;;   :config
-;;   (org-babel-do-load-languages 'org-babel-load-languages
-;;                                (append org-babel-load-languages
-;;                                        '((verb     . t))))
-;;   (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
-;;   :general-config
-;;   (leader-def
-;;    :keymaps 'org-mode-map
-;;    "vh" 'verb-show-vars
-;;    "vs" 'verb-set-var
-;;    "vu" 'verb-unset-var
-;;    "vv" 'verb-send-request-on-point-other-window-stay)
-;;   )
+(use-package verb
+  :after org
+  :custom
+  (verb-auto-kill-response-buffers t)
+  (verb-json-use-mode 'json-ts-mode)
+  :config
+  (org-babel-do-load-languages 'org-babel-load-languages
+                               (append org-babel-load-languages
+                                       '((verb     . t))))
+  (add-to-list 'org-structure-template-alist '("vb" . "src verb :wrap src ob-verb-response :op send get-body"))
+  :general
+  (leader-def
+   :keymaps 'org-mode-map
+   "vh" 'verb-show-vars
+   "vs" 'verb-set-var
+   "vu" 'verb-unset-var
+   "vv" 'verb-send-request-on-point-other-window-stay))
 #+end_src
 * DirConfig
 #+begin_src emacs-lisp
@@ -3087,17 +2679,30 @@ DOCSTRING describes what the command does."
     "Place the agent-shell buffer in the side window."
     (display-buffer-in-side-window
      buffer '((side . right)
-              (slot . 0)
               (dedicated . t)
-              (window-width . 0.45)
+              (window-width . 0.4)
               (window-parameters . (no-delete-other-windows . t))))
     )
-  :config
-  (setq agent-shell-qwen-authentication (agent-shell-qwen-make-authentication :login t))
-  (setq agent-shell-display-action '(+agent-shell-buffer-side-window))
+  :custom
+  ;; (agent-shell-prefer-viewport-interaction t)
+  (agent-shell-display-action '+agent-shell-buffer-side-window)
   :general
   (leader-def
     "ag" 'agent-shell)
+  (:states '(normal insert)
+           :keymaps 'agent-shell-mode-map
+           "M-<return>" 'comint-send-input
+           "C-p" 'agent-shell-previous-item
+           "C-n" 'agent-shell-next-item
+           "TAB" 'agent-shell-ui-toggle-fragment-at-point
+           )
+  (:states '(insert)
+           :keymaps 'agent-shell-mode-map
+           "RET" 'agent-shell-newline)
+  :hook
+  (diff-mode . (lambda ()
+                 (when (string-match-p "\\*agent-shell-diff\\*" (buffer-name))
+                   (evil-emacs-state))))
   )
 
 #+end_src
