@@ -17,23 +17,25 @@
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
       environment.systemPackages =
-        [ pkgs.git
-          pkgs.neovim
-	  pkgs.fd
-	  pkgs.ripgrep
-	  pkgs.tree-sitter
-	  pkgs.colima
-	  pkgs.docker-client
+          [
+            pkgs.git
+            pkgs.neovim
+            pkgs.fd
+            pkgs.ripgrep
+            pkgs.tree-sitter
+            pkgs.colima
+            pkgs.docker-client
 
-          pkgs.ghostty-bin
-	  pkgs.stats
-          pkgs.raycast
-          pkgs.brave
-	  pkgs.dbeaver-bin
-	  pkgs.vscodium
+            pkgs.emacs
+            pkgs.ghostty-bin
+            pkgs.stats
+            pkgs.raycast
+            pkgs.brave
+            pkgs.dbeaver-bin
+            pkgs.vscodium
 
-	  pkgs.teams
-        ];
+            pkgs.teams
+          ];
 
       # Necessary for using flakes on this system.
       nix.settings.experimental-features = "nix-command flakes";
@@ -55,7 +57,8 @@
 
       fonts.packages = with pkgs; [
         nerd-fonts.jetbrains-mono
-	inter
+        nerd-fonts.symbols-only
+        inter
       ];
     };
   in
@@ -63,9 +66,9 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#Akis-MacBook-Air
     darwinConfigurations."Akis-MacBook-Air" = nix-darwin.lib.darwinSystem {
-      modules = [ 
-        configuration 
-	./brew.nix
+      modules = [
+        configuration
+        ./brew.nix
       ];
     };
   };
