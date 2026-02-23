@@ -1,0 +1,6 @@
+.cfg
+
+.fvm
+.dir-locals.el
+.dir-config.el
+.agent-shell

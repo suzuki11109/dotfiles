@@ -1,0 +1,25 @@
+[user]
+	name = Aki Suzuki
+	email = suzuki11109@gmail.com
+[init]
+	defaultBranch = main
+[core]
+	excludesfile = ~/.gitignore
+[status]
+	showUntrackedFiles = all
+[rebase]
+	autoStash = true
+[push]
+	autoSetupRemote = true
+	followTags = true
+[pull]
+	rebase = true
+[fetch]
+	prune = true
+	pruneTags = true
+	all = true
+[diff]
+	algorithm = histogram
+	colorMoved = plain
+[github]
+	user = suzuki11109
