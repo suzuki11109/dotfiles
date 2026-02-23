@@ -1421,6 +1421,7 @@ targets."
           (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
+          (nix "https://github.com/nix-community/tree-sitter-nix")
           (python "https://github.com/tree-sitter/tree-sitter-python")
           (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
@@ -1950,6 +1951,9 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package elisp-def
   :hook
   (emacs-lisp-mode . elisp-def-mode))
+
+(use-package nix-ts-mode
+ :mode "\\.nix\\'")
 
 (use-package markdown-mode
   :ensure nil
