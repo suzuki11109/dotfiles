@@ -1,0 +1,9 @@
+font-family = JetBrains Mono
+font-feature = -calt
+adjust-cell-height = 5
+theme = Catppuccin Mocha
+cursor-invert-fg-bg = true
+cursor-style = block
+cursor-style-blink = false
+shell-integration-features = no-cursor
+maximize = true
