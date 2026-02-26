@@ -23,3 +23,6 @@
 	colorMoved = plain
 [github]
 	user = suzuki11109
+
+[includeIf "gitdir:~/code/xspring/"]
+	path = ~/.gitconfig-work

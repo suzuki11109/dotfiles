@@ -21,3 +21,5 @@ export ANDROID_SDK_ROOT=$HOME/Library/Android/sdk
 export KUBECONFIG=$HOME/.kube/config
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export PATH="$PATH:/Users/aki/.lmstudio/bin"
+
+[ -f ~/.zprofile.local ] && source ~/.zprofile.local
