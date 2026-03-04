@@ -22,9 +22,15 @@
             pkgs.neovim
             pkgs.fd
             pkgs.ripgrep
+            pkgs.cmake
             pkgs.tree-sitter
             pkgs.colima
             pkgs.docker-client
+            pkgs.kubecolor
+            pkgs.kubectx
+            pkgs.pnpm
+            pkgs.python314
+            pkgs.go_1_24
 
             pkgs.emacs
             pkgs.ghostty-bin
@@ -34,6 +40,7 @@
             pkgs.dbeaver-bin
             pkgs.vscodium
 
+            pkgs.google-chrome
             pkgs.teams
           ];
 
@@ -59,6 +66,7 @@
         nerd-fonts.jetbrains-mono
         nerd-fonts.symbols-only
         inter
+        iosevka
       ];
     };
   in
