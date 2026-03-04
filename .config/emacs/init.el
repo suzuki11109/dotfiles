@@ -292,6 +292,7 @@
                          (set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
                          (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
                          (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family) :height 0.9)
+                         (set-face-attribute 'org-modern-symbol nil :family "Iosevka")
                          (set-fontset-font t 'symbol (font-spec :family "Apple Color Emoji"))
                          ))
   )
@@ -1327,7 +1328,7 @@ targets."
     ;; Ensure that anything that should be fixed-pitch in Org files appears that way
     (dolist (face '(org-table org-tag org-verbatim org-list-dt org-hide
                               org-date org-todo org-done org-formula
-                              org-checkbox org-special-keyword org-modern-symbol))
+                              org-checkbox org-special-keyword))
       (set-face-attribute face nil :inherit 'fixed-pitch))
     (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
     (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
