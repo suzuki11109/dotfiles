@@ -1259,8 +1259,8 @@ targets."
   (define-key yas-keymap [(tab)] nil)
   (define-key yas-keymap (kbd "TAB") nil)
   (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
-  (add-hook 'yas-before-expand-snippet-hook #'evil-insert-state)
-  (add-hook 'yas-after-exit-snippet-hook    #'evil-force-normal-state)
+  ;; (add-hook 'yas-before-expand-snippet-hook #'evil-insert-state)
+  ;; (add-hook 'yas-after-exit-snippet-hook    #'evil-force-normal-state)
   )
 
 (use-package yasnippet-capf
