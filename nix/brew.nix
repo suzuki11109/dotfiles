@@ -7,10 +7,12 @@
     ];
 
     casks = [
+      "font-sf-pro"
       "hyperkey"
 
       "discord"
       "gather"
+      "microsoft-teams"
     ];
   };
 }

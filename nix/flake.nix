@@ -41,7 +41,6 @@
             pkgs.vscodium
 
             pkgs.google-chrome
-            pkgs.teams
           ];
 
       # Necessary for using flakes on this system.
