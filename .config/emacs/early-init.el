@@ -4,8 +4,8 @@
 ;;; Code:
 
 (setq gc-cons-threshold most-positive-fixnum)
-(setq gc-cons-percentage 0.2)
-(setq read-process-output-max (* 1024 1024))
+(setq gc-cons-percentage 0.3)
+(setq read-process-output-max (* 3 1024 1024))
 
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (let ((old-file-name-handler-alist file-name-handler-alist))
@@ -43,16 +43,17 @@
 (setq bidi-inhibit-bpa t)
 
 (push '(fullscreen . maximized) default-frame-alist)
-;; (push '(background-color . "#1e1e2e") default-frame-alist)
 (push '(ns-transparent-titlebar . t) default-frame-alist)
 (push '(ns-appearance . dark) default-frame-alist)
 
 (setq native-comp-async-report-warnings-errors 'silent)
+(setq native-comp-async-jobs-number 2)
 
 (setq command-line-x-option-alist nil)
 
 (setenv "LSP_USE_PLISTS" "true")
 
 (setq package-enable-at-startup nil)
+
 
 ;;; early-init.el ends here
