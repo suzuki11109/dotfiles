@@ -2,7 +2,6 @@
 
 ;;; Commentary:
 ;;; Code:
-
 (setq gc-cons-threshold most-positive-fixnum)
 (setq gc-cons-percentage 0.3)
 (setq read-process-output-max (* 3 1024 1024))

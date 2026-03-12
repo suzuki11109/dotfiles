@@ -2,6 +2,7 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
+** undo fu
 ** org notes solution (supertag, ekg, noter, roam)
 ** khoj
 ** consult-ripgrep then wgrep
@@ -15,7 +16,6 @@
 
 ;;; Commentary:
 ;;; Code:
-
 (setq gc-cons-threshold most-positive-fixnum)
 (setq gc-cons-percentage 0.3)
 (setq read-process-output-max (* 3 1024 1024))
@@ -802,11 +802,11 @@
 (setq find-program "fd")
 (setq frame-title-format
       (list
+       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
        '(:eval
          (let ((project (project-current)))
            (when project
-             (format "%s — " (project-name project)))))
-       '(buffer-file-name "%f" (dired-directory dired-directory "%b"))
+             (format " — %s" (project-name project)))))
        ))
 
 (use-package project
@@ -1530,13 +1530,6 @@ targets."
   :custom-face (org-indent ((t (:inherit fixed-pitch))))
   :hook
   (org-mode . org-indent-mode))
-
-(use-package evil-org
-  :after (org evil)
-  :config
-  (setf evil-org-key-theme '(textobjects insert navigation additional todo))
-  :hook
-  (org-mode . evil-org-mode))
 
 (use-package org-appear
   :custom
@@ -2387,7 +2380,7 @@ DOCSTRING describes what the command does."
        (defun ,func-name ()
          ,(format "Run the preconfigured %s command in project root." docstring)
          (interactive)
-         (if-let ((project (project-current)))
+         (if-let* ((project (project-current)))
              (let ((default-directory (project-root project))
                    (command (and (boundp ',variable)
                                  ,variable)))
@@ -2430,6 +2423,7 @@ DOCSTRING describes what the command does."
   :custom
   (async-shell-command-display-buffer nil)
   (async-shell-command-buffer 'new-buffer)
+  (shell-command-switch "-lc")
   (shell-command-prompt-show-cwd t))
 
 (use-package shell-command-x
@@ -2687,36 +2681,50 @@ DOCSTRING describes what the command does."
 #+end_src
 * AI
 #+begin_src emacs-lisp
-(use-package agent-shell
-  :preface
-  (defun +agent-shell-buffer-side-window (buffer alist)
-    "Place the agent-shell buffer in the side window."
-    (display-buffer-in-side-window
-     buffer '((side . right)
-              (dedicated . t)
-              (window-width . 0.4)
-              (window-parameters . (no-delete-other-windows . t))))
-    )
-  :custom
-  ;; (agent-shell-prefer-viewport-interaction t)
-  (agent-shell-display-action '+agent-shell-buffer-side-window)
+(use-package eca
+  ;; :custom-face
+  ;; (eca-chat-usage-string-face ((t (:family (face-attribute 'fixed-pitch :family) :height 1.0 :box (:line-width 4 :color "black")))))
   :general
   (leader-def
-    "ag" 'agent-shell)
+    "aa" 'eca
+    "ab" 'eca-chat-toggle-window)
   (:states '(normal insert)
-           :keymaps 'agent-shell-mode-map
-           "M-<return>" 'comint-send-input
-           "C-p" 'agent-shell-previous-item
-           "C-n" 'agent-shell-next-item
-           "TAB" 'agent-shell-ui-toggle-fragment-at-point
+           :keymaps 'eca-chat-mode-map
+           "<tab>" 'eca-chat-toggle-expandable-block
+
            )
-  (:states '(insert)
-           :keymaps 'agent-shell-mode-map
-           "RET" 'agent-shell-newline)
-  :hook
-  (diff-mode . (lambda ()
-                 (when (string-match-p "\\*agent-shell-diff\\*" (buffer-name))
-                   (evil-emacs-state))))
   )
+
+;; (use-package agent-shell
+;;   :preface
+;;   (defun +agent-shell-buffer-side-window (buffer alist)
+;;     "Place the agent-shell buffer in the side window."
+;;     (display-buffer-in-side-window
+;;      buffer '((side . right)
+;;               (dedicated . t)
+;;               (window-width . 0.4)
+;;               (window-parameters . (no-delete-other-windows . t))))
+;;     )
+;;   :custom
+;;   ;; (agent-shell-prefer-viewport-interaction t)
+;;   (agent-shell-display-action '+agent-shell-buffer-side-window)
+;;   :general
+;;   (leader-def
+;;     "ag" 'agent-shell)
+;;   (:states '(normal insert)
+;;            :keymaps 'agent-shell-mode-map
+;;            "M-<return>" 'comint-send-input
+;;            "C-p" 'agent-shell-previous-item
+;;            "C-n" 'agent-shell-next-item
+;;            "TAB" 'agent-shell-ui-toggle-fragment-at-point
+;;            )
+;;   (:states '(insert)
+;;            :keymaps 'agent-shell-mode-map
+;;            "RET" 'agent-shell-newline)
+;;   :hook
+;;   (diff-mode . (lambda ()
+;;                  (when (string-match-p "\\*agent-shell-diff\\*" (buffer-name))
+;;                    (evil-emacs-state))))
+;;   )
 
 #+end_src
