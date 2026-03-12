@@ -2682,49 +2682,21 @@ DOCSTRING describes what the command does."
 * AI
 #+begin_src emacs-lisp
 (use-package eca
-  ;; :custom-face
-  ;; (eca-chat-usage-string-face ((t (:family (face-attribute 'fixed-pitch :family) :height 1.0 :box (:line-width 4 :color "black")))))
+  :hook
+  (eca-chat-mode . (lambda ()
+                     (evil-insert-state)))
+  :custom
+  (eca-chat-expand-pending-approval-tools nil)
+  (eca-chat-window-width 0.45)
   :general
   (leader-def
     "aa" 'eca
+    "ak" 'eca-stop
     "ab" 'eca-chat-toggle-window)
-  (:states '(normal insert)
+  (:states '(normal)
            :keymaps 'eca-chat-mode-map
            "<tab>" 'eca-chat-toggle-expandable-block
-
            )
   )
-
-;; (use-package agent-shell
-;;   :preface
-;;   (defun +agent-shell-buffer-side-window (buffer alist)
-;;     "Place the agent-shell buffer in the side window."
-;;     (display-buffer-in-side-window
-;;      buffer '((side . right)
-;;               (dedicated . t)
-;;               (window-width . 0.4)
-;;               (window-parameters . (no-delete-other-windows . t))))
-;;     )
-;;   :custom
-;;   ;; (agent-shell-prefer-viewport-interaction t)
-;;   (agent-shell-display-action '+agent-shell-buffer-side-window)
-;;   :general
-;;   (leader-def
-;;     "ag" 'agent-shell)
-;;   (:states '(normal insert)
-;;            :keymaps 'agent-shell-mode-map
-;;            "M-<return>" 'comint-send-input
-;;            "C-p" 'agent-shell-previous-item
-;;            "C-n" 'agent-shell-next-item
-;;            "TAB" 'agent-shell-ui-toggle-fragment-at-point
-;;            )
-;;   (:states '(insert)
-;;            :keymaps 'agent-shell-mode-map
-;;            "RET" 'agent-shell-newline)
-;;   :hook
-;;   (diff-mode . (lambda ()
-;;                  (when (string-match-p "\\*agent-shell-diff\\*" (buffer-name))
-;;                    (evil-emacs-state))))
-;;   )
 
 #+end_src
