@@ -54,8 +54,3 @@ if [[ "$INSIDE_EMACS" = 'vterm' ]] \
   source ${EMACS_VTERM_PATH}/etc/emacs-vterm-zsh.sh
   source ~/.zprofile
 fi
-
-# Added by LM Studio CLI (lms)
-export PATH="$PATH:/Users/aki/.lmstudio/bin"
-# End of LM Studio CLI section
-
