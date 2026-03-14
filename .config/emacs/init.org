@@ -2,14 +2,10 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
-** undo fu
+** consult-ripgrep / wgrep
+** outline mode https://www.youtube.com/watch?v=Dkoy3NrLN9g
 ** org notes solution (supertag, ekg, noter, roam)
-** khoj
-** consult-ripgrep then wgrep
-** outline mode
-** smartparens
-** minor mode only under type of project (projection?)
-** project-rails
+** smartparens (rust?)
 * Early Init
 #+begin_src emacs-lisp :tangle early-init.el
 ;;; early-init.el --- early init -*- lexical-binding: t; no-byte-compile: t -*-
@@ -17,8 +13,8 @@
 ;;; Commentary:
 ;;; Code:
 (setq gc-cons-threshold most-positive-fixnum)
-(setq gc-cons-percentage 0.3)
-(setq read-process-output-max (* 3 1024 1024))
+(setq gc-cons-percentage 0.2)
+(setq read-process-output-max (* 1024 1024))
 
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (let ((old-file-name-handler-alist file-name-handler-alist))
@@ -42,12 +38,15 @@
 (setq initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
 
-(advice-add #'display-startup-echo-area-message :override #'ignore)
 (advice-add #'display-startup-screen :override #'ignore)
+(fset #'display-startup-echo-area-message #'ignore)
 
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
+(push '(horizontal-scroll-bars) default-frame-alist)
+(when (fboundp 'horizontal-scroll-bar-mode)
+  (horizontal-scroll-bar-mode -1))
 
 
 ;; Disable bidirectional text scanning
@@ -250,7 +249,7 @@
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
   (evil-select-search-module 'evil-search-module 'evil-search)
-  (evil-set-undo-system 'undo-redo)
+  (evil-set-undo-system 'undo-fu)
   (evil-define-key '(motion) 'global "j" 'evil-next-visual-line)
   (evil-define-key '(motion) 'global "k" 'evil-previous-visual-line)
   (define-key evil-motion-state-map (kbd ";") 'evil-ex)
@@ -405,18 +404,17 @@
 
 * Scrolling
 #+begin_src emacs-lisp
+(setq redisplay-skip-fontification-on-input t)
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
+(setq scroll-margin 1)
+(setq scroll-conservatively 101)
 (setq scroll-preserve-screen-position t)
-(setq scroll-conservatively 3)
+(pixel-scroll-precision-mode 1)
 
-(use-package ultra-scroll
-  :when (fboundp 'pixel-scroll-precision-mode)
-  :hook
-  (elpaca-after-init . ultra-scroll-mode)
-  :config
-  (add-hook 'ultra-scroll-hide-functions #'hl-todo-mode)
-  (add-hook 'ultra-scroll-hide-functions #'jit-lock-mode))
+;; (use-package ultra-scroll
+;;   :config
+;;   (ultra-scroll-mode 1))
 #+end_src
 * Lines
 #+begin_src emacs-lisp
@@ -788,6 +786,12 @@
 #+end_src
 * Undo
 #+begin_src emacs-lisp
+(use-package undo-fu
+  :init
+  (setq undo-limit (* 64 1024 1024))
+  (setq undo-strong-limit (* 96 1024 1024))
+  (setq undo-outer-limit (* 960 1024 1024)))
+
 (use-package undo-fu-session
   :custom
   (undo-fu-session-incompatible-files '("\\.gpg$" "/COMMIT_EDITMSG\\'" "/git-rebase-todo\\'"))

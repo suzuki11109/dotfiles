@@ -3,8 +3,8 @@
 ;;; Commentary:
 ;;; Code:
 (setq gc-cons-threshold most-positive-fixnum)
-(setq gc-cons-percentage 0.3)
-(setq read-process-output-max (* 3 1024 1024))
+(setq gc-cons-percentage 0.2)
+(setq read-process-output-max (* 1024 1024))
 
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (let ((old-file-name-handler-alist file-name-handler-alist))
@@ -28,12 +28,15 @@
 (setq initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
 
-(advice-add #'display-startup-echo-area-message :override #'ignore)
 (advice-add #'display-startup-screen :override #'ignore)
+(fset #'display-startup-echo-area-message #'ignore)
 
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
+(push '(horizontal-scroll-bars) default-frame-alist)
+(when (fboundp 'horizontal-scroll-bar-mode)
+  (horizontal-scroll-bar-mode -1))
 
 
 ;; Disable bidirectional text scanning

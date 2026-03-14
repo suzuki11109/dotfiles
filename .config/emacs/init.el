@@ -159,7 +159,7 @@
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
   (evil-select-search-module 'evil-search-module 'evil-search)
-  (evil-set-undo-system 'undo-redo)
+  (evil-set-undo-system 'undo-fu)
   (evil-define-key '(motion) 'global "j" 'evil-next-visual-line)
   (evil-define-key '(motion) 'global "k" 'evil-previous-visual-line)
   (define-key evil-motion-state-map (kbd ";") 'evil-ex)
@@ -306,18 +306,17 @@
 (use-package nerd-icons
   :defer t)
 
+(setq redisplay-skip-fontification-on-input t)
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
+(setq scroll-margin 1)
+(setq scroll-conservatively 101)
 (setq scroll-preserve-screen-position t)
-(setq scroll-conservatively 3)
+(pixel-scroll-precision-mode 1)
 
-(use-package ultra-scroll
-  :when (fboundp 'pixel-scroll-precision-mode)
-  :hook
-  (elpaca-after-init . ultra-scroll-mode)
-  :config
-  (add-hook 'ultra-scroll-hide-functions #'hl-todo-mode)
-  (add-hook 'ultra-scroll-hide-functions #'jit-lock-mode))
+;; (use-package ultra-scroll
+;;   :config
+;;   (ultra-scroll-mode 1))
 
 (setq-default display-line-numbers-width 3)
 (setq-default display-line-numbers-widen t)
@@ -650,6 +649,12 @@
 (use-package rainbow-delimiters
   :hook
   (emacs-lisp-mode . rainbow-delimiters-mode))
+
+(use-package undo-fu
+  :init
+  (setq undo-limit (* 64 1024 1024))
+  (setq undo-strong-limit (* 96 1024 1024))
+  (setq undo-outer-limit (* 960 1024 1024)))
 
 (use-package undo-fu-session
   :custom
