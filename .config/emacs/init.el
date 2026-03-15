@@ -337,8 +337,8 @@
 (setq split-width-threshold 160
       split-height-threshold nil)
 
-(setq window-resize-pixelwise nil)
 (setq window-combination-resize t)
+(setq window-resize-pixelwise t)
 (setq frame-resize-pixelwise t)
 
 (use-package ace-window
@@ -1003,8 +1003,7 @@ of the tab bar."
   :hook
   (elpaca-after-init . vertico-mode)
   (vertico-mode . vertico-multiform-mode)
-  (rfn-eshadow-update-overlay . vertico-directory-tidy)
-  )
+  (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
 (use-package marginalia
   :defer t
@@ -1038,20 +1037,7 @@ of the tab bar."
   :bind
   (:map minibuffer-local-map
         ("M-r" . consult-history))
-  (:map isearch-mode-map
-        ("C-b" . consult-line-from-isearch))
   :preface
-  (defun consult-line-from-isearch ()
-    "Invoke `consult-line' from isearch."
-    (interactive)
-    (let ((query (if isearch-regexp
-
-                     isearch-string
-                   (regexp-quote isearch-string))))
-      (isearch-update-ring isearch-string isearch-regexp)
-      (let (search-nonincremental-instead)
-        (ignore-errors (isearch-done t t)))
-      (consult-line query)))
   (defun consult-ripgrep-in-dir ()
     "Search with `rg' for files in DIR selected from prompt"
     (interactive)
@@ -1077,7 +1063,6 @@ of the tab bar."
   (consult-customize
    consult-line-thing-at-point
    :initial (thing-at-point 'symbol))
-
   )
 
 (use-package consult-dir
@@ -1094,24 +1079,6 @@ of the tab bar."
   :commands (embark-act embark-dwim)
   :bind
   ([remap describe-bindings] . embark-bindings)
-  :preface
-  (defun +embark-export-write ()
-    "Export the current vertico results to a writable buffer if possible.
-
-Supports exporting consult-grep to wgrep, file to wdeired, and consult-location to occur-edit"
-    (interactive)
-    (require 'embark)
-    (require 'wgrep)
-    (let* ((edit-command
-            (pcase-let ((`(,type . ,candidates)
-                         (run-hook-with-args-until-success 'embark-candidate-collectors)))
-              (pcase type
-                ('consult-grep #'wgrep-change-to-wgrep-mode)
-                ('file #'wdired-change-to-wdired-mode)
-                ('consult-location #'occur-edit-mode)
-                (x (user-error "Embark category %S doesn't support writable export" x)))))
-           (embark-after-export-hook `(,@embark-after-export-hook ,edit-command)))
-      (embark-export)))
   :config
   (defun embark-which-key-indicator ()
     "An embark indicator that displays keymaps using which-key.
@@ -1151,35 +1118,38 @@ targets."
   (advice-add #'embark-completing-read-prompter
               :around #'embark-hide-which-key-indicator)
 
-  (eval-when-compile
-    (defmacro +embark-ace-action (fn)
-      `(defun ,(intern (concat "+embark-ace-" (symbol-name fn))) ()
-         (interactive)
-         (with-demoted-errors "%s"
-           (require 'ace-window)
-           (let ((aw-dispatch-always t))
-             (aw-switch-to-window (aw-show-dispatch-help))
-             ;; (aw-switch-to-window (aw-select nil))
-             (call-interactively (symbol-function ',fn)))))))
-
-  ;; (general-define-key
-  ;;  :keymaps 'embark-file-map
-  ;;  "o" (+embark-ace-action find-file))
-  ;; (general-define-key
-  ;;  :keymaps 'embark-buffer-map
-  ;;  "o" (+embark-ace-action switch-to-buffer))
-  ;; (general-define-key
-  ;;  :keymaps 'embark-general-map
-  ;;  "D" #'xref-find-definitions-other-window)
-  ;; :general
-  ;; (:keymaps 'minibuffer-local-map
-  ;;           "C-c C-e" #'+embark-export-write)
+  :general
+  (:keymaps 'minibuffer-local-map
+            "C-c C-e" 'embark-export)
   :bind
   ("C-;" . embark-act))
 
 (use-package embark-consult
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
+
+(use-package grep
+  :ensure nil
+  :preface
+  (defun +evil-grep-change-to-grep-edit-mode ()
+    (interactive)
+    (grep-change-to-grep-edit-mode)
+    (evil-insert-state))
+
+  (defun +evil-grep-edit-save-changes ()
+    (interactive)
+    (evil-normal-state)
+    (grep-edit-save-changes))
+
+  :general-config
+  (:states '(normal)
+           :keymaps 'grep-mode-map
+           "i" '+evil-grep-change-to-grep-edit-mode
+           "C-c C-e" '+evil-grep-change-to-grep-edit-mode)
+  (:states '(normal insert)
+           :keymaps 'grep-edit-mode-map
+           "C-c C-c" '+evil-grep-edit-save-changes)
+  )
 
 (use-package cape
   :after corfu
@@ -2373,14 +2343,6 @@ DOCSTRING describes what the command does."
     (funcall orig-fun forward regexp op-fun recursive-edit word-p)))
 
 (advice-add 'isearch-mode :around #'+isearch-default-selected-text)
-
-(use-package rg
-  :commands (rg rg-project rg-dwim-project-dir)
-  :general
-  (leader-def
-    "sg" 'rg-project
-    "sG" 'rg-dwim-project-dir)
-  )
 
 (use-package link-hint
   :commands (link-hint-open-link)
