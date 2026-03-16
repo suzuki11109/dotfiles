@@ -1,6 +1,6 @@
 ;;; init.el --- init file -*- lexical-binding: t; no-byte-compile: t; -*-
 
-(defvar elpaca-core-date '(20250814))
+;; (defvar elpaca-core-date '(20250814))
 (defvar elpaca-installer-version 0.12)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
@@ -259,14 +259,6 @@
   :custom
   (avy-background t))
 
-;; (use-package better-jumper
-;;   :defer 1
-;;   :after evil
-;;   :custom
-;;   (better-jumper-use-evil-jump-advice t)
-;;   :config
-;;   (better-jumper-mode 1))
-
 (repeat-mode 1)
 
 (use-package which-key
@@ -313,10 +305,6 @@
 (setq scroll-conservatively 101)
 (setq scroll-preserve-screen-position t)
 (pixel-scroll-precision-mode 1)
-
-;; (use-package ultra-scroll
-;;   :config
-;;   (ultra-scroll-mode 1))
 
 (setq-default display-line-numbers-width 3)
 (setq-default display-line-numbers-widen t)
@@ -376,9 +364,7 @@
      comint-mode
      "^\\*term.*\\*$" term-mode
      "^\\*shell.*\\*$" shell-mode shell-command-mode
-     ;; "^\\*eshell" eshell-mode
      "-eshell\\*$"
-     ;; "^\\*vterm" vterm-mode
      "-vterm\\*$"
      "\\*Go Test\\*$"
      "\\*Flycheck errors\\*"
@@ -396,8 +382,6 @@
      "\\magit-process:"
      inf-ruby-mode
      sbt-mode
-     "\\*Embark Export:"
-     "\\*Embark Collect:"
      flutter-mode
      "\\*LSP Dart tests\\*"
      "\\*LSP Dart commands\\*"
@@ -607,7 +591,7 @@
   (dired-recursive-copies 'always)
   (dired-recursive-deletes 'top)
   (dired-create-destination-dirs 'ask)
-  (dired-listing-switches "-lah")
+  (dired-listing-switches "-lAh")
   (dired-kill-when-opening-new-dired-buffer t))
 
 (use-package diredfl
@@ -846,10 +830,10 @@ of the tab bar."
                                             (untracked . show)))
   :config
   (add-to-list 'magit-no-confirm 'stage-all-changes)
-  (transient-replace-suffix 'magit-branch "b"
-    '("b" "branch" magit-branch-checkout))
-  (transient-replace-suffix 'magit-branch "l"
-    '("l" "revision" magit-checkout))
+  ;; (transient-replace-suffix 'magit-branch "b"
+  ;;   '("b" "branch" magit-branch-checkout))
+  ;; (transient-replace-suffix 'magit-branch "l"
+  ;;   '("l" "revision" magit-checkout))
 
   (with-eval-after-load 'tabspaces
     (defun +magit-open-project-workspace ()
@@ -1167,25 +1151,27 @@ targets."
   :hook
   ((prog-mode text-mode conf-mode) . corfu-mode)
   ((eshell-mode comint-mode) . corfu-enable-in-shell)
-  (minibuffer-setup . corfu-enable-in-shell)
+  (minibuffer-setup . corfu-enable-in-minibuffer)
   :preface
+  (defun corfu-enable-in-minibuffer ()
+    (unless (or (bound-and-true-p vertico--input)
+                (memq (current-local-map) '(read-passwd-map)))
+      (corfu-mode 1))
+    )
+
   (defun corfu-enable-in-shell ()
     (setq-local corfu-auto nil)
     (corfu-mode 1))
   :init
   (setq text-mode-ispell-word-completion nil)
   (setq corfu-auto t)
-  (setq corfu-auto-delay 0.15)
+  (setq corfu-auto-delay 0.1)
   (setq corfu-auto-prefix 2)
   (setq corfu-cycle t)
   (setq corfu-count 14)
   (setq corfu-preview-current nil)
   (setq corfu-preselect 'first)
   (setq corfu-on-exact-match 'show)
-  (setq global-corfu-minibuffer
-      (lambda ()
-        (not (or (bound-and-true-p vertico--input)
-                 (eq (current-local-map) read-passwd-map)))))
   :config
   (set-face-attribute 'corfu-default nil :inherit 'default)
   (add-to-list 'completion-category-overrides `(lsp-capf (styles ,@completion-styles)))
@@ -1200,7 +1186,6 @@ targets."
              completion-cycle-threshold completion-cycling)
          (consult-completion-in-region beg end table pred)))))
   (keymap-set corfu-map "M-m" #'corfu-move-to-minibuffer)
-
   (add-to-list 'corfu-continue-commands #'corfu-move-to-minibuffer)
   )
 
@@ -1240,8 +1225,6 @@ targets."
   (define-key yas-keymap [(tab)] nil)
   (define-key yas-keymap (kbd "TAB") nil)
   (define-key yas-keymap (kbd "C-<return>") (yas-filtered-definition 'yas-next-field-or-maybe-expand))
-  ;; (add-hook 'yas-before-expand-snippet-hook #'evil-insert-state)
-  ;; (add-hook 'yas-after-exit-snippet-hook    #'evil-force-normal-state)
   )
 
 (use-package yasnippet-capf
@@ -1253,11 +1236,13 @@ targets."
   :init
   (setq completions-detailed t)
   (setq completion-ignore-case t
-        ;; completion-pcm-leading-wildcard t ;; emacs 31
-        completion-styles '(orderless partial-completion basic)
+        completion-pcm-leading-wildcard t ;; emacs 31
+        ;; completion-styles '(orderless partial-completion basic)
+        completion-styles '(orderless basic)
         completion-category-defaults nil
         completion-category-overrides '((file (styles orderless partial-completion)))
-        orderless-component-separator #'orderless-escapable-split-on-space)
+        ;; orderless-component-separator #'orderless-escapable-split-on-space
+        )
   (setq read-file-name-completion-ignore-case t
         read-buffer-completion-ignore-case t)
   )
@@ -1544,16 +1529,6 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package sideline-flycheck
   :hook
   (flycheck-mode . sideline-flycheck-setup))
-
-;; (use-package flyover
-;;   :hook
-;;   (flycheck-mode . flyover-mode)
-;;   :custom
-;;   (flyover-hide-checker-name nil)
-;;   (flyover-show-at-eol t)
-;;   (flyover-virtual-line-type nil)
-;;   (flyover-show-icon nil)
-;;   )
 
 (use-package go-ts-mode
   :ensure nil
@@ -2344,6 +2319,13 @@ DOCSTRING describes what the command does."
 
 (advice-add 'isearch-mode :around #'+isearch-default-selected-text)
 
+
+(use-package replace
+  :ensure nil
+  :config
+  (add-hook 'occur-hook (lambda () (select-window (get-buffer-window "*Occur*"))))
+  )
+
 (use-package link-hint
   :commands (link-hint-open-link)
   :general
@@ -2376,6 +2358,36 @@ DOCSTRING describes what the command does."
 
 (use-package jwt
   :commands (jwt-decode jwt-decode-at-point jwt-decode-region))
+
+(defcustom tesseract-output-buffer "*tesseract-ocr*"
+  "Buffer name used to display Tesseract OCR output."
+  :type 'string)
+
+(defcustom tesseract-default-language "eng"
+  "Default language used for Tesseract OCR."
+  :type 'string)
+
+;;;###autoload
+(defun tesseract (file lang)
+  "Run Tesseract OCR on FILE using language LANG and show result in a new buffer."
+  (interactive
+   (list
+    (read-file-name "Select file for OCR: ")
+    (read-string "Language (e.g. eng, tha, jpn): " "eng")))
+  (let* ((file (expand-file-name file))
+         (buffer (get-buffer-create tesseract-output-buffer)))
+    (with-current-buffer buffer
+      (erase-buffer))
+    (call-process "tesseract" nil buffer nil file "stdout" "-l" lang)
+    (with-current-buffer buffer
+      (goto-char (point-min)))
+    (display-buffer buffer)))
+
+;;;###autoload
+(defun tesseract-with-default-language (file)
+  "Run OCR on FILE using default language (eng)."
+  (interactive "fSelect file for OCR: ")
+  (tesseract file tesseract-default-language))
 
 (use-package eca
   :hook
