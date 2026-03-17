@@ -381,11 +381,13 @@
                          (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 130)
                          (set-face-attribute 'fixed-pitch nil :family "JetBrainsMono Nerd Font" :height 0.9)
                          (set-face-attribute 'variable-pitch nil :family "SF Pro" :height 1.1)
-                         (set-face-attribute 'mode-line nil :family (face-attribute 'variable-pitch :family) :height 1.0)
-                         (set-face-attribute 'mode-line-active nil :family (face-attribute 'variable-pitch :family) :height 1.0)
-                         (set-face-attribute 'mode-line-inactive nil :family (face-attribute 'variable-pitch :family) :height 1.0)
+                         (set-face-attribute 'mode-line nil
+                                             :family (face-attribute 'variable-pitch :family) :height 1.0)
+                         (set-face-attribute 'mode-line-active nil
+                                             :family (face-attribute 'variable-pitch :family) :height 1.0)
+                         (set-face-attribute 'mode-line-inactive nil
+                                             :family (face-attribute 'variable-pitch :family) :height 1.0)
                          (set-face-attribute 'tab-bar nil :family (face-attribute 'variable-pitch :family) :height 0.9)
-                         (set-fontset-font t 'symbol (font-spec :family "Apple Color Emoji"))
                          ))
   )
 
@@ -395,14 +397,13 @@
 
 * Scrolling
 #+begin_src emacs-lisp
-(setq redisplay-skip-fontification-on-input t)
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
 (setq scroll-margin 1)
-(setq scroll-conservatively 101)
+(setq scroll-step 1)
+(setq scroll-conservatively 10)
 (setq scroll-preserve-screen-position t)
 (pixel-scroll-precision-mode 1)
-
 #+end_src
 * Lines
 #+begin_src emacs-lisp
@@ -527,8 +528,10 @@
 (line-number-mode 1)
 (column-number-mode 1)
 (setq mode-line-percent-position nil)
+(setq mode-line-collapse-minor-modes '(not flycheck-mode lsp-mode))
 
 (use-package doom-modeline
+  :ensure (:host github :repo "seagle0128/doom-modeline" :ref "v4.2.1")
   :defer t
   :custom
   (doom-modeline-bar-width 0)
@@ -542,33 +545,33 @@
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
   (doom-modeline-indent-info t)
-  (doom-modeline-check 'simple)
+  (doom-modeline-check-simple-format t)
   :config
   ;; new logic makes some texts become normal weight in inactive
-;;   (defun doom-modeline-face (&optional face inactive-face)
-;;     "Display FACE in active window, and INACTIVE-FACE in inactive window.
-;; IF FACE is nil, `mode-line' face will be used.
-;; If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
-;;     (if (doom-modeline--active)
-;;         (or (and (facep face) `(:inherit (doom-modeline ,face)))
-;;             (and (facep 'mode-line-active) '(:inherit (doom-modeline mode-line-active)))
-;;             '(:inherit (doom-modeline mode-line)))
-;;       (or (and (facep face) `(:inherit (doom-modeline mode-line-inactive ,face)))
-;;           (and (facep inactive-face) `(:inherit (doom-modeline ,inactive-face)))
-;;           '(:inherit (doom-modeline mode-line-inactive)))))
+  ;;   (defun doom-modeline-face (&optional face inactive-face)
+  ;;     "Display FACE in active window, and INACTIVE-FACE in inactive window.
+  ;; IF FACE is nil, `mode-line' face will be used.
+  ;; If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
+  ;;     (if (doom-modeline--active)
+  ;;         (or (and (facep face) `(:inherit (doom-modeline ,face)))
+  ;;             (and (facep 'mode-line-active) '(:inherit (doom-modeline mode-line-active)))
+  ;;             '(:inherit (doom-modeline mode-line)))
+  ;;       (or (and (facep face) `(:inherit (doom-modeline mode-line-inactive ,face)))
+  ;;           (and (facep inactive-face) `(:inherit (doom-modeline ,inactive-face)))
+  ;;           '(:inherit (doom-modeline mode-line-inactive)))))
 
   ;; show compiling
   (doom-modeline-def-segment compilation
-    (and (bound-and-true-p compilation-in-progress)
-         (derived-mode-p '(compilation-mode comint-mode))
-         (propertize "[Compiling] "
-                     'face (doom-modeline-face 'doom-modeline-compilation)
-                     'help-echo "Compiling; mouse-2: Goto Buffer"
-                     'mouse-face 'doom-modeline-highlight
-                     'local-map
-                     (make-mode-line-mouse-map
-                      'mouse-2
-                      #'compilation-goto-in-progress-buffer))))
+                             (and (bound-and-true-p compilation-in-progress)
+                                  (derived-mode-p '(compilation-mode comint-mode))
+                                  (propertize "[Compiling] "
+                                              'face (doom-modeline-face 'doom-modeline-compilation)
+                                              'help-echo "Compiling; mouse-2: Goto Buffer"
+                                              'mouse-face 'doom-modeline-highlight
+                                              'local-map
+                                              (make-mode-line-mouse-map
+                                               'mouse-2
+                                               #'compilation-goto-in-progress-buffer))))
 
   :hook
   (elpaca-after-init . doom-modeline-mode))
