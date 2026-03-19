@@ -2270,24 +2270,24 @@ DOCSTRING describes what the command does."
   :init
   (envrc-global-mode 1))
 
-;; (use-package ediff
-;;   :ensure nil
-;;   :defer t
-;;   :init
-;;   ;; These need to be set before ediff loads
-;;   (setq ediff-diff-options "-w"
-;;         ediff-split-window-function #'split-window-horizontally
-;;         ediff-window-setup-function #'ediff-setup-windows-plain)
-;;   :config
-;;   (defvar +ediff-saved-wconf nil)
-;;   (add-hook 'ediff-before-setup-hook
-;;             (lambda ()
-;;               (setq +ediff-saved-wconf (current-window-configuration))))
-;;   (defun +ediff-restore-wconf-h ()
-;;     (when (window-configuration-p +ediff-saved-wconf)
-;;       (set-window-configuration +ediff-saved-wconf)))
-;;   (add-hook 'ediff-quit-hook '+ediff-restore-wconf-h)
-;;   (add-hook 'ediff-suspend-hook '+ediff-restore-wconf-h))
+(use-package ediff
+  :ensure nil
+  :init
+  (setq ediff-diff-options "-w"
+        ediff-split-window-function #'split-window-horizontally
+        ediff-window-setup-function #'ediff-setup-windows-plain)
+  :config
+  (defvar +ediff-saved-wconf nil)
+  (defun +ediff-save-wconf-h ()
+    (setq +ediff-saved-wconf (current-window-configuration)))
+
+  (defun +ediff-restore-wconf-h ()
+    (when (window-configuration-p +ediff-saved-wconf)
+      (set-window-configuration +ediff-saved-wconf)))
+  :hook
+  (ediff-before-setup . +ediff-save-wconf-h)
+  ((ediff-quit ediff-suspend) . +ediff-restore-wconf-h)
+  )
 
 (use-package isearch
   :ensure nil
