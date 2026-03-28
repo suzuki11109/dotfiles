@@ -155,11 +155,14 @@
                                     evil-goto-definition-semantic
                                     evil-goto-definition-search))
   :config
-  (evil-mode 1)
+  (evil-set-undo-system 'undo-fu)
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
   (evil-select-search-module 'evil-search-module 'evil-search)
-  (evil-set-undo-system 'undo-fu)
+  (evil-set-initial-state 'shell-command-mode 'normal)
+  (evil-set-initial-state 'comint-mode 'normal)
+  (evil-mode 1)
+
   (evil-define-key '(motion) 'global "j" 'evil-next-visual-line)
   (evil-define-key '(motion) 'global "k" 'evil-previous-visual-line)
   (define-key evil-motion-state-map (kbd ";") 'evil-ex)
@@ -167,8 +170,6 @@
   (define-key evil-normal-state-map (kbd "C-p") nil)
   (define-key evil-normal-state-map [remap cua-paste-pop] nil)
   (define-key evil-normal-state-map [remap yank-pop] nil)
-  (evil-set-initial-state 'shell-command-mode 'normal)
-  (evil-set-initial-state 'comint-mode 'normal)
 
   (defun evil-insert-at-process-mark ()
     (interactive)
@@ -196,6 +197,12 @@
     "cd" 'xref-find-definitions
     "cD" 'xref-find-definitions-other-window
     "cR" 'xref-find-references
+
+    "e" '(:ignore t :wk "eval")
+    "ee" 'eval-dwim
+    "ef" 'eval-defun
+    "er" 'eval-region
+    "el" 'eval-last-sexp
 
     "f" '(:ignore t :wk "file")
     "fd" 'dired
@@ -957,10 +964,14 @@ of the tab bar."
                        (smerge-mode 1)
                        ))))))
 
+(setq completions-format 'vertical)
 (setq history-delete-duplicates t)
 (setq enable-recursive-minibuffers t)
+(setq read-file-name-completion-ignore-case t
+      read-buffer-completion-ignore-case t)
 
 (minibuffer-depth-indicate-mode 1)
+(minibuffer-electric-default-mode 1)
 
 (setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
@@ -1247,8 +1258,6 @@ targets."
         completion-category-overrides '((file (styles orderless partial-completion)))
         ;; orderless-component-separator #'orderless-escapable-split-on-space
         )
-  (setq read-file-name-completion-ignore-case t
-        read-buffer-completion-ignore-case t)
   )
 
 (use-package org
@@ -1670,6 +1679,11 @@ for all languages configured in `treesit-language-source-alist'."
   (css-ts-mode . lsp-deferred)
   (css-ts-mode . apheleia-mode))
 
+(use-package html-ts-mode
+  :mode "\\.[px]?html?\\'"
+  :ensure nil
+  )
+
 ;; (use-package emmet-mode
 ;;   :preface (defvar emmet-mode-keymap (make-sparse-keymap))
 ;;   :custom
@@ -1696,7 +1710,6 @@ for all languages configured in `treesit-language-source-alist'."
          ("\\.ts\\'" . jtsx-typescript-mode))
   :commands jtsx-install-treesit-language
   :custom
-  ;; (js-chain-indent t)
   (js-indent-level 2)
   (typescript-ts-mode-indent-offset 2)
   (jtsx-enable-jsx-element-tags-auto-sync t)
@@ -1728,12 +1741,7 @@ for all languages configured in `treesit-language-source-alist'."
   (evilmi-load-plugin-rules '(jtsx-typescript-mode) '(simple javascript html))
   )
 
-(use-package html-ts-mode
-  :mode "\\.[px]?html?\\'"
-  :ensure nil)
-
 (use-package web-mode
-  ;; :mode "\\.[px]?html?\\'"
   :init
   (setq web-mode-enable-html-entities-fontification t)
   (setq web-mode-markup-indent-offset 2)
@@ -1813,7 +1821,7 @@ for all languages configured in `treesit-language-source-alist'."
   (dart-mode . +dart-mode-setup)
   (dart-mode . lsp-deferred)
   :custom
-  (lsp-dart-line-length 200)
+  (lsp-dart-line-length 120)
   (lsp-dart-flutter-fringe-colors nil)
   (lsp-dart-flutter-widget-guides nil)
   (lsp-dart-main-code-lens nil)
@@ -1889,18 +1897,20 @@ for all languages configured in `treesit-language-source-alist'."
   :ensure nil
   :mode "\\.cs\\'")
 
+;;;###autoload
+(defun eval-dwim ()
+  "Evaluate the current line or selected region."
+  (interactive)
+  (if (use-region-p)
+      (call-interactively 'eval-region)
+    (eval-region (line-beginning-position) (line-end-position))))
+
 (use-package elisp-mode
   :ensure nil
   :hook
   (emacs-lisp-mode . apheleia-mode)
   (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
   )
-
-(use-package eros
-  :custom
-  (eros-eval-result-prefix "⟹ ")
-  :hook
-  (emacs-lisp-mode . eros-mode))
 
 (use-package elisp-def
   :hook
@@ -1910,8 +1920,7 @@ for all languages configured in `treesit-language-source-alist'."
  :mode "\\.nix\\'")
 
 (use-package markdown-mode
-  :ensure nil
-  :mode ("/README\\(?:\\.md\\)?\\'" . gfm-mode)
+  :mode ("README\\.md\\'" . gfm-mode)
   :hook
   (markdown-mode . apheleia-mode)
   :custom
@@ -1920,6 +1929,14 @@ for all languages configured in `treesit-language-source-alist'."
   (markdown-fontify-whole-heading-line t)
   (markdown-fontify-code-blocks-natively t)
   (markdown-mouse-follow-link nil)
+  :config
+  (dolist (face '((markdown-header-face-1 . 1.44)
+                  (markdown-header-face-2 . 1.3)
+                  (markdown-header-face-3 . 1.2)
+                  (markdown-header-face-4 . 1.2)
+                  (markdown-header-face-5 . 1.1)
+                  (markdown-header-face-6 . 1.0)))
+    (set-face-attribute (car face) nil :height (cdr face)))
   )
 
 (use-package markdown-xwidget
@@ -1950,7 +1967,8 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package yaml-ts-mode
   :ensure nil
   :mode "\\.ya?ml\\'"
-  )
+  :hook
+  (yaml-ts-mode . lsp-deferred))
 
 (use-package toml-ts-mode
   :ensure nil
@@ -2071,13 +2089,25 @@ for all languages configured in `treesit-language-source-alist'."
     )
   )
 
+(use-package compile-pro
+  :load-path "~/code/compile-pro"
+  :bind
+  ("M-o" . compile-pro-compile-from-history)
+  ("M-O" . compile-pro-compile-in-dir)
+  :general
+  (leader-def
+    "!" 'compile-pro-compile
+    "pc" 'compile-pro-compile
+    )
+  )
+
 (defun compile-region (start end)
   "Send region from START to END to `compile'and display the result."
   (interactive "r")
   (unless (region-active-p)
     (user-error "No region"))
   (let ((cmd (string-trim (buffer-substring-no-properties start end))))
-    (compile cmd)))
+    (compile-pro-compile cmd)))
 
 (defmacro define-project-command (name variable docstring)
   "Define a function to run a preconfigured command in project root.
@@ -2095,25 +2125,13 @@ DOCSTRING describes what the command does."
                    (command (and (boundp ',variable)
                                  ,variable)))
                (if command
-                   (compile command)
+                   (compile-pro-compile command)
                  (user-error "No %s command configured" ,docstring)))
            (user-error "No project found"))))))
 
 (define-project-command test project-test-command "test")
 (define-project-command run project-run-command "run")
 (define-project-command configure project-configure-command "configure")
-
-(use-package compile-pro
-  :load-path "~/code/compile-pro"
-  :bind
-  ("M-o" . compile-pro-compile-from-history)
-  ("M-O" . compile-pro-compile-in-dir)
-  :general
-  (leader-def
-    "!" 'compile-pro-compile
-    "pc" 'compile-pro-compile
-    )
-  )
 
 (use-package fish-completion
   :if (executable-find "fish")
@@ -2328,6 +2346,15 @@ DOCSTRING describes what the command does."
   :ensure nil
   :config
   (add-hook 'occur-hook (lambda () (select-window (get-buffer-window "*Occur*"))))
+  )
+
+(use-package dumb-jump
+  :defer 1
+  :config
+  (setq dumb-jump-prefer-searcher 'rg
+        xref-history-storage #'xref-window-local-history
+        xref-show-definitions-function #'xref-show-definitions-completing-read)
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
   )
 
 (use-package link-hint

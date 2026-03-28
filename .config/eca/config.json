@@ -9,19 +9,9 @@
         "openai/gpt-oss-20b:free": {},
         "z-ai/glm-4.5-air:free": {}
       }
-    },
-    "lmstudio": {
-      "api": "openai-chat",
-      "url": "http://localhost:1234",
-      "completionUrlRelativePath": "/v1/chat/completions",
-      "httpClient": {
-        "version": "http-1.1"
-      },
-      "models": {
-        "qwen/qwen3.5-9b": {}
-      }
     }
   },
   "defaultAgent": "code", // plan
+  "defaultModel": "openrouter/stepfun/step-3.5-flash:free",
   "$schema": "https://eca.dev/config.json"
 }
