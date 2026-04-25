@@ -413,6 +413,9 @@
 (setq highlight-nonselected-windows nil)
 (blink-cursor-mode -1)
 (save-place-mode 1)
+(advice-add 'save-place-find-file-hook :after
+            (lambda (&rest _)
+              (when buffer-file-name (ignore-errors (recenter)))))
 
 (use-package catppuccin-theme
   :custom
@@ -555,6 +558,8 @@
 
   (setq uniquify-buffer-name-style 'forward)
   (setq uniquify-after-kill-buffer-p t)
+
+  (setq ffap-machine-p-known 'reject)
 
   (setq save-some-buffers-default-predicate #'save-some-buffers-root)
 
@@ -1312,8 +1317,18 @@ targets."
     (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
     (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch))
     )
+
+  (defun +evil-org-insert-heading-respect-content ()
+    "Insert heading and enable evil insert mode."
+    (interactive)
+    (org-insert-heading-respect-content)
+    (evil-insert-state)
+    )
   :hook (org-mode . variable-pitch-mode)
   :hook (org-mode . +org-mode-setup)
+  :general
+  (:keymaps 'org-mode-map
+            "C-<return>" '+evil-org-insert-heading-respect-content)
   )
 
 
@@ -2094,6 +2109,7 @@ for all languages configured in `treesit-language-source-alist'."
   :bind
   ("M-o" . compile-pro-compile-from-history)
   ("M-O" . compile-pro-compile-in-dir)
+  ("M-p" . compile-pro-compile-from-makefile)
   :general
   (leader-def
     "!" 'compile-pro-compile
