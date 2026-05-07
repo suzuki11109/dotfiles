@@ -19,5 +19,6 @@ export ANDROID_SDK_ROOT=$HOME/Library/Android/sdk
 
 export KUBECONFIG=$HOME/.kube/config
 export PATH="$PATH:/Users/aki/.lmstudio/bin"
+export PATH="$PATH:/Applications/Emacs.app/Contents/MacOS/bin"
 
 [ -f ~/.zprofile.local ] && source ~/.zprofile.local
