@@ -478,6 +478,7 @@
      "^\\*shell.*\\*$" shell-mode shell-command-mode
      "-eshell\\*$"
      "-vterm\\*$"
+     "-ghostel\\*$"
      "\\*Go Test\\*$"
      "\\*Flycheck errors\\*"
      "\\*rake-compilation\\*"
@@ -1793,6 +1794,7 @@ for all languages configured in `treesit-language-source-alist'."
     "ta" 'go-test-current-project
     "tb" 'go-test-current-benchmark
     "tf" 'go-test-current-file
+    "tl" 'go-test-current-test-cache
     "tt" 'go-test-current-test)
   :custom
   (go-test-verbose t))
@@ -2508,38 +2510,61 @@ DOCSTRING describes what the command does."
   (eshell-syntax-highlighting-global-mode 1))
 #+end_src
 
-* Vterm
+* Terminal
 #+begin_src emacs-lisp
-(use-package vterm
-  :custom
-  (vterm-always-compile-module t)
-  (vterm-max-scrollback 5000)
-  :preface
-  (defun project-vterm ()
-    (interactive)
-    (defvar vterm-buffer-name)
-    (let* ((default-directory (project-root     (project-current t)))
-           (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
-           (vterm-buffer (get-buffer vterm-buffer-name)))
-      (if (and vterm-buffer (not current-prefix-arg))
-          (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
-        (vterm))))
+;; (use-package vterm
+;;   :custom
+;;   (vterm-always-compile-module t)
+;;   (vterm-max-scrollback 5000)
+;;   :preface
+;;   (defun project-vterm ()
+;;     (interactive)
+;;     (defvar vterm-buffer-name)
+;;     (let* ((default-directory (project-root     (project-current t)))
+;;            (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
+;;            (vterm-buffer (get-buffer vterm-buffer-name)))
+;;       (if (and vterm-buffer (not current-prefix-arg))
+;;           (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
+;;         (vterm))))
 
-  (defun vterm-reset-cursor-insert ()
-    (interactive)
-    (vterm-reset-cursor-point)
-    (evil-insert-state))
+;;   (defun vterm-reset-cursor-insert ()
+;;     (interactive)
+;;     (vterm-reset-cursor-point)
+;;     (evil-insert-state))
+;;   :general
+;;   (leader-def
+;;     "os" 'vterm
+;;     "ps" 'project-vterm)
+;;   (:states '(normal visual)
+;;            :keymaps 'vterm-mode-map
+;;            "<return>" #'vterm-reset-cursor-insert)
+;;   (:states '(insert)
+;;            :keymaps 'vterm-mode-map
+;;            "C-y" #'vterm-yank)
+;;   )
+
+(use-package ghostel
+  :hook
+  (ghostel-mode . (lambda () (setq-local line-spacing 0.3)))
+  :custom
+  (ghostel-tramp-shell-integration t)
   :general
   (leader-def
-    "os" 'vterm
-    "ps" 'project-vterm)
+    "os" 'ghostel
+    "ps" 'ghostel-project))
+
+(use-package evil-ghostel
+  :after (ghostel evil)
+  :preface
+  (defun evil-ghostel-normal-return ()
+    (interactive)
+    (evil-insert-state)
+    (ghostel--send-event))
+  :general-config
   (:states '(normal visual)
-           :keymaps 'vterm-mode-map
-           "<return>" #'vterm-reset-cursor-insert)
-  (:states '(insert)
-           :keymaps 'vterm-mode-map
-           "C-y" #'vterm-yank)
-  )
+           :keymaps 'ghostel-mode-map
+           "<return>" 'evil-ghostel-normal-return)
+  :hook (ghostel-mode . evil-ghostel-mode))
 #+end_src
 * Ielm
 #+begin_src emacs-lisp
@@ -2724,6 +2749,9 @@ DOCSTRING describes what the command does."
   (:states '(normal)
            :keymaps 'eca-chat-mode-map
            "<tab>" 'eca-chat-toggle-expandable-block
+           )
+  (:states '(insert)
+           "<M-RET>" 'eca-chat-send-prompt-at-chat
            )
   )
 
