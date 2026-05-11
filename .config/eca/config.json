@@ -1,12 +1,34 @@
 {
+  "$schema": "https://eca.dev/config.json",
   "providers": {
     "openrouter": {
       "api": "openai-chat",
       "url": "https://openrouter.ai/api/v1",
       "keyRc": "openrouter.ai"
+    },
+    "my-company": {
+      "api": "anthropic",
+      "url": "https://llm-gateway.float16.cloud",
+      "keyRc": "llm-gateway.float16.cloud"
     }
   },
-  "defaultAgent": "code", // plan
-  "defaultModel": "openrouter/stepfun/step-3.5-flash",
-  "$schema": "https://eca.dev/config.json"
+  // "defaultModel": "openrouter/stepfun/step-3.5-flash",
+  "defaultAgent": "code",
+  "plugins": {
+    "install": [
+      "caveman"
+    ]
+  },
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "${env:CONTEXT7_API_KEY}"
+      }
+    },
+    "duckduckgo-search": {
+      "command": "npx",
+      "args": ["-y", "duckduckgo-mcp-server"]
+    }
+  }
 }
