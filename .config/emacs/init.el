@@ -618,6 +618,13 @@
 (setq remember-notes-buffer-name "*scratch*")
 (setq initial-buffer-choice 'remember-notes)
 
+(use-package hideshow
+  :ensure nil
+  :custom
+  (hs-show-indicators nil)
+  :hook
+  ((prog-mode conf-mode text-mode) . hs-minor-mode))
+
 (setq kill-do-not-save-duplicates t)
 (setq save-interprogram-paste-before-kill t)
 
@@ -1500,6 +1507,7 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-typescript-suggest-complete-js-docs nil)
   (lsp-javascript-suggest-complete-js-docs nil)
   (lsp-javascript-implicit-project-config-check-js t)
+  (lsp-python-ty-clients-server-command '("uvx" "ty" "server"))
   (lsp-treemacs-error-list-current-project-only t)
   (lsp-treemacs-error-list-expand-depth 3)
   :hook
@@ -1792,18 +1800,18 @@ for all languages configured in `treesit-language-source-alist'."
     "tf" 'pythontest-test-file
     "tt" 'pythontest-test-at-point))
 
-(use-package pyvenv
-  :init
-  (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name ("venv:" pyvenv-virtual-env-name " ")))
-  :hook
-  ((python-mode python-ts-mode) . pyvenv-mode))
+;; (use-package pyvenv
+;;   :init
+;;   (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name ("venv:" pyvenv-virtual-env-name " ")))
+;;   :hook
+;;   ((python-mode python-ts-mode) . pyvenv-mode))
 
-(use-package lsp-pyright
-  :custom
-  (lsp-pyright-langserver-command "basedpyright")
-  :hook
-  (python-ts-mode . apheleia-mode)
-  (python-ts-mode . lsp-deferred))
+;; (use-package lsp-pyright
+;;   :custom
+;;   (lsp-pyright-langserver-command "basedpyright")
+;;   :hook
+;;   (python-ts-mode . apheleia-mode)
+;;   (python-ts-mode . lsp-deferred))
 
 (use-package ruby-ts-mode
   :mode "\\.rb\\'"
