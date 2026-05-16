@@ -235,6 +235,7 @@
 (use-package evil-collection
   :after evil
   :custom
+  (evil-collection-repl-submit-state 'insert)
   (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init))
@@ -337,6 +338,7 @@
 (setq window-combination-resize t)
 (setq window-resize-pixelwise t)
 (setq frame-resize-pixelwise t)
+(setq switch-to-buffer-obey-display-actions t)
 
 (use-package ace-window
   :defer t
@@ -1877,11 +1879,6 @@ for all languages configured in `treesit-language-source-alist'."
   ;;                            (string= "Wrap with widget..." action-name))
   ;;                   (evil-insert-state))
   ;;                 result)))
-
-  :general-config
-  (localleader-def
-    :keymaps 'dart-mode-map
-    "p" 'lsp-dart-pub-get)
   )
 
 (use-package flutter
@@ -1896,8 +1893,14 @@ for all languages configured in `treesit-language-source-alist'."
   :hook
   (dart-mode . +flutter-mode-setup)
   :general
+  (:states '(normal)
+           :keymaps '(flutter-mode-map)
+           "r" 'flutter-hot-reload
+           "R" 'flutter-hot-restart
+           "q" 'flutter-quit)
   (localleader-def
     :keymaps '(dart-mode-map flutter-mode-map)
+    "f" '(:ignore t :wk "flutter")
     "fq" 'flutter-quit
     "fr" 'flutter-hot-reload
     "fR" 'flutter-hot-restart
@@ -2038,7 +2041,6 @@ for all languages configured in `treesit-language-source-alist'."
   (csv-mode . csv-align-mode))
 
 (use-package comint
-  :defer t
   :ensure nil
   :custom
   (comint-use-prompt-regexp t)
@@ -2052,15 +2054,13 @@ for all languages configured in `treesit-language-source-alist'."
       (if (or (not proc) (memq (process-status proc) '(exit signal)))
           (quit-window)
         (message "Process still running!"))))
-  :general
+  :general-config
   (:states '(normal)
            :keymaps 'comint-mode-map
            "q" #'+comint-quit-if-done)
-  (:states '(normal visual)
-           :keymaps 'comint-mode-map
-           "<return>" #'evil-insert-at-process-mark)
   (:states '(insert)
            :keymaps 'comint-mode-map
+           "S-<return>" #'newline
            "C-y" #'yank)
   )
 
@@ -2102,7 +2102,7 @@ for all languages configured in `treesit-language-source-alist'."
 
   (add-hook 'compilation-finish-functions '+compile-finish-read-only)
   :hook
-  (compilation-filter . comint-truncate-buffer)
+  ;; (compilation-filter . comint-truncate-buffer)
   (compilation-filter . ansi-color-compilation-filter)
   (shell-command-mode . compilation-shell-minor-mode)
   :general
