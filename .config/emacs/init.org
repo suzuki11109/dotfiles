@@ -2,9 +2,9 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
+** termint
 ** diff-hl
 ** agent shell
-** mixed-pitch
 ** org notes solution (supertag, ekg, noter, roam)
 ** smartparens (rust?)
 * Early Init
@@ -1703,6 +1703,8 @@ for all languages configured in `treesit-language-source-alist'."
   (lsp-typescript-suggest-complete-js-docs nil)
   (lsp-javascript-suggest-complete-js-docs nil)
   (lsp-javascript-implicit-project-config-check-js t)
+  (lsp-tailwindcss-add-on-mode t)
+  (lsp-tailwindcss-major-modes '())
   (lsp-python-ty-clients-server-command '("uvx" "ty" "server"))
   (lsp-treemacs-error-list-current-project-only t)
   (lsp-treemacs-error-list-expand-depth 3)
@@ -2765,6 +2767,26 @@ DOCSTRING describes what the command does."
   (:states '(insert)
            "<M-RET>" 'eca-chat-send-prompt-at-chat
            )
+  :config
+  (defun eca-chat--key-pressed-tab ()
+    "Expand tool call if point is at expandable content, or use default behavior."
+    (interactive)
+    (cond
+     ;; check if completion popup is active
+     ((eca-chat--completion-active-p)
+      (eca-chat--completion-accept))
+
+     ;; expandable toggle
+     ((eca-chat--expandable-content-at-point)
+      (eca-chat--allow-write
+       (eca-chat--expandable-content-toggle (overlay-get (eca-chat--expandable-content-at-point) 'eca-chat--expandable-content-id))))
+
+     ;; context completion
+     ((and (eca-chat--prompt-context-field-ov)
+           (eolp))
+      (completion-at-point))
+
+     (t t)))
   )
 
 #+end_src
