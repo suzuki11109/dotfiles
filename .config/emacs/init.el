@@ -1279,7 +1279,7 @@ targets."
   :ensure nil
   :defer t
   :init
-  (setq org-directory "~/Library/Mobile Documents/iCloud~com~appsonthemove~beorg/Documents/org/") ;; don't know why custom doesn not work
+  (setq org-directory "~/sync-org/") ;; don't know why custom doesn not work
   (setq org-use-fast-todo-selection 'expert)
   (setq org-src-window-setup 'current-window)
   (setq org-src-preserve-indentation t)
