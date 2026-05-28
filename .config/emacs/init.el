@@ -57,9 +57,9 @@
     :prefix "SPC")
 
   (general-create-definer localleader-def
-          :states '(visual normal motion)
-          :keymaps 'local
-          :prefix "SPC m"))
+    :states '(visual normal motion)
+    :keymaps 'local
+    :prefix "SPC m"))
 
 (use-package comp-run
     :ensure nil
@@ -433,7 +433,6 @@
 (setq mode-line-collapse-minor-modes '(not flycheck-mode lsp-mode))
 
 (use-package doom-modeline
-  :ensure (:host github :repo "seagle0128/doom-modeline" :ref "v4.2.1")
   :defer t
   :custom
   (doom-modeline-bar-width 0)
@@ -443,11 +442,12 @@
   (doom-modeline-workspace-name nil)
   (doom-modeline-modal nil)
   (doom-modeline-vcs-max-length 24)
+  (doom-modeline-github-interval (* 15 60))
   (doom-modeline-env-version nil)
   (doom-modeline-percent-position nil)
   (doom-modeline-buffer-encoding 'nondefault)
   (doom-modeline-indent-info t)
-  (doom-modeline-check-simple-format t)
+  (doom-modeline-check 'simple)
   :config
   ;; new logic makes some texts become normal weight in inactive
   ;;   (defun doom-modeline-face (&optional face inactive-face)
@@ -2483,31 +2483,31 @@ DOCSTRING describes what the command does."
     "aa" 'eca
     "ak" 'eca-stop
     "ab" 'eca-chat-toggle-window)
-  (:states '(normal)
-           :keymaps 'eca-chat-mode-map
-           "<tab>" 'eca-chat-toggle-expandable-block
-           )
-  (:states '(insert)
-           "<M-RET>" 'eca-chat-send-prompt-at-chat
-           )
-  :config
-  (defun eca-chat--key-pressed-tab ()
-    "Expand tool call if point is at expandable content, or use default behavior."
-    (interactive)
-    (cond
-     ;; check if completion popup is active
-     ((eca-chat--completion-active-p)
-      (eca-chat--completion-accept))
+  ;; (:states '(normal)
+  ;;          :keymaps 'eca-chat-mode-map
+  ;;          "<tab>" 'eca-chat-toggle-expandable-block
+  ;;          )
+  ;; (:states '(insert)
+  ;;          "<M-RET>" 'eca-chat-send-prompt-at-chat
+           ;; )
+  ;; :config
+  ;; (defun eca-chat--key-pressed-tab ()
+  ;;   "Expand tool call if point is at expandable content, or use default behavior."
+  ;;   (interactive)
+  ;;   (cond
+  ;;    ;; check if completion popup is active
+  ;;    ((eca-chat--completion-active-p)
+  ;;     (eca-chat--completion-accept))
 
-     ;; expandable toggle
-     ((eca-chat--expandable-content-at-point)
-      (eca-chat--allow-write
-       (eca-chat--expandable-content-toggle (overlay-get (eca-chat--expandable-content-at-point) 'eca-chat--expandable-content-id))))
+  ;;    ;; expandable toggle
+  ;;    ((eca-chat--expandable-content-at-point)
+  ;;     (eca-chat--allow-write
+  ;;      (eca-chat--expandable-content-toggle (overlay-get (eca-chat--expandable-content-at-point) 'eca-chat--expandable-content-id))))
 
-     ;; context completion
-     ((and (eca-chat--prompt-context-field-ov)
-           (eolp))
-      (completion-at-point))
+  ;;    ;; context completion
+  ;;    ((and (eca-chat--prompt-context-field-ov)
+  ;;          (eolp))
+  ;;     (completion-at-point))
 
-     (t t)))
+  ;;    (t t)))
   )
