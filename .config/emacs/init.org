@@ -1503,7 +1503,7 @@ targets."
 
     ;; Ensure that anything that should be fixed-pitch in Org files appears that way
     (dolist (face '(org-table org-tag org-verbatim org-list-dt org-hide
-                              org-date org-todo org-done org-formula
+                              org-date org-formula
                               org-checkbox org-special-keyword))
       (set-face-attribute face nil :inherit 'fixed-pitch))
     (set-face-attribute 'org-block nil :foreground (catppuccin-get-color 'text) :inherit 'fixed-pitch)
@@ -1547,10 +1547,26 @@ targets."
   (org-mode . org-modern-mode)
   :custom
   (org-modern-table nil)
-  (org-modern-hide-stars nil)
-  (org-modern-list
-   '((?* . "•")
-     (?+ . "‣")))
+  :config
+  (let ((todo-bg (face-foreground 'org-todo nil t))
+        (done-bg (face-background 'org-done nil t))
+        (fg (face-background 'default nil t)))
+    (setq org-modern-todo-faces
+          `(("TODO" :foreground ,fg
+             :background ,todo-bg
+             :height 1.1
+             :family (face-attribute 'fixed-pitch :family)
+             :box (:line-width (4 . 0)
+                               :color ,todo-bg
+                               :style flat-button))
+
+            ("DONE" :foreground "white"
+             :background ,done-bg
+             :height 1.1
+             :family (face-attribute 'fixed-pitch :family)
+             :box (:line-width (4 . 0)
+                               :color ,done-bg
+                               :style flat-button)))))
   )
 
 (use-package org-modern-indent
