@@ -520,6 +520,13 @@
 
 (setq image-animate-loop t)
 
+(use-package visual-fill-column
+ :custom
+ (visual-fill-column-center-text t)
+ (visual-fill-column-width 101)
+ :hook
+ ((org-mode markdown-mode) . visual-fill-column-mode))
+
 (use-package autorevert
   :ensure nil
   :custom
@@ -1308,12 +1315,12 @@ targets."
   :preface
   (defun +org-mode-setup ()
     ;; Resize Org headings
-    (dolist (face '((org-document-title . 1.44)
-                    (org-level-1 . 1.3)
-                    (org-level-2 . 1.2)
+    (dolist (face '((org-document-title . 1.45)
+                    (org-level-1 . 1.35)
+                    (org-level-2 . 1.3)
                     (org-level-3 . 1.2)
                     (org-level-4 . 1.1)
-                    (org-level-5 . 1.1)
+                    (org-level-5 . 1.0)
                     (org-level-6 . 1.0)
                     (org-level-7 . 1.0)
                     (org-level-8 . 1.0)))
@@ -1334,11 +1341,29 @@ targets."
     (org-insert-heading-respect-content)
     (evil-insert-state)
     )
+
+  (defun +evil-org-insert-heading-above ()
+    "Insert heading and enable evil insert mode."
+    (interactive)
+    (org-insert-heading-respect-content)
+    (org-metaup)
+    (evil-insert-state)
+    )
   :hook (org-mode . variable-pitch-mode)
   :hook (org-mode . +org-mode-setup)
   :general
   (:keymaps 'org-mode-map
+            "C-S-<return>" '+evil-org-insert-heading-above
             "C-<return>" '+evil-org-insert-heading-respect-content)
+  (localleader-def
+    :keymaps 'org-mode-map
+    "j" 'consult-org-heading
+    "h" 'org-toggle-heading
+    "i" 'org-toggle-item
+    "x" 'org-toggle-checkbox
+    "t" 'org-todo
+    ;; table
+    )
   )
 
 
@@ -1365,6 +1390,8 @@ targets."
   (org-mode . org-modern-mode)
   :custom
   (org-modern-table nil)
+  (org-modern-fold-stars
+   '(("▶" . "▼") ("▷" . "▽") ("▶" . "▼") ("▷" . "▽") ("▸" . "▾")))
   :config
   (let ((todo-bg (face-foreground 'org-todo nil t))
         (done-bg (face-background 'org-done nil t))
@@ -2040,6 +2067,7 @@ for all languages configured in `treesit-language-source-alist'."
   :defer t
   :mode ("[./]flake8\\'" . conf-mode)
   :mode ("/Pipfile\\'" . conf-mode)
+  :mode ("\\.env\\(?:\\..*\\)?\\'" . conf-mode)
   :mode ("rc?\\'" . conf-mode))
 
 (use-package jenkinsfile-mode
