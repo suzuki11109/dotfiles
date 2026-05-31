@@ -10,8 +10,8 @@ export PATH=$HOME/.pyenv/shims:$PATH
 export PATH=$HOME/.rbenv/shims:$PATH
 export PNPM_HOME="/Users/aki/Library/pnpm"
 case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 export JAVA_HOME=$HOME/jdk17.0.14
 export PATH=$JAVA_HOME/bin:$PATH
