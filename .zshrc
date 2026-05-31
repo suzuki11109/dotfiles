@@ -47,10 +47,3 @@ eval "$(/Users/aki/.local/bin/mise activate zsh)"
 command -v rbenv >/dev/null && eval "$(pyenv init -)"
 command -v rbenv >/dev/null && eval "$(rbenv init -)"
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"
-
-if [[ "$INSIDE_EMACS" = 'vterm' ]] \
-    && [[ -n ${EMACS_VTERM_PATH} ]] \
-    && [[ -f ${EMACS_VTERM_PATH}/etc/emacs-vterm-zsh.sh ]]; then
-  source ${EMACS_VTERM_PATH}/etc/emacs-vterm-zsh.sh
-  source ~/.zprofile
-fi
