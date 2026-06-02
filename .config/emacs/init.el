@@ -440,7 +440,7 @@
   (doom-modeline-buffer-file-name-style 'buffer)
   (doom-modeline-major-mode-icon nil)
   (doom-modeline-workspace-name nil)
-  (doom-modeline-modal nil)
+  (doom-modeline-modal t)
   (doom-modeline-vcs-max-length 24)
   (doom-modeline-github-interval (* 15 60))
   (doom-modeline-env-version nil)
@@ -2316,42 +2316,18 @@ DOCSTRING describes what the command does."
   :config
   (eshell-syntax-highlighting-global-mode 1))
 
-;; (use-package vterm
-;;   :custom
-;;   (vterm-always-compile-module t)
-;;   (vterm-max-scrollback 5000)
-;;   :preface
-;;   (defun project-vterm ()
-;;     (interactive)
-;;     (defvar vterm-buffer-name)
-;;     (let* ((default-directory (project-root     (project-current t)))
-;;            (vterm-buffer-name (project-prefixed-buffer-name "vterm"))
-;;            (vterm-buffer (get-buffer vterm-buffer-name)))
-;;       (if (and vterm-buffer (not current-prefix-arg))
-;;           (pop-to-buffer vterm-buffer  (bound-and-true-p display-comint-buffer-action))
-;;         (vterm))))
-
-;;   (defun vterm-reset-cursor-insert ()
-;;     (interactive)
-;;     (vterm-reset-cursor-point)
-;;     (evil-insert-state))
-;;   :general
-;;   (leader-def
-;;     "os" 'vterm
-;;     "ps" 'project-vterm)
-;;   (:states '(normal visual)
-;;            :keymaps 'vterm-mode-map
-;;            "<return>" #'vterm-reset-cursor-insert)
-;;   (:states '(insert)
-;;            :keymaps 'vterm-mode-map
-;;            "C-y" #'vterm-yank)
-;;   )
-
 (use-package ghostel
+  :commands (ghostel-run)
   :hook
   (ghostel-mode . (lambda () (setq-local line-spacing 0.3)))
   :custom
   (ghostel-tramp-shell-integration t)
+  :config
+  (defun ghostel-run (name program &rest args)
+    "Launch PROGRAM in a ghostel buffer named NAME and display it."
+    (let ((buf (get-buffer-create name)))
+      (apply #'ghostel-exec buf program args)
+      (pop-to-buffer buf)))
   :general
   (leader-def
     "os" 'ghostel
@@ -2363,11 +2339,14 @@ DOCSTRING describes what the command does."
   (defun evil-ghostel-normal-return ()
     (interactive)
     (evil-insert-state)
-    (ghostel--send-event))
+    )
   :general-config
   (:states '(normal visual)
-           :keymaps 'ghostel-mode-map
-           "<return>" 'evil-ghostel-normal-return)
+           :keymaps 'ghostel-semi-char-mode-map
+           "<return>" 'evil-ghostel-normal-return
+           "DEL" 'evil-backward-char
+           "<backspace>" 'evil-backward-char
+           )
   :hook (ghostel-mode . evil-ghostel-mode))
 
 (use-package ielm
@@ -2515,6 +2494,12 @@ DOCSTRING describes what the command does."
   (interactive "fSelect file for OCR: ")
   (tesseract file tesseract-default-language))
 
+(defun ghostel-run-pi ()
+  "Run pi-coding-agent in `ghostel'."
+  (interactive)
+  ;; TODO: project's directory
+  (ghostel-run "*pi*" "pi"))
+
 (use-package eca
   :hook
   (eca-chat-mode . (lambda ()
@@ -2533,7 +2518,7 @@ DOCSTRING describes what the command does."
   ;;          )
   ;; (:states '(insert)
   ;;          "<M-RET>" 'eca-chat-send-prompt-at-chat
-           ;; )
+  ;; )
   ;; :config
   ;; (defun eca-chat--key-pressed-tab ()
   ;;   "Expand tool call if point is at expandable content, or use default behavior."
@@ -2555,3 +2540,5 @@ DOCSTRING describes what the command does."
 
   ;;    (t t)))
   )
+
+(use-package agent-shell)
