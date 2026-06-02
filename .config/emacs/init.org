@@ -3,10 +3,13 @@
 #+AUTO_TANGLE: t
 * Todos
 ** jupyter
-** markdown variable-pitch
+** repl quit close buffer
+** buffer marks
 ** agent shell
-** org notes solution (supertag, ekg, noter, roam)
-** termint
+** denote
+** eshell/tramp remote
+** markdown variable-pitch
+** org notes solution (supertag, ekg, denote, org-node, roam)
 ** smartparens
 * Early Init
 #+begin_src emacs-lisp :tangle early-init.el

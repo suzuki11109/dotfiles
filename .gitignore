@@ -1,6 +1,17 @@
-.cfg
+# MacOS Files
+.DS_Store
+Thumbs.db
 
-.fvm
+# IDE files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 .dir-locals.el
 .dir-config.el
 .agent-shell
+
+# Dotfiles
+.cfg
