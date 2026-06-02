@@ -12,23 +12,17 @@
       "keyRc": "llm-gateway.float16.cloud"
     }
   },
-  // "defaultModel": "openrouter/stepfun/step-3.5-flash",
-  "defaultAgent": "code",
-  "plugins": {
-    "install": [
-      "caveman"
-    ]
-  },
-  "mcpServers": {
-    "context7": {
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "${env:CONTEXT7_API_KEY}"
-      }
-    },
-    "duckduckgo-search": {
-      "command": "npx",
-      "args": ["-y", "duckduckgo-mcp-server"]
+  "agent": {
+    "code": {
+      "inherit": "code",
+      "defaultModel": "openrouter/openrouter/owl-alpha"
     }
-  }
+  },
+  "skills": [
+    {
+      "path": "/Users/aki/.claude/skills"
+    }
+  ],
+  "defaultModel": "openrouter/moonshotai/kimi-k2.6",
+  "defaultAgent": "plan"
 }
