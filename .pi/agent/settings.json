@@ -1,9 +1,13 @@
 {
   "lastChangelogVersion": "0.78.0",
   "defaultProvider": "openrouter",
-  "defaultModel": "openrouter/owl-alpha",
+  "defaultModel": "moonshotai/kimi-k2.6",
   "defaultThinkingLevel": "medium",
   "skills": [
     "~/.claude/skills"
-  ]
+  ],
+  "packages": [
+    "https://github.com/XYenon/catppuccin-pi-coding-agent"
+  ],
+  "theme": "catppuccin-mocha-green"
 }
