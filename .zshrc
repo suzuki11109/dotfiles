@@ -44,6 +44,5 @@ alias pn="pnpm"
 
 eval "$(/Users/aki/.local/bin/mise activate zsh)"
 
-command -v rbenv >/dev/null && eval "$(pyenv init -)"
 command -v rbenv >/dev/null && eval "$(rbenv init -)"
 command -v direnv >/dev/null && eval "$(direnv hook zsh)"

@@ -6,16 +6,15 @@ export PATH=$HOME/go/bin:$PATH
 export PATH=$HOME/flutter/bin:$PATH
 export PATH=$HOME/.pub-cache/bin:$PATH
 export PATH=$HOME/.cargo/bin:$PATH
-export PATH=$HOME/.pyenv/shims:$PATH
 export PATH=$HOME/.rbenv/shims:$PATH
 export PNPM_HOME="/Users/aki/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
-export JAVA_HOME=$HOME/jdk17.0.14
+
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 export PATH=$JAVA_HOME/bin:$PATH
-export ANDROID_SDK_ROOT=$HOME/Library/Android/sdk
 
 export KUBECONFIG=$HOME/.kube/config
 export PATH="$PATH:/Users/aki/.lmstudio/bin"
