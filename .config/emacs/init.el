@@ -310,7 +310,7 @@
 
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
-(setq scroll-margin 1)
+(setq scroll-margin 0)
 (setq scroll-step 1)
 (setq scroll-conservatively 10)
 (setq scroll-preserve-screen-position t)
@@ -1838,7 +1838,10 @@ for all languages configured in `treesit-language-source-alist'."
 
 (use-package python-ts-mode
   :ensure nil
-  :mode "\\.py\\'")
+  :mode "\\.py\\'"
+  :hook
+  (python-ts-mode . lsp-deferred)
+  )
 
 (use-package pythontest
   :general
@@ -2329,6 +2332,11 @@ DOCSTRING describes what the command does."
     (let ((buf (get-buffer-create name)))
       (apply #'ghostel-exec buf program args)
       (pop-to-buffer buf)))
+
+  (defun ghostel-run-pi ()
+    "Run pi-coding-agent in `ghostel'."
+    (interactive)
+    (ghostel-run "*pi*" "pi"))
   :general
   (leader-def
     "os" 'ghostel
@@ -2495,12 +2503,6 @@ DOCSTRING describes what the command does."
   (interactive "fSelect file for OCR: ")
   (tesseract file tesseract-default-language))
 
-(defun ghostel-run-pi ()
-  "Run pi-coding-agent in `ghostel'."
-  (interactive)
-  (ghostel-run "*pi*" "pi")
-  )
-
 (use-package eca
   :hook
   (eca-chat-mode . (lambda ()
@@ -2567,5 +2569,6 @@ DOCSTRING describes what the command does."
               (propertize result 'face
                           'eca-chat-approval-modeline-face)
             result)))))
+  )
 
 (use-package agent-shell)
