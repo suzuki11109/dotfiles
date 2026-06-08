@@ -19,7 +19,7 @@
 ;;; Code:
 (setq gc-cons-threshold most-positive-fixnum)
 (setq gc-cons-percentage 0.2)
-(setq read-process-output-max (* 1024 1024))
+(setq read-process-output-max (* 4 1024 1024))
 
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (let ((old-file-name-handler-alist file-name-handler-alist))
@@ -33,19 +33,43 @@
 ;; Case-insensitive pass over `auto-mode-alist' is time wasted.
 (setq auto-mode-case-fold nil)
 
+;; Font compacting can be very resource-intensive.
+(setq inhibit-compacting-font-caches t)
+
+;; Emacs will try to resize itself to a specific column size without this.
 (setq frame-inhibit-implied-resize t)
 
-(setq mode-line-format nil)
-
+;; Reduce *Message* noise at startup. An empty scratch buffer for faster display.
 (setq inhibit-startup-screen t
+      inhibit-x-resources t
       inhibit-startup-buffer-menu t)
-
 (setq initial-major-mode 'fundamental-mode
       initial-scratch-message nil)
 
+;; Remove "For information about GNU Emacs..." message at startup
 (advice-add #'display-startup-screen :override #'ignore)
 (fset #'display-startup-echo-area-message #'ignore)
 
+;; Disable bidirectional text scanning
+(setq-default bidi-display-reordering 'left-to-right
+              bidi-paragraph-direction 'left-to-right)
+(setq bidi-inhibit-bpa t)
+
+(setq native-comp-async-report-warnings-errors 'silent)
+(setq native-comp-async-jobs-number 2)
+
+;; Unset command line options irrelevant to the current OS
+(setq command-line-x-option-alist nil)
+
+;; Disable warnings
+(setq warning-suppress-types '((defvaralias) (lexical-binding)))
+(setq warning-inhibit-types '((files missing-lexbind-cookie)))
+
+;; Disable warnings from the legacy advice API. They aren't actionable or useful.
+(setq ad-redefinition-action 'accept)
+
+;; Minimal UI
+(setq mode-line-format nil)
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
@@ -53,26 +77,16 @@
 (when (fboundp 'horizontal-scroll-bar-mode)
   (horizontal-scroll-bar-mode -1))
 
-
-;; Disable bidirectional text scanning
-(setq-default bidi-display-reordering 'left-to-right
-              bidi-paragraph-direction 'left-to-right)
-(setq bidi-inhibit-bpa t)
-
+;; Maximize windows from start
 (push '(fullscreen . maximized) default-frame-alist)
+
+;; Transparent Titlebar
 (push '(ns-transparent-titlebar . t) default-frame-alist)
 (push '(ns-appearance . dark) default-frame-alist)
-
-(setq native-comp-async-report-warnings-errors 'silent)
-(setq native-comp-async-jobs-number 2)
-
-(setq command-line-x-option-alist nil)
 
 (setenv "LSP_USE_PLISTS" "true")
 
 (setq package-enable-at-startup nil)
-
-
 ;;; early-init.el ends here
 #+end_src
 * Package Management
@@ -119,6 +133,7 @@
 (add-hook 'after-init-hook #'elpaca-process-queues)
 (elpaca `(,@elpaca-order))
 
+(setq use-package-expand-minimally t)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
 
@@ -139,6 +154,12 @@
     :states '(visual normal motion)
     :keymaps 'local
     :prefix "SPC m"))
+#+end_src
+* Custom
+#+begin_src emacs-lisp
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
+(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
 #+end_src
 * Native Comp
 #+begin_src emacs-lisp
@@ -177,12 +198,6 @@
   (interactive)
   (kill-new (buffer-file-name))
   (message "Copied %s to clipboard" (buffer-file-name)))
-#+end_src
-* Custom
-#+begin_src emacs-lisp
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
 #+end_src
 * Garbage Collection
 #+begin_src emacs-lisp
@@ -630,9 +645,6 @@
 (setq use-short-answers t)
 (setq confirm-kill-emacs #'y-or-n-p)
 
-;; Disable warnings from the legacy advice API. They aren't actionable or useful.
-(setq ad-redefinition-action 'accept)
-
 (setq use-file-dialog nil)
 (setq use-dialog-box nil)
 
@@ -642,6 +654,8 @@
 (delete-selection-mode 1)
 
 (setq image-animate-loop t)
+
+(setq epg-pinentry-mode 'loopback)
 #+end_src
 * Zen
 #+begin_src emacs-lisp
@@ -700,6 +714,9 @@
 
   (setq save-some-buffers-default-predicate #'save-some-buffers-root)
 
+  (setq imenu-auto-rescan t)
+  (setq imenu-max-item-length 160)
+
   (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p))
 
 (use-package recentf
@@ -708,8 +725,8 @@
   :hook ((buffer-list-update . recentf-track-opened-file))
   :custom
   (recentf-filename-handlers '(abbreviate-file-name))
-  (recentf-max-saved-items 500)
-  (recentf-max-menu-items 50)
+  (recentf-max-saved-items 300)
+  (recentf-max-menu-items 20)
   (recentf-auto-cleanup 'never)
   (recentf-exclude '("/auto-install/"
                      ".recentf"
@@ -771,6 +788,9 @@
 
 (setq kill-do-not-save-duplicates t)
 (setq save-interprogram-paste-before-kill t)
+(setq delete-pair-blink-delay 0.05)
+
+(setq-default electric-indent-chars '(?\n ?\^?))
 #+end_src
 * Pairs
 #+begin_src emacs-lisp
@@ -793,6 +813,7 @@
 #+end_src
 * Parens
 #+begin_src emacs-lisp
+
 (use-package paren
   :ensure nil
   :defer 1
@@ -1163,6 +1184,9 @@ of the tab bar."
 (setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
+(setq xref-show-definitions-function 'xref-show-definitions-completing-read
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)
+
 (use-package savehist
   :ensure nil
   :custom
@@ -1172,7 +1196,6 @@ of the tab bar."
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring compile-pro--history-alist))
   :config
   (savehist-mode 1))
-
 #+end_src
 * Vertico
 #+begin_src emacs-lisp
@@ -1235,9 +1258,9 @@ of the tab bar."
     (interactive)
     (setq current-prefix-arg '(4))
     (call-interactively 'consult-ripgrep))
-  :init
-  (setq xref-show-xrefs-function #'consult-xref)
-  (setq xref-show-definitions-function #'consult-xref)
+  ;; :init
+  ;; (setq xref-show-xrefs-function #'consult-xref)
+  ;; (setq xref-show-definitions-function #'consult-xref)
   :config
   (setq consult-narrow-key "<")
   (setq completion-in-region-function
@@ -1650,6 +1673,7 @@ targets."
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
           (gowork "https://github.com/omertuc/tree-sitter-go-work")
           (heex "https://github.com/phoenixframework/tree-sitter-heex")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
           (java "https://github.com/tree-sitter/tree-sitter-java")
           (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
           (json "https://github.com/tree-sitter/tree-sitter-json")
@@ -2635,6 +2659,11 @@ DOCSTRING describes what the command does."
 #+end_src
 * Diff
 #+begin_src emacs-lisp
+(use-package diff
+  :ensure nil
+  :init
+  (setq diff-font-lock-prettify t))
+
 (use-package ediff
   :ensure nil
   :init
@@ -2659,6 +2688,7 @@ DOCSTRING describes what the command does."
 (use-package isearch
   :ensure nil
   :config
+  (setq lazy-highlight-initial-delay 0)
   (setq search-whitespace-regexp ".*?")
   (setq isearch-allow-scroll 'unlimited)
   (setq isearch-lazy-count t)
@@ -2852,6 +2882,7 @@ DOCSTRING describes what the command does."
             result)))))
   )
 
-(use-package agent-shell)
-
+(use-package agent-shell
+  :commands (agent-shell)
+  :defer t)
 #+end_src

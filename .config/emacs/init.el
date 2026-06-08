@@ -40,6 +40,7 @@
 (add-hook 'after-init-hook #'elpaca-process-queues)
 (elpaca `(,@elpaca-order))
 
+(setq use-package-expand-minimally t)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
 
@@ -60,6 +61,10 @@
     :states '(visual normal motion)
     :keymaps 'local
     :prefix "SPC m"))
+
+;; Save custom vars to separate file from init.el.
+(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
+(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
 
 (use-package comp-run
     :ensure nil
@@ -94,10 +99,6 @@
   (interactive)
   (kill-new (buffer-file-name))
   (message "Copied %s to clipboard" (buffer-file-name)))
-
-;; Save custom vars to separate file from init.el.
-(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
 
 (use-package gcmh
   :init
@@ -508,9 +509,6 @@
 (setq use-short-answers t)
 (setq confirm-kill-emacs #'y-or-n-p)
 
-;; Disable warnings from the legacy advice API. They aren't actionable or useful.
-(setq ad-redefinition-action 'accept)
-
 (setq use-file-dialog nil)
 (setq use-dialog-box nil)
 
@@ -520,6 +518,8 @@
 (delete-selection-mode 1)
 
 (setq image-animate-loop t)
+
+(setq epg-pinentry-mode 'loopback)
 
 (use-package visual-fill-column
  :custom
@@ -574,6 +574,9 @@
 
   (setq save-some-buffers-default-predicate #'save-some-buffers-root)
 
+  (setq imenu-auto-rescan t)
+  (setq imenu-max-item-length 160)
+
   (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p))
 
 (use-package recentf
@@ -582,8 +585,8 @@
   :hook ((buffer-list-update . recentf-track-opened-file))
   :custom
   (recentf-filename-handlers '(abbreviate-file-name))
-  (recentf-max-saved-items 500)
-  (recentf-max-menu-items 50)
+  (recentf-max-saved-items 300)
+  (recentf-max-menu-items 20)
   (recentf-auto-cleanup 'never)
   (recentf-exclude '("/auto-install/"
                      ".recentf"
@@ -637,6 +640,9 @@
 
 (setq kill-do-not-save-duplicates t)
 (setq save-interprogram-paste-before-kill t)
+(setq delete-pair-blink-delay 0.05)
+
+(setq-default electric-indent-chars '(?\n ?\^?))
 
 (use-package electric-pair-mode
   :ensure nil
@@ -999,6 +1005,9 @@ of the tab bar."
 (setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
+(setq xref-show-definitions-function 'xref-show-definitions-completing-read
+      xref-show-xrefs-function 'xref-show-definitions-completing-read)
+
 (use-package savehist
   :ensure nil
   :custom
@@ -1065,9 +1074,9 @@ of the tab bar."
     (interactive)
     (setq current-prefix-arg '(4))
     (call-interactively 'consult-ripgrep))
-  :init
-  (setq xref-show-xrefs-function #'consult-xref)
-  (setq xref-show-definitions-function #'consult-xref)
+  ;; :init
+  ;; (setq xref-show-xrefs-function #'consult-xref)
+  ;; (setq xref-show-definitions-function #'consult-xref)
   :config
   (setq consult-narrow-key "<")
   (setq completion-in-region-function
@@ -1459,6 +1468,7 @@ targets."
           (gomod "https://github.com/camdencheek/tree-sitter-go-mod")
           (gowork "https://github.com/omertuc/tree-sitter-go-work")
           (heex "https://github.com/phoenixframework/tree-sitter-heex")
+          (html "https://github.com/tree-sitter/tree-sitter-html")
           (java "https://github.com/tree-sitter/tree-sitter-java")
           (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
           (json "https://github.com/tree-sitter/tree-sitter-json")
@@ -2371,6 +2381,11 @@ DOCSTRING describes what the command does."
   :init
   (envrc-global-mode 1))
 
+(use-package diff
+  :ensure nil
+  :init
+  (setq diff-font-lock-prettify t))
+
 (use-package ediff
   :ensure nil
   :init
@@ -2393,6 +2408,7 @@ DOCSTRING describes what the command does."
 (use-package isearch
   :ensure nil
   :config
+  (setq lazy-highlight-initial-delay 0)
   (setq search-whitespace-regexp ".*?")
   (setq isearch-allow-scroll 'unlimited)
   (setq isearch-lazy-count t)
@@ -2571,4 +2587,6 @@ DOCSTRING describes what the command does."
             result)))))
   )
 
-(use-package agent-shell)
+(use-package agent-shell
+  :commands (agent-shell)
+  :defer t)
