@@ -1034,6 +1034,7 @@ of the tab bar."
   :hook
   (elpaca-after-init . vertico-mode)
   (vertico-mode . vertico-multiform-mode)
+  (minibuffer-setup . vertico-repeat-save)
   (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
 (use-package marginalia
@@ -1050,12 +1051,12 @@ of the tab bar."
     "sb" #'consult-line
     "sI" #'consult-imenu-multi
     "sj" #'consult-outline
+    "sk" #'consult-mark
     "sP" #'consult-ripgrep-in-dir
     "sp" #'consult-ripgrep)
   :bind
   ([remap bookmark-jump]                 . consult-bookmark)
   ([remap goto-line]                     . consult-goto-line)
-  ([remap evil-show-marks]               . consult-mark)
   ([remap imenu]                         . consult-imenu)
   ([remap locate]                        . consult-locate)
   ([remap load-theme]                    . consult-theme)
@@ -2586,6 +2587,7 @@ DOCSTRING describes what the command does."
                           'eca-chat-approval-modeline-face)
             result)))))
   )
+
 
 (use-package agent-shell
   :commands (agent-shell)
