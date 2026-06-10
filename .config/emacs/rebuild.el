@@ -1,30 +1,31 @@
-(load user-init-file)
+;; -*- lexical-binding: t; -*-
 
-(require 'elpaca)
+(load "~/.config/emacs/init.el")
 
 (message "Processing Elpaca queues...")
 (elpaca-process-queues)
 (elpaca-wait)
 
-(message "Updating packages...")
-(elpaca-update-all)
-(elpaca-process-queues)
-(elpaca-wait)
+(when (fboundp 'elpaca-update-all)
+  (message "Updating packages...")
+  (elpaca-update-all)
+  (elpaca-process-queues)
+  (elpaca-wait))
 
-(let* ((elpaca-dir
-        (expand-file-name "elpaca/repos" user-emacs-directory))
-       (files
-        (directory-files-recursively
-         elpaca-dir
-         "\\.el\\'")))
+(let ((builds-dir
+       (expand-file-name "elpaca/builds"
+                         user-emacs-directory)))
 
-  (message "Native compiling %d files..." (length files))
+  (message "Compiling packages from %s" builds-dir)
 
-  (dolist (file files)
+  (dolist (file
+           (directory-files-recursively
+            builds-dir
+            "\\.el\\'"))
     (condition-case err
         (native-compile file)
       (error
-       (message "Failed %s: %s" file err)))))
+       (message "Failed %s: %S" file err)))))
 
 (message "Finished.")
 (kill-emacs 0)
