@@ -2130,7 +2130,6 @@ for all languages configured in `treesit-language-source-alist'."
 ** Flutter
 #+begin_src emacs-lisp
 (use-package dart-mode
-  :ensure (:host github :repo "emacsorphanage/dart-mode")
   :mode "\\.dart\\'")
 
 (use-package lsp-dart

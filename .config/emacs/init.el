@@ -1897,7 +1897,6 @@ for all languages configured in `treesit-language-source-alist'."
   :after (ruby-ts-mode))
 
 (use-package dart-mode
-  :ensure (:host github :repo "emacsorphanage/dart-mode")
   :mode "\\.dart\\'")
 
 (use-package lsp-dart
