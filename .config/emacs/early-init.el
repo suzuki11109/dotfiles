@@ -65,11 +65,13 @@
 ;; Maximize windows from start
 (push '(fullscreen . maximized) default-frame-alist)
 
+(push '(background-color . "#1e1e2e") default-frame-alist)
+(push '(foreground-color . "#cdd6f4") default-frame-alist)
+
 ;; Transparent Titlebar
 (push '(ns-transparent-titlebar . t) default-frame-alist)
 (push '(ns-appearance . dark) default-frame-alist)
 
 (setenv "LSP_USE_PLISTS" "true")
 
-(setq package-enable-at-startup nil)
 ;;; early-init.el ends here

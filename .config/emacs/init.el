@@ -1,56 +1,16 @@
 ;;; init.el --- init file -*- lexical-binding: t; no-byte-compile: t; -*-
-
-;; (defvar elpaca-core-date '(20250814))
-(defvar elpaca-installer-version 0.12)
-(defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
-(defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-(defvar elpaca-sources-directory (expand-file-name "sources/" elpaca-directory))
-(defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-                              :ref nil :depth 1 :inherit ignore
-                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-                              :build (:not elpaca-activate)))
-(let* ((repo  (expand-file-name "elpaca/" elpaca-sources-directory))
-       (build (expand-file-name "elpaca/" elpaca-builds-directory))
-       (order (cdr elpaca-order))
-       (default-directory repo))
-  (add-to-list 'load-path (if (file-exists-p build) build repo))
-  (unless (file-exists-p repo)
-    (make-directory repo t)
-    (when (<= emacs-major-version 28) (require 'subr-x))
-    (condition-case-unless-debug err
-        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-                                                  ,@(when-let* ((depth (plist-get order :depth)))
-                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
-                                                  ,(plist-get order :repo) ,repo))))
-                  ((zerop (call-process "git" nil buffer t "checkout"
-                                        (or (plist-get order :ref) "--"))))
-                  (emacs (concat invocation-directory invocation-name))
-                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
-                  ((require 'elpaca))
-                  ((elpaca-generate-autoloads "elpaca" repo)))
-            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-          (error "%s" (with-current-buffer buffer (buffer-string))))
-      ((error) (warn "%s" err) (delete-directory repo 'recursive))))
-  (unless (require 'elpaca-autoloads nil t)
-    (require 'elpaca)
-    (elpaca-generate-autoloads "elpaca" repo)
-    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
-(add-hook 'after-init-hook #'elpaca-process-queues)
-(elpaca `(,@elpaca-order))
+(setq package-vc-register-as-project nil)
+(setq package-archives
+      '(("gnu" . "https://elpa.gnu.org/packages/")
+        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
+        ("melpa" . "https://melpa.org/packages/")))
 
 (setq use-package-expand-minimally t)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
 
-(elpaca elpaca-use-package
-  (elpaca-use-package-mode))
-
 ;; Load general for :general
 (use-package general
-  :ensure (:wait t)
-  :demand t
   :config
   (general-create-definer leader-def
     :states '(visual normal motion)
@@ -63,15 +23,16 @@
     :prefix "SPC m"))
 
 ;; Save custom vars to separate file from init.el.
-(setq-default custom-file (expand-file-name "custom.el" user-emacs-directory))
-(add-hook 'elpaca-after-init-hook (lambda () (load custom-file 'noerror)))
+(setq custom-file (expand-file-name "custom.el" user-emacs-directory))
+(when (file-exists-p custom-file)
+  (load custom-file 'noerror))
 
 (use-package comp-run
-    :ensure nil
-    :config
-    (push "cl-loaddefs.el.gz" native-comp-jit-compilation-deny-list)
-    (push "org-loaddefs.el.gz" native-comp-jit-compilation-deny-list)
-    (push "tramp-loaddefs.el.gz" native-comp-jit-compilation-deny-list))
+  :ensure nil
+  :config
+  (push "cl-loaddefs.el.gz" native-comp-jit-compilation-deny-list)
+  (push "org-loaddefs.el.gz" native-comp-jit-compilation-deny-list)
+  (push "tramp-loaddefs.el.gz" native-comp-jit-compilation-deny-list))
 
 (defmacro quiet! (&rest forms)
   "Run FORMS without making any noise."
@@ -116,8 +77,7 @@
   :custom
   (exec-path-from-shell-arguments '("-l"))
   (exec-path-from-shell-variables '("PATH" "MANPATH" "JAVA_HOME" "KUBECONFIG" "NPM_TOKEN" "PNPM_HOME"))
-  :init
-  (exec-path-from-shell-initialize))
+  :hook (emacs-startup . exec-path-from-shell-initialize))
 
 (setenv "EDITOR" "emacsclient")
 (setenv "VISUAL" "emacsclient")
@@ -126,10 +86,9 @@
 
 (use-package server
   :ensure nil
-  :defer 1
-  :config
-  (unless (server-running-p)
-    (server-start)))
+  :hook (after-init . (lambda ()
+                        (unless (server-running-p)
+                          (server-start)))))
 
 (setq mac-command-modifier 'meta)
 (setq mac-option-modifier 'none)
@@ -139,9 +98,11 @@
 (use-package evil
   :init
   (setq evil-want-Y-yank-to-eol t)
+  (setq evil-want-keybinding nil)
+  :hook
+  (after-init . evil-mode)
   :custom
   (evil-echo-state nil)
-  (evil-want-keybinding nil)
   (evil-v$-excludes-newline t)
   (evil-mode-line-format nil)
   (evil-want-C-u-scroll t)
@@ -162,7 +123,7 @@
   (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-set-initial-state 'shell-command-mode 'normal)
   (evil-set-initial-state 'comint-mode 'normal)
-  (evil-mode 1)
+  ;; (evil-mode 1)
 
   (evil-define-key '(motion) 'global "j" 'evil-next-visual-line)
   (evil-define-key '(motion) 'global "k" 'evil-previous-visual-line)
@@ -292,7 +253,7 @@
   ("M--" . global-text-scale-adjust)
   ("M-0" . global-text-scale-adjust)
   :hook
-  (elpaca-after-init . (lambda ()
+  (after-init . (lambda ()
                          (set-face-attribute 'default nil :family "JetBrainsMono Nerd Font" :height 130)
                          (set-face-attribute 'fixed-pitch nil :family "JetBrainsMono Nerd Font" :height 0.9)
                          (set-face-attribute 'variable-pitch nil :family "SF Pro" :height 1.1)
@@ -425,8 +386,7 @@
   :custom
   (catppuccin-height-title-3 1.1)
   :init
-  (load-theme 'catppuccin :no-confirm)
-  )
+  (load-theme 'catppuccin :no-confirm))
 
 (line-number-mode 1)
 (column-number-mode 1)
@@ -478,7 +438,7 @@
                                                #'compilation-goto-in-progress-buffer))))
 
   :hook
-  (elpaca-after-init . doom-modeline-mode))
+  (after-init . doom-modeline-mode))
 
 (use-package anzu
   :defer 1
@@ -736,6 +696,8 @@ of the tab bar."
   )
 
 (use-package tabspaces
+  :hook
+  (window-setup . tabspaces-mode)
   :custom
   (tabspaces-use-filtered-buffers-as-default t)
   (tabspaces-default-tab "home")
@@ -747,8 +709,7 @@ of the tab bar."
   :general
   (leader-def
     "TAB" '(:keymap tabspaces-command-map :wk "workspaces"))
-  :init
-  (tabspaces-mode 1)
+  :config
   (tab-bar-mode 1)
   (tab-bar-rename-tab tabspaces-default-tab) ;; Rename intial tab to default tab
 
@@ -776,9 +737,6 @@ of the tab bar."
   )
 
 (use-package dashboard
-  :hook
-  (elpaca-after-init . dashboard-insert-startupify-lists)
-  (elpaca-after-init . dashboard-initialize)
   :custom
   (initial-buffer-choice #'dashboard-open)
   (dashboard-startup-banner "~/.config/emacs/banner.png")
@@ -788,6 +746,8 @@ of the tab bar."
   (dashboard-icon-type 'nerd-icons)
   (dashboard-set-heading-icons t)
   (dashboard-items '((projects . 5)))
+  :hook
+  (window-setup . #'dashboard-setup-startup-hook)
   :config
   (dashboard-setup-startup-hook)
   )
@@ -1015,8 +975,8 @@ of the tab bar."
   (savehist-save-minibuffer-history t)
   (savehist-autosave-interval nil)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring compile-pro--history-alist))
-  :config
-  (savehist-mode 1))
+  :hook (minibuffer-setup . savehist-mode)
+  )
 
 (use-package vertico
   :defer t
@@ -1032,7 +992,7 @@ of the tab bar."
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
   :hook
-  (elpaca-after-init . vertico-mode)
+  (after-init . vertico-mode)
   (vertico-mode . vertico-multiform-mode)
   (minibuffer-setup . vertico-repeat-save)
   (rfn-eshadow-update-overlay . vertico-directory-tidy))
@@ -1042,7 +1002,7 @@ of the tab bar."
   :custom
   (marginalia-align 'right)
   :hook
-  (elpaca-after-init . marginalia-mode))
+  (after-init . marginalia-mode))
 
 (use-package consult
   :general
@@ -1075,9 +1035,6 @@ of the tab bar."
     (interactive)
     (setq current-prefix-arg '(4))
     (call-interactively 'consult-ripgrep))
-  ;; :init
-  ;; (setq xref-show-xrefs-function #'consult-xref)
-  ;; (setq xref-show-definitions-function #'consult-xref)
   :config
   (setq consult-narrow-key "<")
   (setq completion-in-region-function
@@ -1161,6 +1118,7 @@ targets."
   (embark-collect-mode . consult-preview-at-point-mode))
 
 (use-package grep
+  :defer t
   :ensure nil
   :preface
   (defun +evil-grep-change-to-grep-edit-mode ()
@@ -1322,6 +1280,16 @@ targets."
   (setq org-confirm-babel-evaluate nil)
   (setq org-log-into-drawer t)
   :config
+  (require 'org-tempo)
+  (org-babel-do-load-languages
+   'org-babel-load-languages
+   '((emacs-lisp . t)
+     (shell . t)
+     (js . t)))
+  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
+  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
+  (add-to-list 'org-structure-template-alist '("js" . "src js"))
+
   (add-to-list 'org-modules 'org-habit t)
   :preface
   (defun +org-mode-setup ()
@@ -1426,23 +1394,9 @@ targets."
   )
 
 (use-package org-modern-indent
-  :ensure (:host github :repo "jdtsmith/org-modern-indent")
+  :vc (:url "https://github.com/jdtsmith/org-modern-indent")
   :hook
   (org-mode . org-modern-indent-mode))
-
-(use-package org-tempo
-  :after org
-  :ensure nil
-  :config
-  (org-babel-do-load-languages
-   'org-babel-load-languages
-   '((emacs-lisp . t)
-     (shell . t)
-     (js . t)))
-  (add-to-list 'org-structure-template-alist '("el" . "src emacs-lisp"))
-  (add-to-list 'org-structure-template-alist '("sh" . "src shell"))
-  (add-to-list 'org-structure-template-alist '("js" . "src js"))
-  )
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
@@ -1875,6 +1829,11 @@ for all languages configured in `treesit-language-source-alist'."
 ;;   (python-ts-mode . apheleia-mode)
 ;;   (python-ts-mode . lsp-deferred))
 
+;; (use-package auto-virtualenv
+;;   :config
+;;   (setq auto-virtualenv-verbose t)
+;;   (auto-virtualenv-setup))
+
 (use-package ruby-ts-mode
   :mode "\\.rb\\'"
   :ensure nil
@@ -2027,15 +1986,15 @@ for all languages configured in `treesit-language-source-alist'."
   )
 
 (use-package markdown-xwidget
-  :after markdown-mode
-  :ensure (markdown-xwidget
-           :host github
-           :repo "cfclrk/markdown-xwidget"
-           :files (:defaults "resources"))
+  :commands (markdown-xwidget-preview-mode)
+  :vc (:url "https://github.com/cfclrk/markdown-xwidget"
+       :lisp-dir "."
+       :main-file "markdown-xwidget.el"
+       :rev :newest)
   :general
   (localleader-def
     :keymaps 'markdown-mode-map
-    "x" 'markdown-xwidget-preview-mode)
+    "x" #'markdown-xwidget-preview-mode)
   :custom
   (markdown-xwidget-github-theme "dark")
   (markdown-xwidget-mermaid-theme "dark")
@@ -2101,6 +2060,7 @@ for all languages configured in `treesit-language-source-alist'."
   (csv-mode . csv-align-mode))
 
 (use-package comint
+  :defer t
   :ensure nil
   :custom
   (comint-use-prompt-regexp t)
@@ -2230,6 +2190,7 @@ DOCSTRING describes what the command does."
   (eshell-mode . fish-completion-mode))
 
 (use-package shell
+  :defer t
   :ensure nil
   :custom
   (async-shell-command-display-buffer nil)
@@ -2378,8 +2339,13 @@ DOCSTRING describes what the command does."
   )
 
 (use-package envrc
-  :init
-  (envrc-global-mode 1))
+  :hook (after-init . envrc-global-mode))
+
+(use-package dir-config
+  :custom
+  (dir-config-allowed-directories '("~/code"))
+  :hook
+  (after-init . dir-config-mode))
 
 (use-package diff
   :ensure nil
@@ -2479,12 +2445,6 @@ DOCSTRING describes what the command does."
    "vs" 'verb-set-var
    "vu" 'verb-unset-var
    "vv" 'verb-send-request-on-point-other-window-stay))
-
-(use-package dir-config
-  :custom
-  (dir-config-allowed-directories '("~/code"))
-  :hook
-  (elpaca-after-init . dir-config-mode))
 
 (use-package jwt
   :commands (jwt-decode jwt-decode-at-point jwt-decode-region))
