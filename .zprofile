@@ -13,11 +13,12 @@ case ":$PATH:" in
   *) export PATH="$PNPM_HOME/bin:$PATH" ;;
 esac
 
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 export PATH=$JAVA_HOME/bin:$PATH
 
 export KUBECONFIG=$HOME/.kube/config
-export PATH="$PATH:/Users/aki/.lmstudio/bin"
+export PATH="$PATH:$HOME/.lmstudio/bin"
 export PATH="$PATH:/Applications/Emacs.app/Contents/MacOS/bin"
+export PATH="$PATH:$HOME/Library/Application Support/Coursier/bin"
 
 [ -f ~/.zprofile.local ] && source ~/.zprofile.local

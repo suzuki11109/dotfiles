@@ -2,7 +2,7 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
-** scala
+** copy don't work in terminal
 ** eshell/tramp remote
 ** denote
 ** org notes solution (supertag, ekg, denote, org-node, roam)
@@ -14,8 +14,9 @@
 ;;; Commentary:
 ;;; Code:
 (setq gc-cons-threshold most-positive-fixnum)
-(setq gc-cons-percentage 0.2)
 (setq read-process-output-max (* 4 1024 1024))
+
+(setq site-run-file nil)
 
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (let ((old-file-name-handler-alist file-name-handler-alist))
@@ -65,7 +66,7 @@
 (setq ad-redefinition-action 'accept)
 
 ;; Minimal UI
-(setq mode-line-format nil)
+(setq mode-line-format '("%e"))
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
@@ -91,27 +92,16 @@
 #+begin_src emacs-lisp
 ;;; init.el --- init file -*- lexical-binding: t; no-byte-compile: t; -*-
 (setq package-vc-register-as-project nil)
+(setq package-quickstart t)
 (setq package-archives
       '(("gnu" . "https://elpa.gnu.org/packages/")
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
         ("melpa" . "https://melpa.org/packages/")))
 
+(setq use-package-compute-statistics t)
 (setq use-package-expand-minimally t)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
-
-;; Load general for :general
-(use-package general
-  :config
-  (general-create-definer leader-def
-    :states '(visual normal motion)
-    :keymaps 'override
-    :prefix "SPC")
-
-  (general-create-definer localleader-def
-    :states '(visual normal motion)
-    :keymaps 'local
-    :prefix "SPC m"))
 #+end_src
 * Custom
 #+begin_src emacs-lisp
@@ -175,10 +165,12 @@
 * Path
 #+begin_src emacs-lisp
 (use-package exec-path-from-shell
-  :custom
-  (exec-path-from-shell-arguments '("-l"))
-  (exec-path-from-shell-variables '("PATH" "MANPATH" "JAVA_HOME" "KUBECONFIG" "NPM_TOKEN" "PNPM_HOME"))
-  :hook (emacs-startup . exec-path-from-shell-initialize))
+  :if (or (memq window-system '(ns x))
+          (daemonp))
+  :init
+  (setq exec-path-from-shell-arguments '("-l"))
+  (setq exec-path-from-shell-variables '("PATH" "MANPATH" "JAVA_HOME" "KUBECONFIG" "NPM_TOKEN" "PNPM_HOME"))
+  (exec-path-from-shell-initialize))
 
 (setenv "EDITOR" "emacsclient")
 (setenv "VISUAL" "emacsclient")
@@ -189,9 +181,9 @@
 #+begin_src emacs-lisp
 (use-package server
   :ensure nil
-  :hook (after-init . (lambda ()
-                        (unless (server-running-p)
-                          (server-start)))))
+  :config
+  (unless (or (daemonp) (server-running-p))
+    (server-start)))
 #+end_src
 * Evil
 #+begin_src emacs-lisp
@@ -199,6 +191,20 @@
 (setq mac-option-modifier 'none)
 
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
+
+(use-package general
+  :config
+  (general-create-definer leader-def
+    :states '(visual normal motion)
+    :keymaps 'override
+    :prefix "SPC")
+
+  (general-create-definer localleader-def
+    :states '(visual normal motion)
+    :keymaps 'local
+    :prefix "SPC m")
+
+  )
 
 (use-package evil
   :init
@@ -222,20 +228,20 @@
                                     evil-goto-definition-semantic
                                     evil-goto-definition-search))
   :config
+  ;; (evil-mode 1)
   (evil-set-undo-system 'undo-fu)
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
   (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-set-initial-state 'shell-command-mode 'normal)
   (evil-set-initial-state 'comint-mode 'normal)
-  ;; (evil-mode 1)
 
   (evil-define-key '(motion) 'global "j" 'evil-next-visual-line)
   (evil-define-key '(motion) 'global "k" 'evil-previous-visual-line)
   (define-key evil-motion-state-map (kbd ";") 'evil-ex)
   (define-key evil-normal-state-map (kbd "C-n") nil)
   (define-key evil-normal-state-map (kbd "C-p") nil)
-  (define-key evil-normal-state-map [remap cua-paste-pop] nil)
+  ;; (define-key evil-normal-state-map [remap cua-paste-pop] nil)
   (define-key evil-normal-state-map [remap yank-pop] nil)
 
   (defun evil-insert-at-process-mark ()
@@ -282,6 +288,10 @@
     "fW" '((lambda () (interactive) (dired "~/Downloads")) :wk "Go to Downloads")
     "fy" '+save-buffer-absolute-path
 
+    "i" '(:ignore t :wk "insert")
+    "ie" 'emoji-search
+    "iu" 'insert-char
+
     "g" '(:ignore t :wk "git")
 
     "n" '(:ignore t :wk "notes")
@@ -297,6 +307,7 @@
     "so" 'occur
 
     "w" '(:keymap evil-window-map :wk "window"))
+
   )
 
 (use-package evil-collection
@@ -385,7 +396,7 @@
 #+begin_src emacs-lisp
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
-(setq scroll-margin 0)
+(setq scroll-margin 1)
 (setq scroll-step 1)
 (setq scroll-conservatively 10)
 (setq scroll-preserve-screen-position t)
@@ -630,26 +641,35 @@
   :ensure nil
   :custom
   (auto-revert-verbose nil)
-  (auto-revert-use-notify nil)
+  (auto-revert-use-notify t)  ; Use file notifications instead of polling
+  ;; (global-auto-revert-non-file-buffers nil)
   :config
-  ;; global-auto-revert-mode can slow for non-file buffers. try to enable it per active window.
-  (add-to-list 'window-state-change-functions
-               (defun ar/window-state-state-change (state)
-                 (let* ((old-selected-window (old-selected-window))
-                        (old-buffer (when old-selected-window
-                                      (window-buffer old-selected-window)))
-                        (selected-window (selected-window))
-                        (new-buffer (when selected-window
-                                      (window-buffer selected-window))))
-                   (when old-buffer
-                     (with-current-buffer old-buffer
-                       (when (or buffer-file-name (derived-mode-p '(dired-mode)))
-                         (auto-revert-mode -1))))
+  (global-auto-revert-mode 1))
 
-                   (when new-buffer
-                     (with-current-buffer new-buffer
-                       (when (or buffer-file-name (derived-mode-p '(dired-mode)))
-                         (auto-revert-mode +1))))))))
+;; (use-package autorevert
+;;   :ensure nil
+;;   :custom
+;;   (auto-revert-verbose nil)
+;;   (auto-revert-use-notify nil)
+;;   :config
+;;   ;; global-auto-revert-mode can slow for non-file buffers. try to enable it per active window.
+;;   (add-to-list 'window-state-change-functions
+;;                (defun ar/window-state-state-change (state)
+;;                  (let* ((old-selected-window (old-selected-window))
+;;                         (old-buffer (when old-selected-window
+;;                                       (window-buffer old-selected-window)))
+;;                         (selected-window (selected-window))
+;;                         (new-buffer (when selected-window
+;;                                       (window-buffer selected-window))))
+;;                    (when old-buffer
+;;                      (with-current-buffer old-buffer
+;;                        (when (or buffer-file-name (derived-mode-p '(dired-mode)))
+;;                          (auto-revert-mode -1))))
+
+;;                    (when new-buffer
+;;                      (with-current-buffer new-buffer
+;;                        (when (or buffer-file-name (derived-mode-p '(dired-mode)))
+;;                          (auto-revert-mode +1))))))))
 
 (use-package emacs
   :ensure nil
@@ -680,7 +700,6 @@
 (use-package recentf
   :ensure nil
   :defer .5
-  :hook ((buffer-list-update . recentf-track-opened-file))
   :custom
   (recentf-filename-handlers '(abbreviate-file-name))
   (recentf-max-saved-items 300)
@@ -861,6 +880,7 @@ of the tab bar."
   :hook
   (window-setup . tabspaces-mode)
   :custom
+  (tabspaces-keymap-prefix nil)
   (tabspaces-use-filtered-buffers-as-default t)
   (tabspaces-default-tab "home")
   (tabspaces-include-buffers '("*dashboard*" "*Messages*"))
@@ -881,7 +901,8 @@ of the tab bar."
   (define-key tabspaces-command-map (kbd "p") 'tab-bar-switch-to-prev-tab)
 
   (with-eval-after-load 'consult
-    (consult-customize consult-source-buffer :hidden t :default nil)
+    (plist-put consult-source-buffer :hidden t)
+    (plist-put consult-source-buffer :default nil)
 
     (defvar consult-source-workspace
       (list :name     "Workspace Buffers"
@@ -914,8 +935,6 @@ of the tab bar."
   (dashboard-items '((projects . 5)))
   :hook
   (window-setup . #'dashboard-setup-startup-hook)
-  :config
-  (dashboard-setup-startup-hook)
   )
 #+end_src
 * Help
@@ -1152,7 +1171,7 @@ of the tab bar."
   (savehist-save-minibuffer-history t)
   (savehist-autosave-interval nil)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring compile-pro--history-alist))
-  :hook (minibuffer-setup . savehist-mode)
+  :hook (after-init . savehist-mode)
   )
 #+end_src
 * Vertico
@@ -1189,25 +1208,19 @@ of the tab bar."
 (use-package consult
   :general
   (leader-def
+    "bb" #'consult-buffer
+    "bB" #'consult-buffer-other-window
+    "fr" #'consult-recent-file
+    "iy" #'consult-yank-pop
+    "pb" #'consult-project-buffer
     "sB" #'consult-line-thing-at-point
     "sb" #'consult-line
+    "si" #'consult-imenu
     "sI" #'consult-imenu-multi
     "sj" #'consult-outline
     "sk" #'consult-mark
     "sP" #'consult-ripgrep-in-dir
     "sp" #'consult-ripgrep)
-  :bind
-  ([remap bookmark-jump]                 . consult-bookmark)
-  ([remap goto-line]                     . consult-goto-line)
-  ([remap imenu]                         . consult-imenu)
-  ([remap locate]                        . consult-locate)
-  ([remap load-theme]                    . consult-theme)
-  ([remap man]                           . consult-man)
-  ([remap recentf]                       . consult-recent-file)
-  ([remap switch-to-buffer]              . consult-buffer)
-  ([remap switch-to-buffer-other-window] . consult-buffer-other-window)
-  ([remap yank-pop]                      . consult-yank-pop)
-  ([remap project-switch-to-buffer]      . consult-project-buffer)
   :bind
   (:map minibuffer-local-map
         ("M-r" . consult-history))
@@ -1350,8 +1363,7 @@ targets."
   (defun corfu-enable-in-minibuffer ()
     (unless (or (bound-and-true-p vertico--input)
                 (memq (current-local-map) '(read-passwd-map)))
-      (corfu-mode 1))
-    )
+      (corfu-mode 1)))
 
   (defun corfu-enable-in-shell ()
     (setq-local corfu-auto nil)
@@ -1635,6 +1647,7 @@ targets."
           (python "https://github.com/tree-sitter/tree-sitter-python")
           (ruby "https://github.com/tree-sitter/tree-sitter-ruby")
           (rust "https://github.com/tree-sitter/tree-sitter-rust")
+          (scala "https://github.com/tree-sitter/tree-sitter-scala")
           (templ . ("https://github.com/vrischmann/tree-sitter-templ" "master" "src"))
           (toml "https://github.com/tree-sitter/tree-sitter-toml")
           (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
@@ -1671,11 +1684,13 @@ for all languages configured in `treesit-language-source-alist'."
   :commands apheleia-mode
   :config
   (setf (alist-get 'prettier-typescript apheleia-formatters)
-        '("apheleia-npx" "prettierd" "--stdin-filepath" filepath "--parser=typescript"
+        '("prettierd" "--stdin-filepath" filepath "--parser=typescript"
           (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
+
   (setf (alist-get 'prettier apheleia-formatters)
-        '("apheleia-npx" "prettierd" "--stdin-filepath" filepath
+        '("prettierd" "--stdin-filepath" filepath
           (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
+
   (setf (alist-get 'erb-formatter apheleia-formatters)
         '("erb-format" "--print-width=140" filepath))
 
@@ -1712,9 +1727,11 @@ for all languages configured in `treesit-language-source-alist'."
     (add-hook 'orderless-style-dispatchers #'+orderless-dispatch-flex-first nil 'local)
     )
   :custom
+  (lsp-file-watch-threshold 10000)
   (lsp-keep-workspace-alive nil)
   (lsp-completion-provider :none)
   (lsp-enable-folding nil)
+  (lsp-enable-indentation nil)
   (lsp-enable-text-document-color nil)
   (lsp-enable-symbol-highlighting nil)
   (lsp-enable-on-type-formatting nil)
@@ -1757,6 +1774,7 @@ for all languages configured in `treesit-language-source-alist'."
     "co" 'lsp-organize-imports
     "ch" 'lsp-describe-thing-at-point
     "cH" 'lsp-describe-session
+    "cl" 'lsp-avy-lens
     "cr" 'lsp-rename
     "cQ" 'lsp-workspace-restart
     "cq" 'lsp-workspace-shutdown)
@@ -1774,14 +1792,13 @@ for all languages configured in `treesit-language-source-alist'."
 #+begin_src emacs-lisp
 (use-package flycheck
   :defer t
-  :init
-  (setq flycheck-checkers '(emacs-lisp emacs-lisp-checkdoc))
-  (setq flycheck-idle-change-delay 1.0)
-  (setq flycheck-display-errors-function nil)
-  (setq flycheck-buffer-switch-check-intermediate-buffers t)
-  (setq flycheck-check-syntax-automatically '(save idle-change mode-enabled))
-  (setq flycheck-emacs-lisp-load-path 'inherit)
-  )
+  :custom
+  (flycheck-checkers '(emacs-lisp emacs-lisp-checkdoc))
+  (flycheck-idle-change-delay 1.0)
+  (flycheck-display-errors-function nil)
+  (flycheck-buffer-switch-check-intermediate-buffers t)
+  (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
+  (flycheck-emacs-lisp-load-path 'inherit))
 
 (use-package sideline
   :custom
@@ -2176,6 +2193,102 @@ for all languages configured in `treesit-language-source-alist'."
   :ensure nil
   :mode "\\.lua\\'")
 #+end_src
+** Scala
+#+begin_src emacs-lisp
+(use-package scala-ts-mode
+  :init
+  (add-to-list 'major-mode-remap-alist '(scala-mode . scala-ts-mode))
+  :mode ("\\.scala\\'" . scala-ts-mode)
+  :interpreter ("scala" . scala-ts-mode)
+  :preface
+  (defun +scala-ts-mode-setup ()
+    (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+  :hook
+  (scala-ts-mode . +scala-ts-mode-setup)
+  )
+
+(use-package sbt-mode
+  :commands sbt-start sbt-command sbt-do-run sbt-do-test sbt-do-testquick sbt-do-compile sbt-do-clean
+  :config
+  (substitute-key-definition
+   'minibuffer-complete-word
+   'self-insert-command
+   minibuffer-local-completion-map)
+  (setq sbt:program-options '("-Dsbt.supershell=false"))
+  :hook
+  (sbt-mode . (lambda ()
+                (evil-insert-state)))
+  :general
+  (localleader-def
+    :keymaps '(scala-ts-mode-map)
+    "b" '(:ignore t :wk "sbt")
+    "bb" 'sbt-command
+    "bc" 'sbt-do-compile
+    "bC" 'sbt-do-clean
+    "bp" 'sbt-do-package
+    "br" 'sbt-do-run
+    "bt" 'sbt-do-test
+    "b." 'sbt-run-previous-command
+
+    "t" '(:ignore t :wk "test")
+    "ta" 'sbt-do-test
+    "tf" '(+sbt-test-file :wk "Test current file")
+    )
+  )
+
+(use-package lsp-metals
+  :custom
+  (lsp-metals-java-home (or (getenv "JAVA_HOME") "/usr/lib/jvm/java-21"))
+  (lsp-metals-enable-semantic-highlighting t)
+  (lsp-metals-server-args '("-J-Dmetals.icons=unicode"))
+  :preface
+  (defun +scala-isolate-metals ()
+    "Use project-local Metals directory."
+    (setq-local lsp-inlay-hint-enable t)
+    (let ((project-metals (expand-file-name ".metals" (project-root (project-current)))))
+      (setenv "METALS_HOME" project-metals)
+      (make-directory project-metals t)))
+
+  :hook
+  (scala-ts-mode . +scala-isolate-metals)
+  (scala-ts-mode . lsp-deferred)
+  )
+
+;; (use-package sbt-mode
+;;   :general
+;;   (+local-leader-def
+;;     :keymaps '(scala-mode-map)
+;;     "b" '(nil :wk "sbt")
+;;     "bb" #'sbt-command
+;;     "bc" #'sbt-compile
+;;     "br" #'sbt-start
+;;     "b." #'sbt-run-previous-command
+;;     "t" '(nil :wk "test")
+;;     "ta" '(sbt-do-test :wk "Test quick")
+;;     "tf" '(+sbt-test-file :wk "Test current file")
+;;     ;; "tt" '(nil :wk "Test quick")
+;;   )
+;;   :commands sbt-start sbt-command
+;;   :init
+;;   (defun +sbt-get-testonly-file (&optional file)
+;;     "Return FILE formatted in a sbt testOnly command."
+;;     (--> (or file (file-name-base))
+;;          (format "testOnly *%s" it)))
+
+;;   (defun +sbt-test-file (&optional file)
+;;     (interactive)
+;;     (sbt-command (+sbt-get-testonly-file file)))
+
+;;   :config
+;;   ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
+;;   ;; allows using SPACE when in the minibuffer
+;;   ;; (substitute-key-definition
+;;   ;;  'minibuffer-complete-word
+;;   ;;  'self-insert-command
+;;   ;;  minibuffer-local-completion-map)
+;;   ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
+;;   (setq sbt:program-options '("-Dsbt.supershell=false")))
+#+end_src
 ** Csharp
 #+begin_src emacs-lisp
 (use-package csharp-ts-mode
@@ -2196,6 +2309,7 @@ for all languages configured in `treesit-language-source-alist'."
   :ensure nil
   :hook
   (emacs-lisp-mode . apheleia-mode)
+  (emacs-lisp-mode . flycheck-mode)
   (emacs-lisp-mode . (lambda () (setq-local evil-lookup-func 'helpful-at-point)))
   )
 
@@ -2473,51 +2587,7 @@ DOCSTRING describes what the command does."
 #+end_src
 * Eshell
 #+begin_src emacs-lisp
-(use-package eshell
-  :ensure nil
-  :commands (eshell eshell-new)
-  :general
-  (leader-def
-    "oE" 'eshell-new
-    "oe" 'eshell)
-  (:states '(normal visual)
-           :keymaps 'eshell-mode-map
-           "<return>" #'+eshell-reset-cursor-insert)
-  (:states '(normal insert visual)
-           :keymaps 'eshell-mode-map
-           "C-t" #'+shell-interactive-cd)
-  (:states '(normal visual insert)
-           :keymaps 'eshell-mode-map
-           "M-r" #'consult-history)
-  (:states '(insert)
-           :keymaps 'eshell-mode-map
-           "C-y" #'yank)
-  :preface
-  (defun +eshell-reset-cursor-insert ()
-    (interactive)
-    ;; Move to end of buffer and ensure we're at prompt
-    (end-of-buffer)
-    (when (get-buffer-process (current-buffer))
-      (while (not (looking-back eshell-prompt-regexp (line-beginning-position)))
-        (comint-send-input)))
-    (evil-insert-state))
-
-  (defun +shell-interactive-cd (dir)
-    "Prompt for a directory and cd to it."
-    (interactive "Dcd ")
-    (let ((inhibit-read-only t))
-      (insert (concat "cd " dir)))
-    (pcase major-mode
-      ('shell-mode (comint-send-input))
-      ('eshell-mode (eshell-send-input)))
-    )
-
-  (defun eshell-new ()
-    "Open a new instance of eshell."
-    (interactive)
-    (eshell 'N))
-  :custom
-  (eshell-banner-message "
+(defconst +eshell-banner  "
 \x1b[32m                             'c.                    \x1b[0m
 \x1b[32m                          ,xNMM.                    \x1b[0m
 \x1b[32m                        .OMMMMo                     \x1b[0m
@@ -2543,6 +2613,51 @@ DOCSTRING describes what the command does."
 \x1b[34m  _/_/_/  _/_/_/    _/    _/    _/_/_/  _/  _/      \x1b[0m
 
 ")
+(use-package eshell
+  :ensure nil
+  :commands (eshell eshell-new)
+  :general
+  (leader-def
+    "oE" 'eshell-new
+    "oe" 'eshell)
+  (:states '(normal visual)
+           :keymaps 'eshell-mode-map
+           "<return>" #'+eshell-reset-cursor-insert)
+  (:states '(normal insert visual)
+           :keymaps 'eshell-mode-map
+           "C-t" #'+shell-interactive-cd)
+  (:states '(normal visual insert)
+           :keymaps 'eshell-mode-map
+           "M-r" #'consult-history)
+  (:states '(insert)
+           :keymaps 'eshell-mode-map
+           "C-y" #'yank)
+  :preface
+  (defun +eshell-reset-cursor-insert ()
+    "Move to end of buffer and ensure we're at prompt."
+    (interactive)
+    (goto-char (point-max))
+    (when (get-buffer-process (current-buffer))
+      (while (not (looking-back eshell-prompt-regexp (line-beginning-position)))
+        (comint-send-input)))
+    (evil-insert-state))
+
+  (defun +shell-interactive-cd (dir)
+    "Prompt for a directory and cd to it."
+    (interactive "Dcd ")
+    (let ((inhibit-read-only t))
+      (insert (concat "cd " dir)))
+    (pcase major-mode
+      ('shell-mode (comint-send-input))
+      ('eshell-mode (eshell-send-input)))
+    )
+
+  (defun eshell-new ()
+    "Open a new instance of eshell."
+    (interactive)
+    (eshell 'N))
+  :custom
+  (eshell-banner-message +eshell-banner)
   (eshell-scroll-to-bottom-on-input 'all)
   (eshell-scroll-to-bottom-on-output 'all)
   (eshell-kill-processes-on-exit t)

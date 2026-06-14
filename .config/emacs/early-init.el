@@ -3,8 +3,9 @@
 ;;; Commentary:
 ;;; Code:
 (setq gc-cons-threshold most-positive-fixnum)
-(setq gc-cons-percentage 0.2)
 (setq read-process-output-max (* 4 1024 1024))
+
+(setq site-run-file nil)
 
 ;; `file-name-handler-alist' is consulted often. Unsetting it offers a notable saving in startup time.
 (let ((old-file-name-handler-alist file-name-handler-alist))
@@ -54,7 +55,7 @@
 (setq ad-redefinition-action 'accept)
 
 ;; Minimal UI
-(setq mode-line-format nil)
+(setq mode-line-format '("%e"))
 (push '(menu-bar-lines . 0) default-frame-alist)
 (push '(tool-bar-lines . 0) default-frame-alist)
 (push '(vertical-scroll-bars) default-frame-alist)
