@@ -1494,7 +1494,7 @@ for all languages configured in `treesit-language-source-alist'."
   )
 
 (use-package editorconfig
-  :defer .5
+  :defer 1
   :ensure nil
   :config
   (editorconfig-mode 1))
@@ -1817,6 +1817,73 @@ for all languages configured in `treesit-language-source-alist'."
   (web-mode . apheleia-mode)
   )
 
+(use-package scala-ts-mode
+  :init
+  (add-to-list 'major-mode-remap-alist '(scala-mode . scala-ts-mode))
+  :mode ("\\.scala\\'" . scala-ts-mode)
+  :interpreter ("scala" . scala-ts-mode)
+  :preface
+  (defun +scala-ts-mode-setup ()
+    (setq-local lsp-inlay-hint-enable t)
+
+    (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+  :hook
+  (scala-ts-mode . +scala-ts-mode-setup))
+
+(use-package sbt-mode
+  :commands sbt-start sbt-command sbt-do-run sbt-do-test sbt-do-testquick sbt-do-compile sbt-do-clean
+  :config
+  (substitute-key-definition
+   'minibuffer-complete-word
+   'self-insert-command
+   minibuffer-local-completion-map)
+  (setq sbt:program-options '("-Dsbt.supershell=false"))
+  :hook
+  (sbt-mode . (lambda ()
+                (evil-insert-state)))
+  :general
+  (localleader-def
+    :keymaps '(scala-ts-mode-map)
+    "b" '(:ignore t :wk "sbt")
+    "bb" 'sbt-command
+    "bc" 'sbt-do-compile
+    "bC" 'sbt-do-clean
+    "bp" 'sbt-do-package
+    "br" 'sbt-do-run
+    "bt" 'sbt-do-test
+    "b." 'sbt-run-previous-command
+
+    )
+  )
+
+(use-package bloop
+  :load-path "~/code/bloop"
+  :after scala-ts-mode
+  :general
+  (localleader-def
+    :keymaps '(scala-ts-mode-map)
+    "t" '(:ignore t :wk "test")
+    "ta" 'bloop-test-project
+    "tf" 'bloop-test-class
+    "tt" 'bloop-test-method
+    ))
+
+(use-package lsp-metals
+  :custom
+  (lsp-metals-java-home (or (getenv "JAVA_HOME") "/usr/lib/jvm/java-21"))
+  (lsp-metals-enable-semantic-highlighting t)
+  (lsp-metals-server-args '("-J-Dmetals.icons=unicode"))
+  :preface
+  (defun +scala-isolate-metals ()
+    "Use project-local Metals directory."
+    (let ((project-metals (expand-file-name ".metals" (project-root (project-current)))))
+      (setenv "METALS_HOME" project-metals)
+      (make-directory project-metals t)))
+  :hook
+  (scala-ts-mode . +scala-isolate-metals)
+  (scala-ts-mode . lsp-deferred)
+  )
+
 (use-package python-ts-mode
   :ensure nil
   :mode "\\.py\\'"
@@ -1955,100 +2022,6 @@ for all languages configured in `treesit-language-source-alist'."
   :ensure nil
   :mode "\\.lua\\'")
 
-(use-package scala-ts-mode
-  :init
-  (add-to-list 'major-mode-remap-alist '(scala-mode . scala-ts-mode))
-  :mode ("\\.scala\\'" . scala-ts-mode)
-  :interpreter ("scala" . scala-ts-mode)
-  :preface
-  (defun +scala-ts-mode-setup ()
-    (add-hook 'before-save-hook 'lsp-format-buffer nil t))
-  :hook
-  (scala-ts-mode . +scala-ts-mode-setup)
-  )
-
-(use-package sbt-mode
-  :commands sbt-start sbt-command sbt-do-run sbt-do-test sbt-do-testquick sbt-do-compile sbt-do-clean
-  :config
-  (substitute-key-definition
-   'minibuffer-complete-word
-   'self-insert-command
-   minibuffer-local-completion-map)
-  (setq sbt:program-options '("-Dsbt.supershell=false"))
-  :hook
-  (sbt-mode . (lambda ()
-                (evil-insert-state)))
-  :general
-  (localleader-def
-    :keymaps '(scala-ts-mode-map)
-    "b" '(:ignore t :wk "sbt")
-    "bb" 'sbt-command
-    "bc" 'sbt-do-compile
-    "bC" 'sbt-do-clean
-    "bp" 'sbt-do-package
-    "br" 'sbt-do-run
-    "bt" 'sbt-do-test
-    "b." 'sbt-run-previous-command
-
-    "t" '(:ignore t :wk "test")
-    "ta" 'sbt-do-test
-    "tf" '(+sbt-test-file :wk "Test current file")
-    )
-  )
-
-(use-package lsp-metals
-  :custom
-  (lsp-metals-java-home (or (getenv "JAVA_HOME") "/usr/lib/jvm/java-21"))
-  (lsp-metals-enable-semantic-highlighting t)
-  (lsp-metals-server-args '("-J-Dmetals.icons=unicode"))
-  :preface
-  (defun +scala-isolate-metals ()
-    "Use project-local Metals directory."
-    (setq-local lsp-inlay-hint-enable t)
-    (let ((project-metals (expand-file-name ".metals" (project-root (project-current)))))
-      (setenv "METALS_HOME" project-metals)
-      (make-directory project-metals t)))
-
-  :hook
-  (scala-ts-mode . +scala-isolate-metals)
-  (scala-ts-mode . lsp-deferred)
-  )
-
-;; (use-package sbt-mode
-;;   :general
-;;   (+local-leader-def
-;;     :keymaps '(scala-mode-map)
-;;     "b" '(nil :wk "sbt")
-;;     "bb" #'sbt-command
-;;     "bc" #'sbt-compile
-;;     "br" #'sbt-start
-;;     "b." #'sbt-run-previous-command
-;;     "t" '(nil :wk "test")
-;;     "ta" '(sbt-do-test :wk "Test quick")
-;;     "tf" '(+sbt-test-file :wk "Test current file")
-;;     ;; "tt" '(nil :wk "Test quick")
-;;   )
-;;   :commands sbt-start sbt-command
-;;   :init
-;;   (defun +sbt-get-testonly-file (&optional file)
-;;     "Return FILE formatted in a sbt testOnly command."
-;;     (--> (or file (file-name-base))
-;;          (format "testOnly *%s" it)))
-
-;;   (defun +sbt-test-file (&optional file)
-;;     (interactive)
-;;     (sbt-command (+sbt-get-testonly-file file)))
-
-;;   :config
-;;   ;; WORKAROUND: https://github.com/ensime/emacs-sbt-mode/issues/31
-;;   ;; allows using SPACE when in the minibuffer
-;;   ;; (substitute-key-definition
-;;   ;;  'minibuffer-complete-word
-;;   ;;  'self-insert-command
-;;   ;;  minibuffer-local-completion-map)
-;;   ;; sbt-supershell kills sbt-mode:  https://github.com/hvesalai/emacs-sbt-mode/issues/152
-;;   (setq sbt:program-options '("-Dsbt.supershell=false")))
-
 (use-package csharp-ts-mode
   :ensure nil
   :mode "\\.cs\\'")
@@ -2152,7 +2125,11 @@ for all languages configured in `treesit-language-source-alist'."
   :mode ("[./]flake8\\'" . conf-mode)
   :mode ("/Pipfile\\'" . conf-mode)
   :mode ("\\.env\\(?:\\..*\\)?\\'" . conf-mode)
-  :mode ("rc?\\'" . conf-mode))
+  )
+
+;; (use-package auth-source
+;;   :ensure nil
+;;   :mode ("\\.netrc\\'" . authinfo-mode))
 
 (use-package jenkinsfile-mode
   :mode "Jenkinsfile.*\\'")
@@ -2439,6 +2416,9 @@ DOCSTRING describes what the command does."
            "DEL" 'evil-backward-char
            "<backspace>" 'evil-backward-char
            )
+  (:states '(insert)
+           :keymaps 'ghostel-semi-char-mode-map
+           "C-y" #'yank)
   :hook (ghostel-mode . evil-ghostel-mode))
 
 (use-package ielm
@@ -2484,6 +2464,7 @@ DOCSTRING describes what the command does."
   )
 
 (use-package isearch
+  :defer t
   :ensure nil
   :config
   (setq lazy-highlight-initial-delay 0)
@@ -2526,7 +2507,7 @@ DOCSTRING describes what the command does."
   )
 
 (use-package dumb-jump
-  :defer 1
+  :after evil
   :config
   (setq dumb-jump-prefer-searcher 'rg
         xref-history-storage #'xref-window-local-history
@@ -2603,10 +2584,10 @@ DOCSTRING describes what the command does."
     "aa" 'eca
     "ak" 'eca-stop
     "ab" 'eca-chat-toggle-window)
-  ;; (:states '(normal)
-  ;;          :keymaps 'eca-chat-mode-map
-  ;;          "<tab>" 'eca-chat-toggle-expandable-block
-  ;;          )
+  (:states '(normal)
+           :keymaps 'eca-chat-mode-map
+           "<tab>" 'eca-chat-toggle-expandable-block
+           )
   :config
   (defun eca-chat--mode-line-spacer-image ()
     "Return an invisible spacer image synced to `doom-modeline-height'."
@@ -2663,3 +2644,7 @@ DOCSTRING describes what the command does."
 (use-package agent-shell
   :commands (agent-shell)
   :defer t)
+
+(use-package pi-coding-agent
+  :defer t
+  :init (defalias 'pi 'pi-coding-agent))
