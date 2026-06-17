@@ -12,17 +12,11 @@
       "keyRc": "llm-gateway.float16.cloud"
     }
   },
-  "agent": {
-    "code": {
-      "inherit": "code",
-      "defaultModel": "openrouter/openrouter/owl-alpha"
-    }
-  },
   "skills": [
     {
       "path": "/Users/aki/.claude/skills"
     }
   ],
   "defaultModel": "openrouter/moonshotai/kimi-k2.6",
-  "defaultAgent": "plan"
+  "defaultAgent": "code"
 }
