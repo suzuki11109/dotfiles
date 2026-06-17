@@ -8,41 +8,49 @@ zi light zsh-users/zsh-completions
 zi light hlissner/zsh-autopair
 zi snippet OMZP::git
 
-autoload -U compinit && compinit
-
-zi cdreplay -q
-
-bindkey -e
-
-HISTSIZE=5000
-SAVEHIST=5000
-HISTFILE=~/.zsh_history
-setopt appendhistory
-setopt sharehistory
-setopt hist_ignore_space
-setopt hist_save_no_dups
-setopt hist_ignore_all_dups
-setopt hist_ignore_dups
-setopt hist_find_no_dups
-bindkey '^p' history-search-backward
-bindkey '^n' history-search-forward
-
-zstyle ':completion:*' menu select
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
-zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
-bindkey '^[[Z' reverse-menu-complete
-
 PS1='%F{blue}%~ %(?.%F{green}.%F{red})%#%f '
 
-alias ls="ls --color"
+autoload -Uz compinit && compinit
+
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=10000
+SAVEHIST=10000
+setopt sharehistory
+setopt hist_ignore_all_dups
+setopt hist_ignore_space
+
+setopt extended_glob
+setopt auto_cd
+setopt auto_pushd
+setopt interactive_comments
+setopt menu_complete
+
+export CLICOLOR=1
+export LSCOLORS="ExFxCxDxBxegedabagacad"
+export LS_COLORS="di=01;34:ln=01;36:ex=01;32:fi=00"
+zstyle ':completion:*:default' list-colors "${(s.:.)LS_COLORS}"
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' cache-path ~/.zcompcache
+zstyle ':completion:*' use-cache yes
+
+bindkey -e
+bindkey '^[[Z' reverse-menu-complete
+
+# fuzzy
+
+alias ls="ls -G"
+alias ll="ls -alG"
+alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
 alias vi="nvim"
 alias vim="nvim"
 alias kubectl="kubecolor"
 alias k="kubecolor"
-alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
-alias pn="pnpm"
+
+compdef kubecolor=kubectl
 
 eval "$(/Users/aki/.local/bin/mise activate zsh)"
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
 
-command -v rbenv >/dev/null && eval "$(rbenv init -)"
-command -v direnv >/dev/null && eval "$(direnv hook zsh)"
+precmd () { print -Pn "\e]2;%-3~\a"; }
