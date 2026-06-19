@@ -97,7 +97,6 @@
     :states '(visual normal motion)
     :keymaps 'local
     :prefix "SPC m")
-
   )
 
 (use-package evil
@@ -405,6 +404,7 @@
 (setq mode-line-collapse-minor-modes '(not flycheck-mode lsp-mode))
 
 (use-package doom-modeline
+  :vc (:url "https://github.com/seagle0128/doom-modeline" :rev "a8b4fe52a0d875a7589b2a6aae57c5a58868197d")
   :defer t
   :custom
   (doom-modeline-bar-width 0)
@@ -495,6 +495,7 @@
  :custom
  (visual-fill-column-center-text t)
  (visual-fill-column-width 101)
+ (visual-fill-column-enable-sensible-window-split t)
  :hook
  ((org-mode markdown-mode) . visual-fill-column-mode))
 
@@ -1423,10 +1424,8 @@ targets."
   :init
   (setq treesit-font-lock-level 4)
   (setq treesit-language-source-alist
-        '((bash "https://github.com/tree-sitter/tree-sitter-bash")
-          (c "https://github.com/tree-sitter/tree-sitter-c")
+        '((c "https://github.com/tree-sitter/tree-sitter-c")
           (css "https://github.com/tree-sitter/tree-sitter-css")
-          (c-sharp "https://github.com/tree-sitter/tree-sitter-c-sharp")
           (dart "https://github.com/UserNobody14/tree-sitter-dart")
           (dockerfile "https://github.com/camdencheek/tree-sitter-dockerfile")
           (elixir "https://github.com/elixir-lang/tree-sitter-elixir")
@@ -1437,6 +1436,7 @@ targets."
           (html "https://github.com/tree-sitter/tree-sitter-html")
           (java "https://github.com/tree-sitter/tree-sitter-java")
           (javascript . ("https://github.com/tree-sitter/tree-sitter-javascript" "master" "src"))
+          (jsdoc "https://github.com/tree-sitter/tree-sitter-jsdoc")
           (json "https://github.com/tree-sitter/tree-sitter-json")
           (lua "https://github.com/tree-sitter-grammars/tree-sitter-lua")
           (nix "https://github.com/nix-community/tree-sitter-nix")
@@ -1449,9 +1449,6 @@ targets."
           (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
           (typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
           (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
-
-  (add-to-list 'major-mode-remap-alist '(sh-mode . bash-ts-mode))
-  (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
 
   :preface
   (defun treesit-install-all-language-grammers ()
@@ -1777,11 +1774,14 @@ for all languages configured in `treesit-language-source-alist'."
         (set-mark (point))
         (goto-char end)
         (jtsx-comment-dwim nil))))
+
+  (defun +jtsx-mode-setup ()
+    (setq-local evilnc-comment-or-uncomment-region-function '+jtsx-evilnc-comment)
+    (setq-local show-paren-data-function 'show-paren--default)
+    (+add-pairs '((?` . ?`)))
+    )
   :hook
-  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
-                                                          (setq-local evilnc-comment-or-uncomment-region-function '+jtsx-evilnc-comment)))
-  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . (lambda ()
-                                                          (+add-pairs '((?` . ?`)))))
+  ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . +jtsx-mode-setup)
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . lsp-deferred)
   ((jtsx-tsx-mode jtsx-jsx-mode jtsx-typescript-mode) . apheleia-mode)
   :config
@@ -2022,10 +2022,6 @@ for all languages configured in `treesit-language-source-alist'."
   :ensure nil
   :mode "\\.lua\\'")
 
-(use-package csharp-ts-mode
-  :ensure nil
-  :mode "\\.cs\\'")
-
 ;;;###autoload
 (defun eval-dwim ()
   "Evaluate the current line or selected region."
@@ -2088,6 +2084,8 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package json-ts-mode
   :ensure nil
   :mode "\\.js\\(?:on\\|[hl]int\\(?:rc\\)?\\)\\'"
+  :init
+  (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
   :preface
   (defun +json-mode-setup ()
     (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
