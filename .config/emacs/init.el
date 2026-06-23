@@ -251,7 +251,9 @@
   (which-key-min-display-lines 5)
   (which-key-show-operator-state-maps t)
   :config
-  (which-key-mode 1))
+  (which-key-mode 1)
+  ;; (which-key-setup-minibuffer)
+  )
 
 (setq-default line-spacing 0.3)
 
@@ -306,10 +308,15 @@
 (setq split-width-threshold 160
       split-height-threshold nil)
 
+(setq window-min-height 1)
 (setq window-combination-resize t)
 (setq window-resize-pixelwise t)
 (setq frame-resize-pixelwise t)
 (setq switch-to-buffer-obey-display-actions t)
+
+(setq window-divider-default-right-width 1)
+(setq window-divider-default-places 'right-only)
+(window-divider-mode 1)
 
 (use-package ace-window
   :defer t
@@ -391,6 +398,7 @@
             (lambda (&rest _)
               (when buffer-file-name (ignore-errors (recenter)))))
 
+(setq custom-safe-themes t)
 (use-package catppuccin-theme
   :custom
   (catppuccin-height-title-3 1.1)
@@ -405,7 +413,6 @@
 
 (use-package doom-modeline
   :vc (:url "https://github.com/seagle0128/doom-modeline" :rev "a8b4fe52a0d875a7589b2a6aae57c5a58868197d")
-  :defer t
   :custom
   (doom-modeline-bar-width 0)
   (doom-modeline-height 32)
@@ -448,7 +455,8 @@
                                                #'compilation-goto-in-progress-buffer))))
 
   :hook
-  (after-init . doom-modeline-mode))
+  (after-init . doom-modeline-mode)
+  )
 
 (use-package anzu
   :defer 1
@@ -479,13 +487,12 @@
 (setq use-short-answers t)
 (setq confirm-kill-emacs #'y-or-n-p)
 
+(context-menu-mode 1)
+
 (setq use-file-dialog nil)
 (setq use-dialog-box nil)
 
 (setq ring-bell-function #'ignore)
-
-(setq kill-whole-line t)
-(delete-selection-mode 1)
 
 (setq image-animate-loop t)
 
@@ -504,7 +511,7 @@
   :custom
   (auto-revert-verbose nil)
   (auto-revert-use-notify t)  ; Use file notifications instead of polling
-  ;; (global-auto-revert-non-file-buffers nil)
+  (global-auto-revert-non-file-buffers t)
   :config
   (global-auto-revert-mode 1))
 
@@ -601,7 +608,9 @@
   (dired-recursive-deletes 'top)
   (dired-create-destination-dirs 'ask)
   (dired-listing-switches "-lAh")
-  (dired-kill-when-opening-new-dired-buffer t))
+  (dired-kill-when-opening-new-dired-buffer t)
+  (dired-clean-confirm-killing-deleted-buffers nil)
+  )
 
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
@@ -610,13 +619,8 @@
 (setq remember-notes-buffer-name "*scratch*")
 (setq initial-buffer-choice 'remember-notes)
 
-(use-package hideshow
-  :ensure nil
-  :custom
-  (hs-show-indicators nil)
-  :hook
-  ((prog-mode conf-mode text-mode) . hs-minor-mode))
-
+(delete-selection-mode 1)
+(setq kill-whole-line t)
 (setq kill-do-not-save-duplicates t)
 (setq save-interprogram-paste-before-kill t)
 (setq delete-pair-blink-delay 0.05)
@@ -652,6 +656,13 @@
 (use-package rainbow-delimiters
   :hook
   (emacs-lisp-mode . rainbow-delimiters-mode))
+
+(use-package hideshow
+  :ensure nil
+  :custom
+  (hs-show-indicators nil)
+  :hook
+  ((prog-mode conf-mode text-mode) . hs-minor-mode))
 
 (use-package undo-fu
   :init
@@ -760,9 +771,10 @@ of the tab bar."
 (use-package dashboard
   :custom
   (initial-buffer-choice #'dashboard-open)
-  (dashboard-startup-banner "~/.config/emacs/banner.png")
+  (dashboard-startup-banner (expand-file-name "banner.png" user-emacs-directory))
   (dashboard-image-banner-max-height 450)
   (dashboard-center-content t)
+  (dashboard-vertically-center-content t)
   (dashboard-display-icons-p t)
   (dashboard-icon-type 'nerd-icons)
   (dashboard-set-heading-icons t)
@@ -1040,6 +1052,7 @@ of the tab bar."
     "sP" #'consult-ripgrep-in-dir
     "sp" #'consult-ripgrep)
   :bind
+  ([remap yank-pop] . consult-yank-pop)
   (:map minibuffer-local-map
         ("M-r" . consult-history))
   :preface
@@ -1795,21 +1808,25 @@ for all languages configured in `treesit-language-source-alist'."
   (evilmi-load-plugin-rules '(jtsx-typescript-mode) '(simple javascript html))
   )
 
+;; web-mode for templating files (.erb, .hbs, .vue, mixed-content .html)
 (use-package web-mode
-  :init
-  (setq web-mode-enable-html-entities-fontification t)
-  (setq web-mode-markup-indent-offset 2)
-  (setq web-mode-markup-comment-indent-offset 2)
-  (setq web-mode-code-indent-offset 2)
-  (setq web-mode-css-indent-offset 2)
-  (setq web-mode-attr-indent-offset 2)
-  (setq web-mode-attr-value-indent-offset 2)
-  (setq web-mode-auto-close-style 1)
-  (setq web-mode-comment-style 2)
+  :custom
+  ;; (web-mode-attr-indent-offset 2)
+  ;; (web-mode-attr-value-indent-offset 2)
+  ;; (web-mode-code-indent-offset 2)
+  ;; (web-mode-css-indent-offset 2)
+  ;; (web-mode-markup-indent-offset 2)
+  ;; (web-mode-markup-comment-indent-offset 2)
+
+  ;; (web-mode-auto-close-style 1)
+  (web-mode-comment-style 2)
+  ;; (web-mode-enable-auto-pairing t)
+  (web-mode-enable-html-entities-fontification t)
 
   (define-derived-mode erb-mode web-mode
     "Web[erb]")
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
+
   :config
   (add-to-list 'web-mode-engines-alist '("elixir" . "\\.eex\\'"))
   (add-to-list 'web-mode-engines-alist '("phoenix" . "\\.[lh]eex\\'"))
@@ -2291,32 +2308,6 @@ DOCSTRING describes what the command does."
   (setq shell-command-x-buffer-name-format "*shell %p:%a*")
   (shell-command-x-mode 1))
 
-(defconst +eshell-banner  "
-\x1b[32m                             'c.                    \x1b[0m
-\x1b[32m                          ,xNMM.                    \x1b[0m
-\x1b[32m                        .OMMMMo                     \x1b[0m
-\x1b[32m                        OMMM0,                      \x1b[0m
-\x1b[32m              .;loddo:' loolloddol;.                \x1b[0m
-\x1b[32m            cKMMMMMMMMMMNWMMMMMMMMMM0:              \x1b[0m
-\x1b[33m          .KMMMMMMMMMMMMMMMMMMMMMMMWd.              \x1b[0m
-\x1b[33m          XMMMMMMMMMMMMMMMMMMMMMMMX.                \x1b[0m
-\x1b[31m        ;MMMMMMMMMMMMMMMMMMMMMMMM:                  \x1b[0m
-\x1b[31m        :MMMMMMMMMMMMMMMMMMMMMMMM:                  \x1b[0m
-\x1b[31m        .MMMMMMMMMMMMMMMMMMMMMMMMX.                 \x1b[0m
-\x1b[31m         kMMMMMMMMMMMMMMMMMMMMMMMMWd.               \x1b[0m
-\x1b[35m          .XMMMMMMMMMMMMMMMMMMMMMMMMMMk             \x1b[0m
-\x1b[35m           .XMMMMMMMMMMMMMMMMMMMMMMMMK.             \x1b[0m
-\x1b[34m             kMMMMMMMMMMMMMMMMMMMMMMd               \x1b[0m
-\x1b[34m              ;KMMMMMMMWXXWMMMMMMMk.                \x1b[0m
-\x1b[34m                .cooc,.    .,coo:.                  \x1b[0m
-
-\x1b[34m                        _/                  _/  _/  \x1b[0m
-\x1b[34m     _/_/      _/_/_/  _/_/_/      _/_/    _/  _/   \x1b[0m
-\x1b[34m  _/_/_/_/  _/_/      _/    _/  _/_/_/_/  _/  _/    \x1b[0m
-\x1b[34m _/            _/_/  _/    _/  _/        _/  _/     \x1b[0m
-\x1b[34m  _/_/_/  _/_/_/    _/    _/    _/_/_/  _/  _/      \x1b[0m
-
-")
 (use-package eshell
   :ensure nil
   :commands (eshell eshell-new)
@@ -2337,14 +2328,21 @@ DOCSTRING describes what the command does."
            :keymaps 'eshell-mode-map
            "C-y" #'yank)
   :preface
+  ;; (defun +eshell-reset-cursor-insert ()
+  ;;   "Move to end of buffer and ensure we're at prompt."
+  ;;   (interactive)
+  ;;   (goto-char (point-max))
+  ;;   (when (get-buffer-process (current-buffer))
+  ;;     (while (not (looking-back eshell-prompt-regexp (line-beginning-position)))
+  ;;       (comint-send-input)))
+  ;;   (evil-insert-state))
+
   (defun +eshell-reset-cursor-insert ()
-    "Move to end of buffer and ensure we're at prompt."
+    "Move cursor to the prompt when switching to insert mode (if point isn't
+already there)."
     (interactive)
     (goto-char (point-max))
-    (when (get-buffer-process (current-buffer))
-      (while (not (looking-back eshell-prompt-regexp (line-beginning-position)))
-        (comint-send-input)))
-    (evil-insert-state))
+    (evil-append 1))
 
   (defun +shell-interactive-cd (dir)
     "Prompt for a directory and cd to it."
@@ -2361,7 +2359,6 @@ DOCSTRING describes what the command does."
     (interactive)
     (eshell 'N))
   :custom
-  (eshell-banner-message +eshell-banner)
   (eshell-scroll-to-bottom-on-input 'all)
   (eshell-scroll-to-bottom-on-output 'all)
   (eshell-kill-processes-on-exit t)
@@ -2371,6 +2368,7 @@ DOCSTRING describes what the command does."
   (eshell-error-if-no-glob t)
   :hook
   (eshell-mode . goto-address-mode)
+  (eshell-mode . electric-pair-local-mode)
   )
 
 (use-package eshell-syntax-highlighting
@@ -2385,28 +2383,36 @@ DOCSTRING describes what the command does."
   :custom
   (ghostel-tramp-shell-integration t)
   :config
-  (defun ghostel-run (name program &rest args)
+  (defun ghostel-run (program &rest args)
+    (interactive "sEnter command: ")
     "Launch PROGRAM in a ghostel buffer named NAME and display it."
-    (let ((buf (get-buffer-create name)))
+    (let* ((project (project-current))
+           (project-root (when project (project-root project)))
+           (default-directory (or project-root default-directory))
+           (buf (get-buffer-create (format "*%s*" program))))
       (apply #'ghostel-exec buf program args)
       (pop-to-buffer buf)))
 
-  (defun ghostel-run-pi ()
+  (defun pi ()
     "Run pi-coding-agent in `ghostel'."
     (interactive)
-    (ghostel-run "*pi*" "pi"))
+    (ghostel-run "pi"))
   :general
   (leader-def
     "os" 'ghostel
-    "ps" 'ghostel-project))
+    "ps" 'ghostel-project
+    "pS" 'ghostel-project-list-buffers)
+  :hook
+  (after-init . ghostel-comint-global-mode)
+  (eshell-load . ghostel-eshell-visual-command-mode)
+  )
 
 (use-package evil-ghostel
   :after (ghostel evil)
   :preface
   (defun evil-ghostel-normal-return ()
     (interactive)
-    (evil-insert-state)
-    )
+    (evil-insert-state))
   :general-config
   (:states '(normal visual)
            :keymaps 'ghostel-semi-char-mode-map
@@ -2415,8 +2421,8 @@ DOCSTRING describes what the command does."
            "<backspace>" 'evil-backward-char
            )
   (:states '(insert)
-           :keymaps 'ghostel-semi-char-mode-map
-           "C-y" #'yank)
+           :keymaps 'evil-ghostel-mode-map
+           "C-y" #'ghostel-yank)
   :hook (ghostel-mode . evil-ghostel-mode))
 
 (use-package ielm
@@ -2430,6 +2436,9 @@ DOCSTRING describes what the command does."
 
 (use-package envrc
   :hook (after-init . envrc-global-mode))
+
+(use-package mise
+  :hook (after-init . global-mise-mode))
 
 (use-package dir-config
   :custom
@@ -2479,6 +2488,11 @@ DOCSTRING describes what the command does."
       map))
   (put 'isearch-repeat-forward  'repeat-map 'isearch-repeat-map)
   (put 'isearch-repeat-backward 'repeat-map 'isearch-repeat-map)
+
+  (global-set-key (kbd "C-s") 'isearch-forward-regexp)
+  (global-set-key (kbd "C-r") 'isearch-backward-regexp)
+  (global-set-key (kbd "C-M-s") 'isearch-forward)
+  (global-set-key (kbd "C-M-r") 'isearch-backward)
   )
 
 ;; use selection to search
@@ -2642,6 +2656,10 @@ DOCSTRING describes what the command does."
 (use-package agent-shell
   :commands (agent-shell)
   :defer t)
+
+(use-package agent-shell-sidebar
+  :after agent-shell
+  :vc (:url "https://github.com/cmacrae/agent-shell-sidebar"))
 
 (use-package pi-coding-agent
   :defer t

@@ -1,6 +1,6 @@
 alias clear clear-scrollback
-alias l ls -lhGo $*
-alias ll ls -lAhGo $*
+alias l ls -lh $*
+alias ll ls -lAh $*
 alias less view-file $1
 alias glgg git log --graph
 alias glog git log --oneline --decorate --graph --all
@@ -8,3 +8,4 @@ alias glod git log --graph --pretty="%Cred%h%Creset%C(auto)%d%Creset %s %Cgreen(
 alias dot git --git-dir=$HOME/.cfg/ --work-tree=$HOME $*
 alias k kubecolor $*
 alias kubectl kubecolor $*
+alias ff find-file $1
