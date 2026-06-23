@@ -6,7 +6,7 @@ export PATH=$HOME/go/bin:$PATH
 export PATH=$HOME/flutter/bin:$PATH
 export PATH=$HOME/.pub-cache/bin:$PATH
 export PATH=$HOME/.cargo/bin:$PATH
-export PATH=$HOME/.rbenv/shims:$PATH
+# export PATH=$HOME/.local/share/mise/shims:$PATH
 export PNPM_HOME="/Users/aki/Library/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME/bin:"*) ;;
