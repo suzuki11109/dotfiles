@@ -308,7 +308,6 @@
 (setq split-width-threshold 160
       split-height-threshold nil)
 
-(setq window-min-height 1)
 (setq window-combination-resize t)
 (setq window-resize-pixelwise t)
 (setq frame-resize-pixelwise t)
@@ -455,8 +454,7 @@
                                                #'compilation-goto-in-progress-buffer))))
 
   :hook
-  (after-init . doom-modeline-mode)
-  )
+  (after-init . doom-modeline-mode))
 
 (use-package anzu
   :defer 1
@@ -861,10 +859,6 @@ of the tab bar."
                                             (untracked . show)))
   :config
   (add-to-list 'magit-no-confirm 'stage-all-changes)
-  ;; (transient-replace-suffix 'magit-branch "b"
-  ;;   '("b" "branch" magit-branch-checkout))
-  ;; (transient-replace-suffix 'magit-branch "l"
-  ;;   '("l" "revision" magit-checkout))
 
   (with-eval-after-load 'tabspaces
     (defun +magit-open-project-workspace ()
@@ -872,8 +866,7 @@ of the tab bar."
     (add-hook 'magit-post-clone-hook #'+magit-open-project-workspace))
 
   :hook
-  (magit-process-mode . goto-address-mode)
-  )
+  (magit-process-mode . goto-address-mode))
 
 ;;; For dotfiles
 (use-package magit
@@ -1006,8 +999,7 @@ of the tab bar."
   (savehist-save-minibuffer-history t)
   (savehist-autosave-interval nil)
   (savehist-additional-variables '(kill-ring register-alist search-ring regexp-search-ring comint-input-ring compile-pro--history-alist))
-  :hook (after-init . savehist-mode)
-  )
+  :hook (after-init . savehist-mode))
 
 (use-package vertico
   :defer t
@@ -1589,12 +1581,13 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package flycheck
   :defer t
   :custom
-  (flycheck-checkers '(emacs-lisp emacs-lisp-checkdoc))
+  (flycheck-checkers '(emacs-lisp emacs-lisp-checkdoc sh-shellcheck))
   (flycheck-idle-change-delay 1.0)
   (flycheck-display-errors-function nil)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
-  (flycheck-emacs-lisp-load-path 'inherit))
+  (flycheck-emacs-lisp-load-path 'inherit)
+  )
 
 (use-package sideline
   :custom
