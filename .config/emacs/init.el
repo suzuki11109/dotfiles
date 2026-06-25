@@ -185,6 +185,13 @@
     "ie" 'emoji-search
     "iu" 'insert-char
 
+    "l" '(:ignore t :wk "package")
+    "ld" 'package-delete
+    "lr" 'package-refresh-contents
+    "lu" 'package-upgrade
+    "lU" 'package-upgrade-all
+    "lV" 'package-vc-upgrade-all
+
     "g" '(:ignore t :wk "git")
 
     "n" '(:ignore t :wk "notes")
@@ -608,6 +615,18 @@
   (dired-listing-switches "-lAh")
   (dired-kill-when-opening-new-dired-buffer t)
   (dired-clean-confirm-killing-deleted-buffers nil)
+  )
+
+(use-package dired-x
+  :ensure nil
+  :hook (dired-mode . dired-omit-mode)
+  :config
+  (setq dired-omit-verbose nil)
+  (setq dired-omit-files
+        (concat dired-omit-files
+                "\\|^\\.DS_Store\\'"
+                "\\|^\\.localized\\'"
+                "\\|^\\.project\\(?:ile\\)?\\'"))
   )
 
 (use-package diredfl
@@ -1477,15 +1496,15 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package apheleia
   :commands apheleia-mode
   :config
-  (setf (alist-get 'prettier-typescript apheleia-formatters)
-        '("prettierd" "--stdin-filepath" filepath "--parser=typescript"
-          (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
+  ;; (setf (alist-get 'prettier-typescript apheleia-formatters)
+  ;;       '("prettierd" "--stdin-filepath" filepath "--parser=typescript"
+  ;;         (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
 
-  (setf (alist-get 'prettier apheleia-formatters)
-        '("prettierd" "--stdin-filepath" filepath
-          (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
+  ;; (setf (alist-get 'prettier apheleia-formatters)
+  ;;       '("prettierd" "--stdin-filepath" filepath
+  ;;         (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
 
-  (setf (alist-get 'erb-formatter apheleia-formatters)
+  (setf (alist-get 'biome apheleia-formatters)
         '("erb-format" "--print-width=140" filepath))
 
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
@@ -1583,6 +1602,8 @@ for all languages configured in `treesit-language-source-alist'."
   :custom
   (flycheck-checkers '(emacs-lisp emacs-lisp-checkdoc sh-shellcheck))
   (flycheck-idle-change-delay 1.0)
+  (flycheck-idle-buffer-switch-delay 0.5)
+  (flycheck-display-errors-delay 0.25)
   (flycheck-display-errors-function nil)
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
@@ -2124,6 +2145,11 @@ for all languages configured in `treesit-language-source-alist'."
   (dockerfile-ts-mode . +dockerfile-ts-mode-setup)
   (dockerfile-ts-mode . lsp-deferred))
 
+(use-package sh-script
+  :ensure nil
+  :hook
+  (sh-mode . flycheck-mode))
+
 (use-package bazel
   :mode ("\\Tiltfile\\'" . bazel-starlark-mode))
 
@@ -2134,10 +2160,6 @@ for all languages configured in `treesit-language-source-alist'."
   :mode ("/Pipfile\\'" . conf-mode)
   :mode ("\\.env\\(?:\\..*\\)?\\'" . conf-mode)
   )
-
-;; (use-package auth-source
-;;   :ensure nil
-;;   :mode ("\\.netrc\\'" . authinfo-mode))
 
 (use-package jenkinsfile-mode
   :mode "Jenkinsfile.*\\'")
@@ -2539,6 +2561,7 @@ already there)."
   :general
   (leader-def
    :keymaps 'org-mode-map
+   "v" '(:ignore t :wk "verb")
    "vh" 'verb-show-vars
    "vs" 'verb-set-var
    "vu" 'verb-unset-var
@@ -2653,7 +2676,3 @@ already there)."
 (use-package agent-shell-sidebar
   :after agent-shell
   :vc (:url "https://github.com/cmacrae/agent-shell-sidebar"))
-
-(use-package pi-coding-agent
-  :defer t
-  :init (defalias 'pi 'pi-coding-agent))
