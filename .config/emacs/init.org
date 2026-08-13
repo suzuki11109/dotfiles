@@ -2,9 +2,9 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
-** gptel
-** ediff
-** https://github.com/pkryger/difftastic.el
+** org evil
+** claude code cli
+** copilot/minute
 ** smartparens
 ** org notes solution (denote, supertag, ekg, org-node, roam)
 * Early Init
@@ -190,6 +190,7 @@
 (setq mac-command-modifier 'meta)
 (setq mac-option-modifier 'none)
 
+(global-set-key (kbd "M-v") 'yank)
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 
 (use-package general
@@ -240,7 +241,6 @@
   (define-key evil-motion-state-map (kbd ";") 'evil-ex)
   (define-key evil-normal-state-map (kbd "C-n") nil)
   (define-key evil-normal-state-map (kbd "C-p") nil)
-  ;; (define-key evil-normal-state-map [remap cua-paste-pop] nil)
   (define-key evil-normal-state-map [remap yank-pop] nil)
 
   (defun evil-insert-at-process-mark ()
@@ -347,7 +347,8 @@
   (:states '(normal visual)
            "s" 'evil-avy-goto-char-2)
   (:keymaps 'isearch-mode-map
-            "C-j" 'avy-isearch)
+            "C-j" 'avy-isearch
+            )
   :custom
   (avy-background t))
 
@@ -367,7 +368,7 @@
   (which-key-show-operator-state-maps t)
   :config
   (which-key-mode 1)
-  ;; (which-key-setup-minibuffer)
+  (which-key-setup-minibuffer)
   )
 #+end_src
 
@@ -412,8 +413,6 @@
 #+end_src
 * Lines
 #+begin_src emacs-lisp
-(setq-default display-line-numbers-width 3)
-(setq-default display-line-numbers-widen t)
 
 (use-package display-line-numbers
   :ensure nil
@@ -421,6 +420,8 @@
   :hook ((org-mode markdown-mode) . (lambda () (display-line-numbers-mode 0)))
   :custom
   (display-line-numbers-type 'visual)
+  (display-line-numbers-width 3)
+  (display-line-numbers-widen t)
   )
 
 (setq-default truncate-lines t)
@@ -546,7 +547,7 @@
 (setq mode-line-collapse-minor-modes '(not flycheck-mode lsp-mode))
 
 (use-package doom-modeline
-  :vc (:url "https://github.com/seagle0128/doom-modeline" :rev "a8b4fe52a0d875a7589b2a6aae57c5a58868197d")
+  :vc (:url "https://github.com/seagle0128/doom-modeline" :rev "017854c6484dd6a38e4b039dad04ce6dbec02f08")
   :custom
   (doom-modeline-bar-width 0)
   (doom-modeline-height 32)
@@ -562,19 +563,6 @@
   (doom-modeline-indent-info t)
   (doom-modeline-check 'simple)
   :config
-  ;; new logic makes some texts become normal weight in inactive
-  ;;   (defun doom-modeline-face (&optional face inactive-face)
-  ;;     "Display FACE in active window, and INACTIVE-FACE in inactive window.
-  ;; IF FACE is nil, `mode-line' face will be used.
-  ;; If INACTIVE-FACE is nil, `mode-line-inactive' face will be used."
-  ;;     (if (doom-modeline--active)
-  ;;         (or (and (facep face) `(:inherit (doom-modeline ,face)))
-  ;;             (and (facep 'mode-line-active) '(:inherit (doom-modeline mode-line-active)))
-  ;;             '(:inherit (doom-modeline mode-line)))
-  ;;       (or (and (facep face) `(:inherit (doom-modeline mode-line-inactive ,face)))
-  ;;           (and (facep inactive-face) `(:inherit (doom-modeline ,inactive-face)))
-  ;;           '(:inherit (doom-modeline mode-line-inactive)))))
-
   ;; show compiling
   (doom-modeline-def-segment compilation
                              (and (bound-and-true-p compilation-in-progress)
@@ -593,17 +581,13 @@
 
 (use-package anzu
   :defer 1
-  :general
-  (:states '(visual)
-           "M-s r" 'anzu-query-replace-regexp)
-  (leader-def
-    "sr" #'anzu-query-replace)
-  :bind
-  (:map isearch-mode-map
-        ([remap isearch-query-replace] . anzu-isearch-query-replace)
-        ([remap isearch-query-replace-regexp] . anzu-isearch-query-replace-regexp)
-        ("M-s r" . anzu-isearch-query-replace-regexp)
-        )
+  ;; :general
+  ;; (:states '(normal)
+  ;;          "M-s r" 'anzu-query-replace-regexp
+  ;;          "M-s R" 'anzu-query-replace-at-cursor)
+  ;; :bind
+  ;; (:map isearch-mode-map
+  ;;       ("M-s r" . anzu-isearch-query-replace-regexp))
   :config
   (global-anzu-mode 1))
 
@@ -659,31 +643,6 @@
   (global-auto-revert-non-file-buffers t)
   :config
   (global-auto-revert-mode 1))
-
-;; (use-package autorevert
-;;   :ensure nil
-;;   :custom
-;;   (auto-revert-verbose nil)
-;;   (auto-revert-use-notify nil)
-;;   :config
-;;   ;; global-auto-revert-mode can slow for non-file buffers. try to enable it per active window.
-;;   (add-to-list 'window-state-change-functions
-;;                (defun ar/window-state-state-change (state)
-;;                  (let* ((old-selected-window (old-selected-window))
-;;                         (old-buffer (when old-selected-window
-;;                                       (window-buffer old-selected-window)))
-;;                         (selected-window (selected-window))
-;;                         (new-buffer (when selected-window
-;;                                       (window-buffer selected-window))))
-;;                    (when old-buffer
-;;                      (with-current-buffer old-buffer
-;;                        (when (or buffer-file-name (derived-mode-p '(dired-mode)))
-;;                          (auto-revert-mode -1))))
-
-;;                    (when new-buffer
-;;                      (with-current-buffer new-buffer
-;;                        (when (or buffer-file-name (derived-mode-p '(dired-mode)))
-;;                          (auto-revert-mode +1))))))))
 
 (use-package emacs
   :ensure nil
@@ -1188,9 +1147,6 @@ of the tab bar."
 (setq minibuffer-prompt-properties '(read-only t intangible t cursor-intangible t face minibuffer-prompt))
 (add-hook 'minibuffer-setup-hook #'cursor-intangible-mode)
 
-(setq xref-show-definitions-function 'xref-show-definitions-completing-read
-      xref-show-xrefs-function 'xref-show-definitions-completing-read)
-
 (use-package savehist
   :ensure nil
   :custom
@@ -1239,6 +1195,7 @@ of the tab bar."
     "fr" #'consult-recent-file
     "iy" #'consult-yank-pop
     "pb" #'consult-project-buffer
+    "pr" #'consult-project-recent-file
     "sB" #'consult-line-thing-at-point
     "sb" #'consult-line
     "si" #'consult-imenu
@@ -1257,6 +1214,16 @@ of the tab bar."
     (interactive)
     (setq current-prefix-arg '(4))
     (call-interactively 'consult-ripgrep))
+
+  (defun consult-project-recent-file ()
+    "Find a recently visited file in the current project."
+    (interactive)
+    (consult--multi '(consult-source-project-recent-file)
+                    :prompt "Project recent file: "
+                    :require-match t))
+  :init
+  (setq xref-show-xrefs-function #'consult-xref
+        xref-show-definitions-function #'consult-xref)
   :config
   (setq consult-narrow-key "<")
   (setq completion-in-region-function
@@ -1477,11 +1444,9 @@ targets."
   (setq completions-detailed t)
   (setq completion-ignore-case t
         completion-pcm-leading-wildcard t ;; emacs 31
-        ;; completion-styles '(orderless partial-completion basic)
         completion-styles '(orderless basic)
         completion-category-defaults nil
         completion-category-overrides '((file (styles orderless partial-completion)))
-        ;; orderless-component-separator #'orderless-escapable-split-on-space
         )
   )
 
@@ -1652,6 +1617,7 @@ targets."
 (use-package treesit
   :ensure nil
   :init
+  (setq treesit-enabled-modes t)
   (setq treesit-font-lock-level 4)
   (setq treesit-language-source-alist
         '((c "https://github.com/tree-sitter/tree-sitter-c")
@@ -1680,15 +1646,14 @@ targets."
           (typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
           (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
 
-  :preface
-  (defun treesit-install-all-language-grammers ()
-    "Build and install the tree-sitter language grammar libraries
+;;   (defun treesit-install-all-language-grammers ()
+;;     "Build and install the tree-sitter language grammar libraries
 
-for all languages configured in `treesit-language-source-alist'."
-    (interactive)
-    (dolist (source treesit-language-source-alist)
-      (unless (treesit-ready-p (car source))
-        (treesit-install-language-grammar (car source)))))
+;; for all languages configured in `treesit-language-source-alist'."
+;;     (interactive)
+;;     (dolist (source treesit-language-source-alist)
+;;       (unless (treesit-ready-p (car source))
+;;         (treesit-install-language-grammar (car source)))))
   )
 
 #+end_src
@@ -1706,14 +1671,6 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package apheleia
   :commands apheleia-mode
   :config
-  ;; (setf (alist-get 'prettier-typescript apheleia-formatters)
-  ;;       '("prettierd" "--stdin-filepath" filepath "--parser=typescript"
-  ;;         (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
-
-  ;; (setf (alist-get 'prettier apheleia-formatters)
-  ;;       '("prettierd" "--stdin-filepath" filepath
-  ;;         (apheleia-formatters-js-indent "--use-tabs" "--tab-width")))
-
   (setf (alist-get 'biome apheleia-formatters)
         '("erb-format" "--print-width=140" filepath))
 
@@ -1812,6 +1769,9 @@ for all languages configured in `treesit-language-source-alist'."
 
 * Flycheck
 #+begin_src emacs-lisp
+;; (setq-default right-fringe-width 0)
+;; (setq-default left-fringe-width 2)
+
 (use-package flycheck
   :defer t
   :custom
@@ -1823,6 +1783,7 @@ for all languages configured in `treesit-language-source-alist'."
   (flycheck-buffer-switch-check-intermediate-buffers t)
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   (flycheck-emacs-lisp-load-path 'inherit)
+  (flycheck-indication-mode 'left-margin)
   )
 
 (use-package sideline
@@ -2006,6 +1967,11 @@ for all languages configured in `treesit-language-source-alist'."
 ;;   (html-ts-mode . emmet-mode)
 ;;   (web-mode . emmet-mode))
 
+
+(add-hook 'tsx-ts-mode-hook
+          (lambda ()
+            (setq-local show-paren-data-function #'my/tsx-show-paren-data)))
+
 (use-package jtsx
   :mode (("\\.jsx?\\'" . jtsx-jsx-mode)
          ("\\.tsx\\'" . jtsx-tsx-mode)
@@ -2026,9 +1992,20 @@ for all languages configured in `treesit-language-source-alist'."
         (goto-char end)
         (jtsx-comment-dwim nil))))
 
+  (defun +jtsx-show-paren-data ()
+    "Like `treesit-show-paren-data' but suppress highlight for JSX angle brackets.
+Keeps show-paren highlights for (), [], and {}."
+    (let ((result (treesit-show-paren-data)))
+      (when result
+        (let ((here (nth 0 result))
+              (there (nth 1 result)))
+          (unless (or (memq (char-after here) '(?< ?>))
+                      (memq (char-after there) '(?< ?>)))
+            result)))))
+
   (defun +jtsx-mode-setup ()
     (setq-local evilnc-comment-or-uncomment-region-function '+jtsx-evilnc-comment)
-    (setq-local show-paren-data-function 'show-paren--default)
+    (setq-local show-paren-data-function '+jtsx-show-paren-data)
     (+add-pairs '((?` . ?`)))
     )
   :hook
@@ -2076,8 +2053,6 @@ for all languages configured in `treesit-language-source-alist'."
 ** Scala
 #+begin_src emacs-lisp
 (use-package scala-ts-mode
-  :init
-  (add-to-list 'major-mode-remap-alist '(scala-mode . scala-ts-mode))
   :mode ("\\.scala\\'" . scala-ts-mode)
   :interpreter ("scala" . scala-ts-mode)
   :preface
@@ -2148,8 +2123,7 @@ for all languages configured in `treesit-language-source-alist'."
   :ensure nil
   :mode "\\.py\\'"
   :hook
-  (python-ts-mode . lsp-deferred)
-  )
+  (python-ts-mode . lsp-deferred))
 
 (use-package pythontest
   :general
@@ -2158,12 +2132,6 @@ for all languages configured in `treesit-language-source-alist'."
     "ta" 'pythontest-test-all
     "tf" 'pythontest-test-file
     "tt" 'pythontest-test-at-point))
-
-;; (use-package pyvenv
-;;   :init
-;;   (setq pyvenv-mode-line-indicator '(pyvenv-virtual-env-name ("venv:" pyvenv-virtual-env-name " ")))
-;;   :hook
-;;   ((python-mode python-ts-mode) . pyvenv-mode))
 
 ;; (use-package lsp-pyright
 ;;   :custom
@@ -2366,8 +2334,6 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package json-ts-mode
   :ensure nil
   :mode "\\.js\\(?:on\\|[hl]int\\(?:rc\\)?\\)\\'"
-  :init
-  (add-to-list 'major-mode-remap-alist '(js-json-mode . json-ts-mode))
   :preface
   (defun +json-mode-setup ()
     (add-hook 'before-save-hook 'json-pretty-print-buffer t t))
@@ -2379,16 +2345,14 @@ for all languages configured in `treesit-language-source-alist'."
 (use-package yaml-ts-mode
   :ensure nil
   :mode "\\.ya?ml\\'"
-  :hook
-  (yaml-ts-mode . lsp-deferred))
+  )
 #+end_src
 ** TOML
 #+begin_src emacs-lisp
 (use-package toml-ts-mode
   :ensure nil
   :mode "\\.toml\\'"
-  :hook
-  (toml-ts-mode . lsp-deferred))
+  )
 #+end_src
 ** Dockerfile
 #+begin_src emacs-lisp
@@ -2465,7 +2429,6 @@ for all languages configured in `treesit-language-source-alist'."
 #+end_src
 * Compile
 #+begin_src emacs-lisp
-
 (use-package compile
   :defer t
   :ensure nil
@@ -2600,9 +2563,9 @@ DOCSTRING describes what the command does."
   (leader-def
     "oE" 'eshell-new
     "oe" 'eshell)
-  (:states '(normal visual)
-           :keymaps 'eshell-mode-map
-           "<return>" #'+eshell-reset-cursor-insert)
+  ;; (:states '(normal visual)
+  ;;          :keymaps 'eshell-mode-map
+  ;;          "<return>" #'+eshell-reset-cursor-insert)
   (:states '(normal insert visual)
            :keymaps 'eshell-mode-map
            "C-t" #'+shell-interactive-cd)
@@ -2622,12 +2585,12 @@ DOCSTRING describes what the command does."
   ;;       (comint-send-input)))
   ;;   (evil-insert-state))
 
-  (defun +eshell-reset-cursor-insert ()
-    "Move cursor to the prompt when switching to insert mode (if point isn't
-already there)."
-    (interactive)
-    (goto-char (point-max))
-    (evil-append 1))
+;;   (defun +eshell-reset-cursor-insert ()
+;;     "Move cursor to the prompt when switching to insert mode (if point isn't
+;; already there)."
+;;     (interactive)
+;;     (goto-char (point-max))
+;;     (evil-append 1))
 
   (defun +shell-interactive-cd (dir)
     "Prompt for a directory and cd to it."
@@ -2726,8 +2689,11 @@ already there)."
 #+end_src
 * Env
 #+begin_src emacs-lisp
-(use-package envrc
-  :hook (after-init . envrc-global-mode))
+(use-package ben
+  :custom
+  (ben-add-to-mode-line-misc-info nil)
+  :hook
+  (after-init . ben-global-mode))
 
 (use-package mise
   :hook (after-init . global-mise-mode))
@@ -2737,6 +2703,17 @@ already there)."
 (use-package dir-config
   :custom
   (dir-config-allowed-directories '("~/code"))
+  :preface
+  (defun project-edit-dir-config ()
+    "Open the project's `.dir-config.el' file."
+    (interactive)
+    (if-let* ((project (project-current))
+              (root (project-root project)))
+        (find-file (expand-file-name ".dir-config.el" root))
+      (user-error "No project found")))
+  :general
+  (leader-def
+    "pi" 'project-edit-dir-config)
   :hook
   (after-init . dir-config-mode))
 #+end_src
@@ -2768,53 +2745,60 @@ already there)."
 #+end_src
 * Search
 #+begin_src emacs-lisp
-(use-package isearch
-  :defer t
-  :ensure nil
-  :config
-  (setq lazy-highlight-initial-delay 0)
-  (setq search-whitespace-regexp ".*?")
-  (setq isearch-allow-scroll 'unlimited)
-  (setq isearch-lazy-count t)
-  (setq isearch-repeat-on-direction-change t)
-  (setq isearch-wrap-pause 'no)
+;; (use-package isearch
+;;   :defer t
+;;   :ensure nil
+;;   :config
+;;   (setq lazy-highlight-initial-delay 0)
+;;   (setq search-whitespace-regexp ".*?")
+;;   (setq search-ring-max 100)
+;;   (setq isearch-allow-scroll 'unlimited)
+;;   (setq isearch-lazy-count t)
+;;   (setq isearch-repeat-on-direction-change t)
+;;   (setq isearch-wrap-pause 'no)
 
-  (defvar isearch-repeat-map
-    (let ((map (make-sparse-keymap)))
-      (define-key map "s" 'isearch-repeat-forward)
-      (define-key map "r" 'isearch-repeat-backward)
-      map))
-  (put 'isearch-repeat-forward  'repeat-map 'isearch-repeat-map)
-  (put 'isearch-repeat-backward 'repeat-map 'isearch-repeat-map)
+;;   (defvar isearch-repeat-map
+;;     (let ((map (make-sparse-keymap)))
+;;       (define-key map "s" 'isearch-repeat-forward)
+;;       (define-key map "r" 'isearch-repeat-backward)
+;;       map))
+;;   (put 'isearch-repeat-forward  'repeat-map 'isearch-repeat-map)
+;;   (put 'isearch-repeat-backward 'repeat-map 'isearch-repeat-map)
 
-  (global-set-key (kbd "C-s") 'isearch-forward-regexp)
-  (global-set-key (kbd "C-r") 'isearch-backward-regexp)
-  (global-set-key (kbd "C-M-s") 'isearch-forward)
-  (global-set-key (kbd "C-M-r") 'isearch-backward)
-  )
+;;   (global-set-key (kbd "C-s") 'isearch-forward-regexp)
+;;   (global-set-key (kbd "C-r") 'isearch-backward-regexp)
 
-;; use selection to search
-(defun +isearch-default-selected-text (orig-fun forward &optional regexp op-fun recursive-edit word-p)
-  "Advice for `isearch-mode' to use selected text as default search string."
-  (if (and transient-mark-mode mark-active (not (eq (mark) (point))))
-      (progn
-        (isearch-update-ring (buffer-substring-no-properties (mark) (point)))
-        (deactivate-mark)
-        (funcall orig-fun forward regexp op-fun recursive-edit word-p)
-        (if (not forward)
-            (isearch-repeat-backward)
-          (goto-char (mark))
-          (isearch-repeat-forward)))
-    (funcall orig-fun forward regexp op-fun recursive-edit word-p)))
-
-(advice-add 'isearch-mode :around #'+isearch-default-selected-text)
-
+  ;; use selection to search
+;; (defun +isearch-default-selected-text
+;;     (orig forward &optional regexp op-fun recursive-edit word-p)
+;;   (if (use-region-p)
+;;       (let ((text (buffer-substring-no-properties
+;;                    (region-beginning)
+;;                    (region-end)))
+;;             (start (region-beginning)))
+;;         (deactivate-mark)
+;;         (funcall orig forward regexp op-fun recursive-edit word-p)
+;;         (while (> (length isearch-string) 0)
+;;           (isearch-del-char))
+;;         (isearch-process-search-string
+;;          (if regexp
+;;              (regexp-quote text)
+;;            text)
+;;          (if regexp
+;;              (regexp-quote text)
+;;            text))
+;;         (goto-char start)
+;;         (if forward
+;;             (isearch-repeat-forward)
+;;           (isearch-repeat-backward)))
+;;     (funcall orig forward regexp op-fun recursive-edit word-p)))
+;; (advice-add #'isearch-mode :around #'+isearch-default-selected-text)
+;;   )
 
 (use-package replace
   :ensure nil
   :config
-  (add-hook 'occur-hook (lambda () (select-window (get-buffer-window "*Occur*"))))
-  )
+  (add-hook 'occur-hook (lambda () (select-window (get-buffer-window "*Occur*")))))
 #+end_src
 * Jump
 #+begin_src emacs-lisp
@@ -2822,10 +2806,8 @@ already there)."
   :after evil
   :config
   (setq dumb-jump-prefer-searcher 'rg
-        xref-history-storage #'xref-window-local-history
-        xref-show-definitions-function #'xref-show-definitions-completing-read)
-  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate)
-  )
+        xref-history-storage #'xref-window-local-history)
+  (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
 #+end_src
 * Linkhint
 #+begin_src emacs-lisp
@@ -2904,73 +2886,50 @@ already there)."
   (eca-chat-expand-pending-approval-tools nil)
   (eca-chat-window-width 0.45)
   :general
-  (leader-def
-    "aa" 'eca
-    "ak" 'eca-stop
-    "ab" 'eca-chat-toggle-window)
+  ;; (leader-def
+    ;; "ae" 'eca
+    ;; "ak" 'eca-stop
+    ;; "ab" 'eca-chat-toggle-window
+    ;; )
   (:states '(normal)
            :keymaps 'eca-chat-mode-map
            "<tab>" 'eca-chat-toggle-expandable-block
            )
-  :config
-  (defun eca-chat--mode-line-spacer-image ()
-    "Return an invisible spacer image synced to `doom-modeline-height'."
-    (let* ((height (max (or doom-modeline-height 25)
-                        (frame-char-height)))
-           (bg (face-attribute 'mode-line :background nil 'default)))
-      (create-image
-       (concat "P1\n1 " (number-to-string height) "\n"
-               (mapconcat (lambda (_) "1")
-                          (make-list height nil) "\n"))
-       'pbm t :background bg :foreground bg :ascent 'center)))
-
-  (defun eca-chat--mode-line-string (session)
-    "Build mode-line string for SESSION from `eca-chat-mode-line-format'."
-    (if eca-chat--closed
-        (propertize "*Closed session*"
-                    'font-lock-face 'eca-chat-system-messages-face)
-      (let* ((fmt eca-chat-mode-line-format)
-             (spacer-pos (-elem-index :spacer fmt))
-             (left-modules (if spacer-pos (-take spacer-pos fmt) fmt))
-             (right-modules (when spacer-pos
-                              (-drop (1+ spacer-pos) fmt)))
-             (left (string-join
-                    (-non-nil
-                     (-map (lambda (m)
-                             (eca-chat--mode-line-module session m))
-                           left-modules))
-                    ""))
-             (right (string-trim
-                     (string-join
-                      (-non-nil
-                       (-map (lambda (m)
-                               (eca-chat--mode-line-module session m))
-                             right-modules))
-                      "")))
-             (fill (if (string-empty-p right)
-                       ""
-                     (propertize
-                      " " 'display
-                      `((space :align-to
-                               (- right ,(1+ (length right))))))))
-             ;; Sync height to doom-modeline
-             (height (max (or doom-modeline-height 25)
-                          (frame-char-height)))
-             )
-        (let ((result (concat (propertize " " 'display (eca-chat--mode-line-spacer-image)) " " left fill right)))
-          (if (eca-chat--has-pending-approvals-p)
-              (propertize result 'face
-                          'eca-chat-approval-modeline-face)
-            result)))))
   )
 
 
-(use-package agent-shell
-  :commands (agent-shell)
-  :defer t)
+(use-package gptel
+  :commands (gptel)
+  :config
+  ;; gptel-make-openai here
+  (setq gptel-default-mode 'text-mode)
+  (setq gptel-model 'nvidia/nemotron-3-ultra-550b-a55b:free)
+  (setq gptel-backend
+        (gptel-make-openai "OpenRouter"
+          :host "openrouter.ai"
+          :endpoint "/api/v1/chat/completions"
+          :stream t
+          :key gptel-api-key
+          :models '(nvidia/nemotron-3-ultra-550b-a55b:free
+                    )))
+  )
 
-(use-package agent-shell-sidebar
-  :after agent-shell
-  :vc (:url "https://github.com/cmacrae/agent-shell-sidebar"))
+(use-package gptel-agent
+  :commands (gptel-agent)
+  :config (gptel-agent-update))
+
+(use-package agent-shell
+  :defer t
+  :commands (agent-shell)
+  )
+
+(use-package claude-code-ide
+  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
+  ;; :bind ("C-c C-'" . claude-code-ide-menu)
+  ;; :custom
+  ;; (claude-code-ide-cli-path "ocgo launch claude")
+  :config
+  (claude-code-ide-emacs-tools-setup))
+
 
 #+end_src

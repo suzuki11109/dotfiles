@@ -44,7 +44,7 @@ echo "========================================"
 
 rm -rf "$HOME/.config/emacs/eln-cache"
 
-"$EMACS_APP/Contents/MacOS/Emacs" --batch -Q -l "$HOME/.config/emacs/rebuild.el"
+# "$EMACS_APP/Contents/MacOS/Emacs" --batch -Q -l "$HOME/.config/emacs/rebuild.el"
 
 echo "========================================"
 echo "Finished"
