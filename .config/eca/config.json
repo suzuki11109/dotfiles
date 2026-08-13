@@ -1,15 +1,28 @@
 {
   "$schema": "https://eca.dev/config.json",
   "providers": {
+    "opencodego": {
+      "api": "openai-chat",
+      "url": "https://opencode.ai/zen/go/v1",
+      "keyRc": "opencode.ai"
+    },
     "openrouter": {
       "api": "openai-chat",
       "url": "https://openrouter.ai/api/v1",
       "keyRc": "openrouter.ai"
     },
-    "my-company": {
-      "api": "anthropic",
-      "url": "https://llm-gateway.float16.cloud",
-      "keyRc": "llm-gateway.float16.cloud"
+    "9router": {
+      "api": "openai-chat",
+      "url": "http://localhost:20128/v1",
+      "httpClient": {
+        "version": "http-1.1"
+      },
+      "models": {
+        "oc/mimo-v2.5-free": {},
+        "mmf/mimo-auto": {},
+        "oc/nemotron-3-ultra-free": {},
+        "oc/deepseek-v4-flash-free": {}
+      }
     }
   },
   "skills": [
@@ -17,6 +30,6 @@
       "path": "/Users/aki/.claude/skills"
     }
   ],
-  "defaultModel": "openrouter/moonshotai/kimi-k2.6",
+  // "defaultModel": "openrouter/moonshotai/kimi-k2.6",
   "defaultAgent": "code"
 }
