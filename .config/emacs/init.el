@@ -6,7 +6,7 @@
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
         ("melpa" . "https://melpa.org/packages/")))
 
-(setq use-package-compute-statistics t)
+;; (setq use-package-compute-statistics t)
 (setq use-package-expand-minimally t)
 (setq use-package-always-ensure t)
 (setq use-package-enable-imenu-support t)
@@ -202,6 +202,9 @@
     "ol" 'browse-url
     "ow" '+download-file
 
+    "q" '(:ignore t :wk "quit/session")
+    "qq" 'save-buffers-kill-terminal
+
     "s" '(:ignore t :wk "search")
     "si" 'imenu
     "so" 'occur
@@ -214,7 +217,7 @@
   :after evil
   :custom
   (evil-collection-repl-submit-state 'insert)
-  (evil-collection-key-blacklist '("C-y"))
+  ;; (evil-collection-key-blacklist '("C-y"))
   :config
   (evil-collection-init))
 
@@ -418,7 +421,7 @@
 (setq mode-line-collapse-minor-modes '(not flycheck-mode lsp-mode))
 
 (use-package doom-modeline
-  :vc (:url "https://github.com/seagle0128/doom-modeline" :rev "017854c6484dd6a38e4b039dad04ce6dbec02f08")
+  :vc (:url "https://github.com/seagle0128/doom-modeline" :rev "2d6828870bce42c3de6feebe1e70d9edc46515a6")
   :custom
   (doom-modeline-bar-width 0)
   (doom-modeline-height 32)
@@ -811,6 +814,15 @@ of the tab bar."
 
 (use-package magit
   :defer t
+  :preface
+  (defun magit-rebase-current-on-origin-develop ()
+    "Fetch origin and rebase the current branch onto origin/develop."
+    (interactive)
+    (let ((branch (magit-get-current-branch)))
+      (unless branch
+        (user-error "Not on a branch"))
+      (magit-run-git "fetch" "origin")
+      (magit-run-git "rebase" "origin/develop")))
   :general
   (leader-def
     "gB" 'magit-blame-addition
@@ -821,6 +833,7 @@ of the tab bar."
     "gG" 'dotfiles-magit-status
     "gi" 'magit-init
     "gL" 'magit-log-buffer-file
+    "gR" 'magit-rebase-current-on-origin-develop
     )
   :bind (:map magit-diff-section-map
               ("RET" . magit-diff-visit-worktree-file)
@@ -1337,11 +1350,10 @@ targets."
   (localleader-def
     :keymaps 'org-mode-map
     "j" 'consult-org-heading
-    "h" 'org-toggle-heading
-    "i" 'org-toggle-item
-    "x" 'org-toggle-checkbox
-    "t" 'org-todo
-    ;; table
+    ;; "h" 'org-toggle-heading
+    ;; "i" 'org-toggle-item
+    ;; "x" 'org-toggle-checkbox
+    ;; "t" 'org-todo
     )
   )
 
@@ -1400,6 +1412,10 @@ targets."
 
 (use-package org-auto-tangle
   :hook (org-mode . org-auto-tangle-mode))
+
+(use-package evil-org
+  :after (evil org)
+  :hook (org-mode . evil-org-mode))
 
 (use-package eldoc
   :defer t
@@ -2108,6 +2124,12 @@ Keeps show-paren highlights for (), [], and {}."
   (dockerfile-ts-mode . +dockerfile-ts-mode-setup)
   (dockerfile-ts-mode . lsp-deferred))
 
+(use-package lsp-sonarlint
+  :after (go-ts-mode)
+  :custom
+  (lsp-sonarlint-auto-download t)
+  (lsp-sonarlint-enabled-analyzers '("go" "typescript")))
+
 (use-package sh-script
   :ensure nil
   :hook
@@ -2220,7 +2242,6 @@ Keeps show-paren highlights for (), [], and {}."
   :bind
   ("M-o" . compile-pro-compile-from-history)
   ("M-O" . compile-pro-compile-in-dir)
-  ("M-p" . compile-pro-compile-from-makefile)
   :general
   (leader-def
     "!" 'compile-pro-compile
@@ -2590,41 +2611,16 @@ DOCSTRING describes what the command does."
   (eca-chat-expand-pending-approval-tools nil)
   (eca-chat-window-width 0.45)
   :general
-  ;; (leader-def
-    ;; "ae" 'eca
-    ;; "ak" 'eca-stop
-    ;; "ab" 'eca-chat-toggle-window
-    ;; )
-  (:states '(normal)
+  (leader-def
+    "aa" 'eca
+    "ab" 'eca-chat-toggle-window
+    )
+  (:states '(normal insert)
            :keymaps 'eca-chat-mode-map
-           "<tab>" 'eca-chat-toggle-expandable-block
-           )
-  )
-
-
-(use-package gptel
-  :commands (gptel)
-  :config
-  ;; gptel-make-openai here
-  (setq gptel-default-mode 'text-mode)
-  (setq gptel-model 'nvidia/nemotron-3-ultra-550b-a55b:free)
-  (setq gptel-backend
-        (gptel-make-openai "OpenRouter"
-          :host "openrouter.ai"
-          :endpoint "/api/v1/chat/completions"
-          :stream t
-          :key gptel-api-key
-          :models '(nvidia/nemotron-3-ultra-550b-a55b:free
-                    )))
-  )
-
-(use-package gptel-agent
-  :commands (gptel-agent)
-  :config (gptel-agent-update))
-
-(use-package agent-shell
-  :defer t
-  :commands (agent-shell)
+           "<tab>" 'eca-chat-toggle-expandable-block)
+  (:states '(insert)
+           :keymaps 'eca-chat-mode-map
+           "C-y" #'yank)
   )
 
 (use-package claude-code-ide
@@ -2634,3 +2630,31 @@ DOCSTRING describes what the command does."
   ;; (claude-code-ide-cli-path "ocgo launch claude")
   :config
   (claude-code-ide-emacs-tools-setup))
+
+(use-package gptel
+  :commands (gptel)
+  (leader-def
+    "ag" 'gptel-menu
+    )
+  :config
+  (setq gptel-default-mode 'org-mode)
+  (setq gptel-model 'mimo-v2.5)
+  (setq gptel-backend
+        (gptel-make-openai "OpencodeGo"
+          :host "opencode.ai"
+          :endpoint "/zen/go/v1/chat/completions"
+          :stream t
+          :key gptel-api-key
+          :models '(mimo-v2.5
+                    )))
+  )
+
+(use-package gptel-quick
+  :vc (:url "https://github.com/karthink/gptel-quick")
+  :general
+  (leader-def
+    "a?" 'gptel-quick
+    )
+  :config
+  (setq gptel-quick-timeout 15)
+  )

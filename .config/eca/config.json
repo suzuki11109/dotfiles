@@ -30,6 +30,6 @@
       "path": "/Users/aki/.claude/skills"
     }
   ],
-  // "defaultModel": "openrouter/moonshotai/kimi-k2.6",
+  "defaultModel": "opencodego/mimo-v2.5",
   "defaultAgent": "code"
 }

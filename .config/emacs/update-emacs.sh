@@ -43,6 +43,7 @@ echo "Updating Elpaca packages"
 echo "========================================"
 
 rm -rf "$HOME/.config/emacs/eln-cache"
+rm "$HOME/.config/emacs/package-quickstart.elc"
 
 # "$EMACS_APP/Contents/MacOS/Emacs" --batch -Q -l "$HOME/.config/emacs/rebuild.el"
 
