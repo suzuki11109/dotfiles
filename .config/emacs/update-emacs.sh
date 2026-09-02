@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EMACS_SRC="$HOME/emacs"
 EMACS_BRANCH="emacs-31"
+EMACS_SRC="$HOME/emacs"
 EMACS_APP="/Applications/Emacs.app"
+EMACS_DIR="$HOME/.config/emacs"
+EMACS="$EMACS_APP/Contents/MacOS/Emacs"
 
 echo "========================================"
 echo "Pulling Emacs source"
@@ -27,7 +29,7 @@ make distclean || true
 
 ./configure --with-native-compilation=aot --with-tree-sitter --with-xwidgets
 
-make -j8
+make -j6
 
 echo "========================================"
 echo "Installing Emacs.app"
@@ -36,16 +38,16 @@ echo "========================================"
 make install
 
 rm -rf "$EMACS_APP"
-cp -r nextstep/Emacs.app /Applications/Emacs.app
+cp -r nextstep/Emacs.app "$EMACS_APP"
 
 echo "========================================"
 echo "Updating Elpaca packages"
 echo "========================================"
 
-rm -rf "$HOME/.config/emacs/eln-cache"
-rm "$HOME/.config/emacs/package-quickstart.elc"
+rm -rf "$EMACS_DIR/eln-cache"
+rm "$EMACS_DIR/package-quickstart.elc"
 
-# "$EMACS_APP/Contents/MacOS/Emacs" --batch -Q -l "$HOME/.config/emacs/rebuild.el"
+"$EMACS" --batch --load "$EMACS_DIR/update-packages.el"
 
 echo "========================================"
 echo "Finished"
