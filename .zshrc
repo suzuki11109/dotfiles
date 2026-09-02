@@ -38,8 +38,6 @@ zstyle ':completion:*' use-cache yes
 bindkey -e
 bindkey '^[[Z' reverse-menu-complete
 
-# fuzzy
-
 alias ls="ls -G"
 alias ll="ls -alG"
 alias dot='git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
