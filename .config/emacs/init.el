@@ -2,9 +2,9 @@
 (setq package-vc-register-as-project nil)
 (setq package-quickstart t)
 (setq package-archives
-      '(("gnu" . "https://elpa.gnu.org/packages/")
+      '(("gnu"    . "https://elpa.gnu.org/packages/")
         ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-        ("melpa" . "https://melpa.org/packages/")))
+        ("melpa"  . "https://www.mirrorservice.org/sites/melpa.org/packages/")))
 
 ;; (setq use-package-compute-statistics t)
 (setq use-package-expand-minimally t)
@@ -358,6 +358,8 @@
      "Output\\*$"
      ("\\*Compile-Log\\*" . hide)
      "\\*Async Shell Command\\*$"
+     ghostel-compile-view-mode
+     "^\\*compile:"
      compilation-mode
      comint-mode
      "^\\*term.*\\*$" term-mode
@@ -2402,6 +2404,7 @@ DOCSTRING describes what the command does."
     "ps" 'ghostel-project
     "pS" 'ghostel-project-list-buffers)
   :hook
+  ;; (after-init . ghostel-compile-global-mode)
   (after-init . ghostel-comint-global-mode)
   (eshell-load . ghostel-eshell-visual-command-mode)
   )
@@ -2423,6 +2426,11 @@ DOCSTRING describes what the command does."
            :keymaps 'evil-ghostel-mode-map
            "C-y" #'ghostel-yank)
   :hook (ghostel-mode . evil-ghostel-mode))
+
+;; (use-package consult-ghostel
+;; :after (ghostel evil)
+;;   :bind (:map ghostel-semi-char-mode-map
+;;          ("M-r" . consult-ghostel-history)))
 
 (use-package ielm
   :commands (ielm)
@@ -2613,10 +2621,10 @@ DOCSTRING describes what the command does."
   :general
   (leader-def
     "aa" 'eca
-    "ab" 'eca-chat-toggle-window
-    )
+    "ab" 'eca-chat-toggle-window)
   (:states '(normal insert)
            :keymaps 'eca-chat-mode-map
+           "C-c C-k" 'eca-stop
            "<tab>" 'eca-chat-toggle-expandable-block)
   (:states '(insert)
            :keymaps 'eca-chat-mode-map
@@ -2625,17 +2633,20 @@ DOCSTRING describes what the command does."
 
 (use-package claude-code-ide
   :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
-  ;; :bind ("C-c C-'" . claude-code-ide-menu)
-  ;; :custom
-  ;; (claude-code-ide-cli-path "ocgo launch claude")
+  :general
+  (leader-def
+    "ac" 'claude-code-ide-menu)
+  :custom
+  (claude-code-ide-terminal-backend 'ghostel)
+  (claude-code-ide-window-width 0.45)
   :config
   (claude-code-ide-emacs-tools-setup))
 
 (use-package gptel
   :commands (gptel)
+  :general
   (leader-def
-    "ag" 'gptel-menu
-    )
+    "ag" 'gptel-menu)
   :config
   (setq gptel-default-mode 'org-mode)
   (setq gptel-model 'mimo-v2.5)
@@ -2653,8 +2664,6 @@ DOCSTRING describes what the command does."
   :vc (:url "https://github.com/karthink/gptel-quick")
   :general
   (leader-def
-    "a?" 'gptel-quick
-    )
+    "a?" 'gptel-quick)
   :config
-  (setq gptel-quick-timeout 15)
-  )
+  (setq gptel-quick-timeout 15))
