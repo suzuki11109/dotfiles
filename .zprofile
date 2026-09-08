@@ -20,4 +20,6 @@ export PATH="$PATH:$HOME/.lmstudio/bin"
 export PATH="$PATH:/Applications/Emacs.app/Contents/MacOS/bin"
 export PATH="$PATH:$HOME/Library/Application Support/Coursier/bin"
 
+export PATH=$PATH:$HOME/.maestro/bin
+
 [ -f ~/.zprofile.local ] && source ~/.zprofile.local

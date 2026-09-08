@@ -50,6 +50,18 @@
   (kill-new (buffer-file-name))
   (message "Copied %s to clipboard" (buffer-file-name)))
 
+(defun url-encode-region (beg end)
+  (interactive "r")
+  (let ((text (buffer-substring beg end)))
+    (delete-region beg end)
+    (insert (url-hexify-string text))))
+
+(defun url-decode-region (beg end)
+  (interactive "r")
+  (let ((text (buffer-substring beg end)))
+    (delete-region beg end)
+    (insert (url-unhex-string text))))
+
 (use-package gcmh
   :init
   (setq gcmh-idle-delay 'auto)
@@ -116,13 +128,14 @@
   (evil-vsplit-window-right t)
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-symbol-word-search t)
-  (evil-visual-state-cursor '(hollow))
+  (evil-visual-state-cursor 'hollow)
+  (evil-kbd-macro-suppress-motion-error t)
+  (evil-ex-hl-update-delay 0.1)
   (evil-goto-definition-functions '(evil-goto-definition-xref
                                     evil-goto-definition-imenu
                                     evil-goto-definition-semantic
                                     evil-goto-definition-search))
   :config
-  ;; (evil-mode 1)
   (evil-set-undo-system 'undo-fu)
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
@@ -137,10 +150,10 @@
   (define-key evil-normal-state-map (kbd "C-p") nil)
   (define-key evil-normal-state-map [remap yank-pop] nil)
 
-  (defun evil-insert-at-process-mark ()
-    (interactive)
-    (comint-goto-process-mark)
-    (evil-insert-state))
+  ;; (defun evil-insert-at-process-mark ()
+  ;;   (interactive)
+  ;;   (comint-goto-process-mark)
+  ;;   (evil-insert-state))
 
   (leader-def
     "SPC" '(execute-extended-command :wk "M-x")
@@ -210,7 +223,6 @@
     "so" 'occur
 
     "w" '(:keymap evil-window-map :wk "window"))
-
   )
 
 (use-package evil-collection
@@ -232,6 +244,20 @@
   :after evil
   :config
   (global-evil-surround-mode 1))
+
+(use-package evil-textobj-anyblock
+  :defer 1
+  :after evil
+  :config
+  (setq evil-textobj-anyblock-blocks
+        '(("(" . ")")
+          ("{" . "}")
+          ("\\[" . "\\]")
+          ("<" . ">")))
+
+  (define-key evil-inner-text-objects-map "b" 'evil-textobj-anyblock-inner-block)
+  (define-key evil-outer-text-objects-map "b" 'evil-textobj-anyblock-a-block)
+  )
 
 (use-package evil-matchit
   :defer 1
@@ -646,9 +672,9 @@
 
 (use-package undo-fu
   :init
-  (setq undo-limit (* 64 1024 1024))
-  (setq undo-strong-limit (* 96 1024 1024))
-  (setq undo-outer-limit (* 960 1024 1024)))
+  (setq undo-limit (* 256 1024))
+  (setq undo-strong-limit (* 2 1024 1024))
+  (setq undo-outer-limit (* 36 1024 1024)))
 
 (use-package undo-fu-session
   :custom
@@ -745,6 +771,16 @@ of the tab bar."
                                   :sort 'visibility
                                   :as #'buffer-name))))
     (add-to-list 'consult-buffer-sources 'consult-source-workspace)
+    )
+  )
+
+(use-package bookmark-in-project
+  :general
+  (leader-def
+    "kj" 'bookmark-in-project-jump
+    "ko" 'bookmark-in-project-jump-other-window
+    "kk" 'bookmark-in-project-toggle
+    "kD" 'bookmark-in-project-delete-all
     )
   )
 
@@ -851,6 +887,10 @@ of the tab bar."
                                             (untracked . show)))
   :config
   (add-to-list 'magit-no-confirm 'stage-all-changes)
+
+  (with-eval-after-load 'magit
+    (transient-append-suffix 'magit-rebase "p"
+      '("d" "origin/develop" magit-rebase-current-on-origin-develop)))
 
   (with-eval-after-load 'tabspaces
     (defun +magit-open-project-workspace ()
@@ -1259,12 +1299,11 @@ targets."
   :init
   (setq completions-detailed t)
   (setq completion-ignore-case t
-        completion-pcm-leading-wildcard t ;; emacs 31
+        completion-pcm-leading-wildcard t
         completion-styles '(orderless basic)
         completion-category-defaults nil
         completion-category-overrides '((file (styles orderless partial-completion)))
-        )
-  )
+        ))
 
 (use-package org
   :ensure nil
@@ -1455,7 +1494,8 @@ targets."
           (toml "https://github.com/tree-sitter/tree-sitter-toml")
           (tsx . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src"))
           (typescript . ("https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src"))
-          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")))
+          (yaml "https://github.com/tree-sitter-grammars/tree-sitter-yaml")
+          (zig :url "https://github.com/tree-sitter-grammars/tree-sitter-zig")))
 
 ;;   (defun treesit-install-all-language-grammers ()
 ;;     "Build and install the tree-sitter language grammar libraries
@@ -1570,9 +1610,6 @@ targets."
     :keymaps 'lsp-mode-map
     "cj" 'consult-lsp-symbols
     "cx" 'consult-lsp-diagnostics))
-
-;; (setq-default right-fringe-width 0)
-;; (setq-default left-fringe-width 2)
 
 (use-package flycheck
   :defer t
@@ -2309,6 +2346,60 @@ DOCSTRING describes what the command does."
   (setq shell-command-x-buffer-name-format "*shell %p:%a*")
   (shell-command-x-mode 1))
 
+(use-package ghostel
+  :commands (ghostel-run)
+  :hook
+  (ghostel-mode . (lambda () (setq-local line-spacing 0.3)))
+  :custom
+  (ghostel-tramp-shell-integration t)
+  :config
+  (defun ghostel-run (program &rest args)
+    (interactive "sEnter command: ")
+    "Launch PROGRAM in a ghostel buffer named NAME and display it."
+    (let* ((project (project-current))
+           (project-root (when project (project-root project)))
+           (default-directory (or project-root default-directory))
+           (buf (get-buffer-create (format "*%s*" program))))
+      (apply #'ghostel-exec buf program args)
+      (pop-to-buffer buf)))
+
+  (defun pi ()
+    "Run pi-coding-agent in `ghostel'."
+    (interactive)
+    (ghostel-run "pi"))
+  :general
+  (leader-def
+    "os" 'ghostel
+    "ps" 'ghostel-project
+    "pS" 'ghostel-project-list-buffers)
+  :hook
+  (after-init . ghostel-comint-global-mode)
+  (eshell-load . ghostel-eshell-visual-command-mode)
+  )
+
+(use-package evil-ghostel
+  :after (ghostel evil)
+  :preface
+  (defun evil-ghostel-normal-return ()
+    (interactive)
+    (evil-insert-state))
+  :general-config
+  (:states '(normal visual)
+           :keymaps 'ghostel-semi-char-mode-map
+           "<return>" 'evil-ghostel-normal-return
+           "DEL" 'evil-backward-char
+           "<backspace>" 'evil-backward-char
+           )
+  (:states '(insert)
+           :keymaps 'evil-ghostel-mode-map
+           "C-y" #'ghostel-yank)
+  :hook (ghostel-mode . evil-ghostel-mode))
+
+;; (use-package consult-ghostel
+;; :after (ghostel evil)
+;;   :bind (:map ghostel-semi-char-mode-map
+;;          ("M-r" . consult-ghostel-history)))
+
 (use-package eshell
   :ensure nil
   :commands (eshell eshell-new)
@@ -2376,61 +2467,6 @@ DOCSTRING describes what the command does."
   :after eshell
   :config
   (eshell-syntax-highlighting-global-mode 1))
-
-(use-package ghostel
-  :commands (ghostel-run)
-  :hook
-  (ghostel-mode . (lambda () (setq-local line-spacing 0.3)))
-  :custom
-  (ghostel-tramp-shell-integration t)
-  :config
-  (defun ghostel-run (program &rest args)
-    (interactive "sEnter command: ")
-    "Launch PROGRAM in a ghostel buffer named NAME and display it."
-    (let* ((project (project-current))
-           (project-root (when project (project-root project)))
-           (default-directory (or project-root default-directory))
-           (buf (get-buffer-create (format "*%s*" program))))
-      (apply #'ghostel-exec buf program args)
-      (pop-to-buffer buf)))
-
-  (defun pi ()
-    "Run pi-coding-agent in `ghostel'."
-    (interactive)
-    (ghostel-run "pi"))
-  :general
-  (leader-def
-    "os" 'ghostel
-    "ps" 'ghostel-project
-    "pS" 'ghostel-project-list-buffers)
-  :hook
-  ;; (after-init . ghostel-compile-global-mode)
-  (after-init . ghostel-comint-global-mode)
-  (eshell-load . ghostel-eshell-visual-command-mode)
-  )
-
-(use-package evil-ghostel
-  :after (ghostel evil)
-  :preface
-  (defun evil-ghostel-normal-return ()
-    (interactive)
-    (evil-insert-state))
-  :general-config
-  (:states '(normal visual)
-           :keymaps 'ghostel-semi-char-mode-map
-           "<return>" 'evil-ghostel-normal-return
-           "DEL" 'evil-backward-char
-           "<backspace>" 'evil-backward-char
-           )
-  (:states '(insert)
-           :keymaps 'evil-ghostel-mode-map
-           "C-y" #'ghostel-yank)
-  :hook (ghostel-mode . evil-ghostel-mode))
-
-;; (use-package consult-ghostel
-;; :after (ghostel evil)
-;;   :bind (:map ghostel-semi-char-mode-map
-;;          ("M-r" . consult-ghostel-history)))
 
 (use-package ielm
   :commands (ielm)
@@ -2611,6 +2647,12 @@ DOCSTRING describes what the command does."
   (interactive "fSelect file for OCR: ")
   (tesseract file tesseract-default-language))
 
+(use-package pdf-tools
+  :mode ("\\.pdf\\'" . pdf-view-mode)
+  :config
+  (pdf-loader-install)
+  )
+
 (use-package eca
   :hook
   (eca-chat-mode . (lambda ()
@@ -2621,6 +2663,7 @@ DOCSTRING describes what the command does."
   :general
   (leader-def
     "aa" 'eca
+    "af" 'eca-chat-add-filepath-to-user-prompt
     "ab" 'eca-chat-toggle-window)
   (:states '(normal insert)
            :keymaps 'eca-chat-mode-map
