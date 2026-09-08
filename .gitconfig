@@ -23,6 +23,11 @@
 	colorMoved = plain
 [github]
 	user = suzuki11109
-
 [includeIf "gitdir:~/code/xspring/"]
 	path = ~/.gitconfig-work
+[gitflow "release.finish"]
+	no-ff = true
+[gitflow "hotfix.finish"]
+	no-ff = true
+[gitflow "branch.develop"]
+	update-message = Merge tag '$PARENT_VERSION' into develop
