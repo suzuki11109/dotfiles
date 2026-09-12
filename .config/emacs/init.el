@@ -35,6 +35,11 @@
   (let ((default-directory org-directory))
     (call-interactively 'find-file)))
 
+(defun +find-file-in-home ()
+  (interactive)
+  (let ((default-directory "~/"))
+    (call-interactively 'find-file)))
+
 (defun +find-init-org ()
   "Open init.org file."
   (interactive)
@@ -186,6 +191,7 @@
     "f" '(:ignore t :wk "file")
     "fd" 'dired
     "ff" 'find-file
+    "fi" '+find-file-in-home
     "fi" '+find-init-org
     "fj" 'dired-jump
     "fr" 'recentf
@@ -340,6 +346,21 @@
 (setq truncate-partial-width-windows nil)
 
 (global-visual-line-mode 1)
+
+(defun +trim-menu-bar ()
+  "Allow only explicitly defined core menus and an optional Debug menu."
+  (let ((allowed-menus '(file edit options buffer tools))
+        (lmap (current-local-map)))
+    ;; Check if the current buffer has an active local map with a menu-bar
+    (when (and lmap (keymapp (lookup-key lmap [menu-bar])))
+      (map-keymap
+       (lambda (key binding)
+         ;; If the mode-specific menu key is not on your allowed list, drop it
+         (unless (memq key allowed-menus)
+           (define-key lmap (vector 'menu-bar key) nil)))
+       (lookup-key lmap [menu-bar])))))
+
+(add-hook 'after-change-major-mode-hook #'+trim-menu-bar)
 
 (setq split-width-threshold 160
       split-height-threshold nil)
