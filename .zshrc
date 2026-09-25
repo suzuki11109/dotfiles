@@ -38,5 +38,23 @@ alias kubectl="kubecolor"
 alias k="kubecolor"
 compdef kubecolor=kubectl
 
+alias gfi='git flow init'
+alias gfr='git flow release list'
+alias gfh='git flow hotfix list'
+
+gffr() {
+    git flow release finish "$1" \
+        --no-ff
+        --update-message "Merge tag '$1' into %b"
+}
+
+gffh() {
+    git flow hotfix finish "$1" \
+        --no-ff
+        --update-message "Merge tag '$1' into %b"
+}
+
+eval "$(zoxide init zsh)"
+eval "$(atuin init zsh --disable-up-arrow)"
 eval "$("$HOME/.local/bin/mise" activate zsh)"
 command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
