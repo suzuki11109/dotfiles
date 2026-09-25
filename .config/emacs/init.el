@@ -2023,7 +2023,7 @@ Keeps show-paren highlights for (), [], and {}."
   (dart-mode . +dart-mode-setup)
   (dart-mode . lsp-deferred)
   :custom
-  (lsp-dart-line-length 120)
+  (lsp-dart-line-length 80)
   (lsp-dart-flutter-fringe-colors nil)
   (lsp-dart-flutter-widget-guides nil)
   (lsp-dart-main-code-lens nil)
@@ -2076,6 +2076,8 @@ Keeps show-paren highlights for (), [], and {}."
   (localleader-def
     :keymaps '(dart-mode-map flutter-mode-map)
     "f" '(:ignore t :wk "flutter")
+
+    "fg" 'lsp-dart-pub-get
     "fq" 'flutter-quit
     "fr" 'flutter-hot-reload
     "fR" 'flutter-hot-restart
@@ -2421,6 +2423,14 @@ DOCSTRING describes what the command does."
 ;;   :bind (:map ghostel-semi-char-mode-map
 ;;          ("M-r" . consult-ghostel-history)))
 
+(use-package popterm
+  :bind (([f9]    . popterm-toggle))
+  :custom
+  (popterm-backend 'ghostel)
+  :hook
+  (after-init . popterm-global-mode)
+  )
+
 (use-package eshell
   :ensure nil
   :commands (eshell eshell-new)
@@ -2668,11 +2678,11 @@ DOCSTRING describes what the command does."
   (interactive "fSelect file for OCR: ")
   (tesseract file tesseract-default-language))
 
-(use-package pdf-tools
-  :mode ("\\.pdf\\'" . pdf-view-mode)
-  :config
-  (pdf-loader-install)
-  )
+;; (use-package pdf-tools
+;;   :mode ("\\.pdf\\'" . pdf-view-mode)
+;;   :config
+;;   (pdf-loader-install)
+;;   )
 
 (use-package eca
   :hook
