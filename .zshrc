@@ -57,4 +57,4 @@ gffh() {
 eval "$(zoxide init zsh)"
 eval "$(atuin init zsh --disable-up-arrow)"
 eval "$("$HOME/.local/bin/mise" activate zsh)"
-command -v direnv >/dev/null 2>&1 && eval "$(direnv hook zsh)"
+eval "$(direnv hook zsh)"

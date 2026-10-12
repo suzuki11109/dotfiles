@@ -42,7 +42,7 @@
 (setq bidi-inhibit-bpa t)
 
 (setq native-comp-async-report-warnings-errors 'silent)
-(setq native-comp-async-jobs-number 2)
+(setq native-comp-async-jobs-number 1)
 
 ;; Unset command line options irrelevant to the current OS
 (setq command-line-x-option-alist nil)

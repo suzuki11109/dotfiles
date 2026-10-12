@@ -135,7 +135,6 @@
   (evil-symbol-word-search t)
   (evil-visual-state-cursor 'hollow)
   (evil-kbd-macro-suppress-motion-error t)
-  (evil-ex-hl-update-delay 0.1)
   (evil-goto-definition-functions '(evil-goto-definition-xref
                                     evil-goto-definition-imenu
                                     evil-goto-definition-semantic
@@ -237,7 +236,15 @@
   (evil-collection-repl-submit-state 'insert)
   ;; (evil-collection-key-blacklist '("C-y"))
   :config
-  (evil-collection-init))
+  (defvar +evil-collection-disabled-list
+    '(evil-ghostel
+      ))
+  (dolist (sym +evil-collection-disabled-list)
+    (if-let* ((elt (assq sym evil-collection-mode-list)))
+        (cl-callf2 delete elt evil-collection-mode-list)
+      (cl-callf2 delq sym evil-collection-mode-list)))
+  (evil-collection-init)
+  )
 
 (use-package evil-nerd-commenter
   :general
@@ -412,8 +419,7 @@
      "^\\*term.*\\*$" term-mode
      "^\\*shell.*\\*$" shell-mode shell-command-mode
      "-eshell\\*$"
-     "-vterm\\*$"
-     "-ghostel\\*$"
+     ;; "-ghostel\\*$"
      "\\*Go Test\\*$"
      "\\*Flycheck errors\\*"
      "\\*rake-compilation\\*"
@@ -1545,6 +1551,9 @@ targets."
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
         '(ruby-standard))
 
+  (setf (alist-get 'python-ts-mode apheleia-mode-alist)
+        '(ruff))
+
   (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
   )
@@ -1585,7 +1594,7 @@ targets."
   (lsp-signature-render-documentation nil)
   (lsp-auto-execute-action nil)
   (lsp-disabled-clients '(rubocop-ls semgrep-ls))
-  (lsp-pylsp-plugins-ruff-enabled t)
+  ;; (lsp-pylsp-plugins-ruff-enabled t)
   (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-typescript-suggest-complete-js-docs nil)
   (lsp-javascript-suggest-complete-js-docs nil)
@@ -1969,7 +1978,9 @@ Keeps show-paren highlights for (), [], and {}."
   :ensure nil
   :mode "\\.py\\'"
   :hook
-  (python-ts-mode . lsp-deferred))
+  (python-ts-mode . lsp-deferred)
+  (python-ts-mode . apheleia-mode)
+  )
 
 (use-package pythontest
   :general
@@ -2023,12 +2034,12 @@ Keeps show-paren highlights for (), [], and {}."
   (dart-mode . +dart-mode-setup)
   (dart-mode . lsp-deferred)
   :custom
-  (lsp-dart-line-length 80)
+  (lsp-dart-line-length 120)
   (lsp-dart-flutter-fringe-colors nil)
   (lsp-dart-flutter-widget-guides nil)
   (lsp-dart-main-code-lens nil)
   (lsp-dart-test-code-lens nil)
-  ;; (lsp-dart-dap-flutter-hot-reload-on-save t)
+  (lsp-dart-dap-flutter-hot-reload-on-save t)
   :config
   ;; (defun lsp-dart--run-command (command args)
   ;;   "Run COMMAND with ARGS from the project root."
@@ -2418,10 +2429,15 @@ DOCSTRING describes what the command does."
            "C-y" #'ghostel-yank)
   :hook (ghostel-mode . evil-ghostel-mode))
 
-;; (use-package consult-ghostel
-;; :after (ghostel evil)
-;;   :bind (:map ghostel-semi-char-mode-map
-;;          ("M-r" . consult-ghostel-history)))
+(use-package consult-ghostel
+  :after (ghostel)
+  :hook (ghostel-mode . consult-ghostel-mode)
+  :bind (:map ghostel-semi-char-mode-map
+         ("M-r" . consult-ghostel-history))
+  ;; :config
+  ;; (setf (alist-get 'zsh ghostel-shell-history-commands)
+  ;;     "atuin history list --cmd-only --print0 --reverse false")
+  )
 
 (use-package popterm
   :bind (([f9]    . popterm-toggle))
@@ -2678,12 +2694,6 @@ DOCSTRING describes what the command does."
   (interactive "fSelect file for OCR: ")
   (tesseract file tesseract-default-language))
 
-;; (use-package pdf-tools
-;;   :mode ("\\.pdf\\'" . pdf-view-mode)
-;;   :config
-;;   (pdf-loader-install)
-;;   )
-
 (use-package eca
   :hook
   (eca-chat-mode . (lambda ()
@@ -2694,7 +2704,10 @@ DOCSTRING describes what the command does."
   :general
   (leader-def
     "aa" 'eca
+    "ak" 'eca-stop
     "af" 'eca-chat-add-filepath-to-user-prompt
+    "al" 'eca-chat-inline-prompt
+    "aw" 'eca-rewrite
     "ab" 'eca-chat-toggle-window)
   (:states '(normal insert)
            :keymaps 'eca-chat-mode-map
@@ -2705,17 +2718,6 @@ DOCSTRING describes what the command does."
            "C-y" #'yank)
   )
 
-(use-package claude-code-ide
-  :vc (:url "https://github.com/manzaltu/claude-code-ide.el" :rev :newest)
-  :general
-  (leader-def
-    "ac" 'claude-code-ide-menu)
-  :custom
-  (claude-code-ide-terminal-backend 'ghostel)
-  (claude-code-ide-window-width 0.45)
-  :config
-  (claude-code-ide-emacs-tools-setup))
-
 (use-package gptel
   :commands (gptel)
   :general
@@ -2723,14 +2725,12 @@ DOCSTRING describes what the command does."
     "ag" 'gptel-menu)
   :config
   (setq gptel-default-mode 'org-mode)
-  (setq gptel-model 'mimo-v2.5)
+  (setq gptel-model 'deepseek-flash)
   (setq gptel-backend
-        (gptel-make-openai "OpencodeGo"
-          :host "opencode.ai"
-          :endpoint "/zen/go/v1/chat/completions"
+        (gptel-make-deepseek "DeepSeek"
           :stream t
           :key gptel-api-key
-          :models '(mimo-v2.5
+          :models '(deepseek-flash
                     )))
   )
 
