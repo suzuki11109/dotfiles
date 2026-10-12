@@ -9,4 +9,4 @@
 
 (package-initialize)
 
-(package-upgrade-all))
+(package-upgrade-all)

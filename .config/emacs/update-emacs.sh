@@ -46,9 +46,13 @@ echo "========================================"
 
 rm -rf "$EMACS_DIR/eln-cache"
 rm "$EMACS_DIR/package-quickstart.elc"
+rm "$EMACS_DIR/package-quickstart.el"
 
 "$EMACS" --batch --load "$EMACS_DIR/update-packages.el"
 
 echo "========================================"
 echo "Finished"
 echo "========================================"
+
+# profiling while emacs is compiling eln
+# ps -Ao pid,ppid,pcpu,pmem,command | grep -E 'emacs|Emacs' | head -30
