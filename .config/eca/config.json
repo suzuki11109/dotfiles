@@ -25,6 +25,21 @@
       "path": "/Users/aki/.claude/skills"
     }
   ],
+  "hooks": {
+    "rtk-rewrite-shell": {
+      "type": "preToolCall",
+      "matcher": "eca__shell_command",
+      "visible": false,
+      "description": "Rewrite supported shell commands with RTK",
+      "actions": [
+        {
+          "type": "shell",
+          "file": "~/.config/eca/hooks/rtk-rewrite.sh",
+          "timeout": 3000
+        }
+      ]
+    }
+  },
   "defaultModel": "deepseek/deepseek-flash",
   "defaultAgent": "code"
 }
