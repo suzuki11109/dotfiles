@@ -44,13 +44,13 @@ alias gfh='git flow hotfix list'
 
 gffr() {
     git flow release finish "$1" \
-        --no-ff
+        --no-ff \
         --update-message "Merge tag '$1' into %b"
 }
 
 gffh() {
     git flow hotfix finish "$1" \
-        --no-ff
+        --no-ff \
         --update-message "Merge tag '$1' into %b"
 }
 
