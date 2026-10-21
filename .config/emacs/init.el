@@ -807,8 +807,7 @@ of the tab bar."
     "kj" 'bookmark-in-project-jump
     "ko" 'bookmark-in-project-jump-other-window
     "kk" 'bookmark-in-project-toggle
-    "kD" 'bookmark-in-project-delete-all
-    )
+    "kD" 'bookmark-in-project-delete-all)
   )
 
 (use-package dashboard
@@ -1064,8 +1063,8 @@ of the tab bar."
   (vertico-resize nil)
   (vertico-count 15)
   (vertico-multiform-commands
-   '((consult-ripgrep buffer)
-     (compile-pro-compile-from-history (vertico-sort-function . nil))))
+   '((compile-pro-compile-from-history (vertico-sort-function . nil))))
+
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
               ("DEL" . vertico-directory-delete-char)
@@ -1215,6 +1214,10 @@ targets."
     (interactive)
     (evil-normal-state)
     (grep-edit-save-changes))
+  :config
+  (setq grep-program "rg"
+        grep-template
+        "rg --color=never --no-heading --line-number --null -e <R> <D>")
 
   :general-config
   (:states '(normal)
@@ -1224,6 +1227,14 @@ targets."
   (:states '(normal insert)
            :keymaps 'grep-edit-mode-map
            "C-c C-c" '+evil-grep-edit-save-changes)
+  )
+
+(use-package rg
+  :hook
+  (rg-mode . (lambda () (switch-to-buffer (current-buffer))))
+  :general
+  (leader-def
+    "sg" 'rg-project)
   )
 
 (use-package cape
@@ -1640,6 +1651,28 @@ targets."
     :keymaps 'lsp-mode-map
     "cj" 'consult-lsp-symbols
     "cx" 'consult-lsp-diagnostics))
+
+(use-package dape
+  :custom
+  (dape-buffer-window-arrangement 'right)
+  :config
+  (dape-breakpoint-global-mode +1)
+  :hook
+  (dape-repl-mode . mode-line-invisible-mode)
+  :general
+  (leader-def
+    "dd" #'dape
+    "dp" #'dape-pause
+    "dc" #'dape-continue
+    "dn" #'dape-next
+    "dQ" #'dape-restart
+    "db" #'dape-breakpoint-toggle
+    "dB" #'dape-breakpoint-remove-all
+    "dx" #'dape-evaluate-expression
+    "dw" #'dape-watch-dwim
+    "dD" #'dape-disconnect-quit
+    "dq" #'dape-quit)
+  )
 
 (use-package flycheck
   :defer t
