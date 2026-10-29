@@ -1604,15 +1604,14 @@ targets."
   (lsp-signature-auto-activate nil)
   (lsp-signature-render-documentation nil)
   (lsp-auto-execute-action nil)
-  (lsp-disabled-clients '(rubocop-ls semgrep-ls))
-  ;; (lsp-pylsp-plugins-ruff-enabled t)
+  (lsp-disabled-clients '(rubocop-ls semgrep-ls ruff))
   (lsp-clients-typescript-prefer-use-project-ts-server t)
   (lsp-typescript-suggest-complete-js-docs nil)
   (lsp-javascript-suggest-complete-js-docs nil)
   (lsp-javascript-implicit-project-config-check-js t)
   (lsp-tailwindcss-add-on-mode t)
   (lsp-tailwindcss-major-modes '())
-  (lsp-python-ty-clients-server-command '("uvx" "ty" "server"))
+  (lsp-python-ty-clients-server-command '("ty" "server"))
   (lsp-treemacs-error-list-current-project-only t)
   (lsp-treemacs-error-list-expand-depth 3)
   :hook
@@ -2016,19 +2015,15 @@ Keeps show-paren highlights for (), [], and {}."
   )
 
 (use-package pythontest
+  :custom
+  (pythontest-test-runner "pytest")
+  (setq pythontest-pytest-command "pytest --tb=short --disable-warnings --color=yes")
   :general
   (localleader-def
     :keymaps 'python-ts-mode-map
     "ta" 'pythontest-test-all
     "tf" 'pythontest-test-file
     "tt" 'pythontest-test-at-point))
-
-;; (use-package lsp-pyright
-;;   :custom
-;;   (lsp-pyright-langserver-command "basedpyright")
-;;   :hook
-;;   (python-ts-mode . apheleia-mode)
-;;   (python-ts-mode . lsp-deferred))
 
 ;; (use-package auto-virtualenv
 ;;   :config
@@ -2557,11 +2552,9 @@ DOCSTRING describes what the command does."
            "C-y" #'yank)
   )
 
-(use-package ben
-  :custom
-  (ben-add-to-mode-line-misc-info nil)
-  :hook
-  (after-init . ben-global-mode))
+(use-package envrc
+  :config
+  (envrc-global-mode 1))
 
 (use-package mise
   :hook (after-init . global-mise-mode))
