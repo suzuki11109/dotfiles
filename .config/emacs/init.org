@@ -2,8 +2,8 @@
 #+STARTUP: overview
 #+AUTO_TANGLE: t
 * Todos
-** debug go, flutter
 ** md-mode, markdown-ts-mode
+** debug go, flutter
 ** calidraw
 ** slide
 ** smartparens

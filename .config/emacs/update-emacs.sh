@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export PKG_CONFIG_PATH="$(brew --prefix tree-sitter)/lib/pkgconfig"
+
 EMACS_BRANCH="emacs-31"
 EMACS_SRC="$HOME/emacs"
 EMACS_APP="/Applications/Emacs.app"

@@ -3,8 +3,4 @@
 brew update && brew upgrade -y
 brew cleanup
 
-pnpm self-update
 pnpm -g up
-
-uv self update
-mise self-update
