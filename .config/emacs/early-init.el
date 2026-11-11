@@ -42,7 +42,7 @@
 (setq bidi-inhibit-bpa t)
 
 (setq native-comp-async-report-warnings-errors 'silent)
-(setq native-comp-async-jobs-number 1)
+(setq native-comp-async-jobs-number 2)
 
 ;; Unset command line options irrelevant to the current OS
 (setq command-line-x-option-alist nil)
@@ -74,5 +74,9 @@
 (push '(ns-appearance . dark) default-frame-alist)
 
 (setenv "LSP_USE_PLISTS" "true")
+
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 64 1024 1024))))
 
 ;;; early-init.el ends here

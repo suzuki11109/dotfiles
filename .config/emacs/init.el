@@ -73,10 +73,10 @@
   (setq gcmh-auto-idle-delay-factor 10)
   (setq gcmh-high-cons-threshold (* 64 1024 1024))
   (gcmh-mode 1)
-  (add-function :after after-focus-change-function
-                (lambda ()
-                  (unless (frame-focus-state)
-                    (garbage-collect))))
+  ;; (add-function :after after-focus-change-function
+  ;;               (lambda ()
+  ;;                 (unless (frame-focus-state)
+  ;;                   (garbage-collect))))
   )
 
 (use-package exec-path-from-shell
@@ -134,16 +134,17 @@
   (evil-ex-interactive-search-highlight 'selected-window)
   (evil-symbol-word-search t)
   (evil-visual-state-cursor 'hollow)
+  (evil-ex-visual-char-range t)
   (evil-kbd-macro-suppress-motion-error t)
   (evil-goto-definition-functions '(evil-goto-definition-xref
                                     evil-goto-definition-imenu
                                     evil-goto-definition-semantic
                                     evil-goto-definition-search))
   :config
+  (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-set-undo-system 'undo-fu)
   (modify-syntax-entry ?_ "w")
   (defalias 'forward-evil-word 'forward-evil-symbol)
-  (evil-select-search-module 'evil-search-module 'evil-search)
   (evil-set-initial-state 'shell-command-mode 'normal)
   (evil-set-initial-state 'comint-mode 'normal)
 
@@ -190,7 +191,7 @@
     "f" '(:ignore t :wk "file")
     "fd" 'dired
     "ff" 'find-file
-    "fi" '+find-file-in-home
+    "fh" '+find-file-in-home
     "fi" '+find-init-org
     "fj" 'dired-jump
     "fr" 'recentf
@@ -272,6 +273,12 @@
   (define-key evil-outer-text-objects-map "b" 'evil-textobj-anyblock-a-block)
   )
 
+(use-package evil-visualstar
+  :defer 1
+  :after evil
+  :config
+  (global-evil-visualstar-mode 1))
+
 (use-package evil-matchit
   :defer 1
   :after evil
@@ -334,10 +341,14 @@
 (setq fast-but-imprecise-scrolling t)
 (setq auto-window-vscroll nil)
 (setq scroll-margin 1)
-(setq scroll-step 1)
 (setq scroll-conservatively 10)
 (setq scroll-preserve-screen-position t)
-(pixel-scroll-precision-mode 1)
+
+(use-package ultra-scroll
+  :defer 1
+  :config
+  (setq ultra-scroll-throttle-mode-line t)
+  (ultra-scroll-mode 1))
 
 (use-package display-line-numbers
   :ensure nil
@@ -347,10 +358,11 @@
   (display-line-numbers-type 'visual)
   (display-line-numbers-width 3)
   (display-line-numbers-widen t)
+  (display-line-numbers-grow-only t)
   )
 
-(setq-default truncate-lines t)
-(setq truncate-partial-width-windows nil)
+;; (setq-default truncate-lines t)
+;; (setq truncate-partial-width-windows nil)
 
 (global-visual-line-mode 1)
 
@@ -377,8 +389,9 @@
 (setq frame-resize-pixelwise t)
 (setq switch-to-buffer-obey-display-actions t)
 
-(setq window-divider-default-right-width 1)
-(setq window-divider-default-places 'right-only)
+(setq window-divider-default-places t
+      window-divider-default-bottom-width 1
+      window-divider-default-right-width 1)
 (window-divider-mode 1)
 
 (use-package ace-window
@@ -399,6 +412,10 @@
 (use-package popper
   :defer 0.5
   :demand t
+  :general
+  (leader-def
+    "`" 'popper-toggle
+    "\\" 'popper-cycle)
   :bind
   ("C-`"  . popper-toggle)
   ("C-\\" . popper-cycle)
@@ -561,29 +578,37 @@
   :config
   (global-auto-revert-mode 1))
 
+(defvar +auto-save-dir
+  (expand-file-name "autosave/" user-emacs-directory))
+
+(use-package files
+  :ensure nil
+  :custom
+  (create-lockfiles nil)
+  (make-backup-files nil)
+  (auto-save-default t)
+  (auto-save-include-big-deletions t)
+  (auto-save-list-file-prefix +auto-save-dir)
+  (auto-save-file-name-transforms
+   `(("\\`/[^/]*:\\([^/]*/\\)*\\([^/]*\\)\\'"
+      ,(file-name-concat +auto-save-dir "tramp-\\2-") sha1)
+     ("\\`/\\([^/]+/\\)*\\([^/]+\\)\\'"
+      ,(file-name-concat +auto-save-dir "\\2-") sha1)))
+
+  (confirm-nonexistent-file-or-buffer nil)
+  (large-file-warning-threshold nil)
+  (delete-by-moving-to-trash t)
+  (find-file-visit-truename t)
+  (save-some-buffers-default-predicate #'save-some-buffers-root)
+  :config
+  (make-directory +auto-save-dir t))
+
 (use-package emacs
   :ensure nil
   :init
-  (setq create-lockfiles nil)
-  (setq make-backup-files nil)
-  (setq auto-save-default nil)
-
-  (setq confirm-nonexistent-file-or-buffer nil)
-  (setq large-file-warning-threshold nil)
-  (setq delete-by-moving-to-trash t)
-
-  (setq find-file-visit-truename t)
-  (setq vc-follow-symlinks t)
-
   (setq uniquify-buffer-name-style 'forward)
   (setq uniquify-after-kill-buffer-p t)
-
   (setq ffap-machine-p-known 'reject)
-
-  (setq save-some-buffers-default-predicate #'save-some-buffers-root)
-
-  (setq imenu-auto-rescan t)
-  (setq imenu-max-item-length 160)
 
   (add-hook 'after-save-hook 'executable-make-buffer-file-executable-if-script-p))
 
@@ -699,9 +724,9 @@
 
 (use-package undo-fu
   :init
-  (setq undo-limit (* 256 1024))
-  (setq undo-strong-limit (* 2 1024 1024))
-  (setq undo-outer-limit (* 36 1024 1024)))
+  (setq undo-limit (* 512 1024))
+  (setq undo-strong-limit (* 8 1024 1024))
+  (setq undo-outer-limit (* 64 1024 1024)))
 
 (use-package undo-fu-session
   :custom
@@ -862,6 +887,11 @@ of the tab bar."
 
 (use-package hydra
   :defer t)
+
+(use-package vc
+  :ensure nil
+  :custom
+  (vc-follow-symlinks t))
 
 (use-package transient
   :defer t
@@ -1556,16 +1586,12 @@ targets."
 (use-package apheleia
   :commands apheleia-mode
   :config
-  (setf (alist-get 'biome apheleia-formatters)
-        '("erb-format" "--print-width=140" filepath))
-
   (setf (alist-get 'ruby-ts-mode apheleia-mode-alist)
         '(ruby-standard))
 
   (setf (alist-get 'python-ts-mode apheleia-mode-alist)
         '(ruff))
 
-  (add-to-list 'apheleia-mode-alist '(erb-mode . erb-formatter))
   (add-to-list 'apheleia-mode-alist '(markdown-mode . prettier-markdown))
   )
 
@@ -1673,6 +1699,8 @@ targets."
     "dq" #'dape-quit)
   )
 
+(setq-default left-fringe-width 1
+              left-margin-width 1)
 (use-package flycheck
   :defer t
   :custom
@@ -1685,6 +1713,13 @@ targets."
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-indication-mode 'left-margin)
+  ;; :preface
+  ;; (defun +set-flycheck-margins ()
+  ;;   (setq left-fringe-width 1 right-fringe-width 8
+  ;;         left-margin-width 1 right-margin-width 0)
+  ;;   (flycheck-refresh-fringes-and-margins))
+  ;; :hook
+  ;; (flycheck-mode . +set-flycheck-margins)
   )
 
 (use-package sideline
@@ -1930,11 +1965,11 @@ Keeps show-paren highlights for (), [], and {}."
   ;; (web-mode-enable-auto-pairing t)
   (web-mode-enable-html-entities-fontification t)
 
+  :config
   (define-derived-mode erb-mode web-mode
     "Web[erb]")
   (add-to-list 'auto-mode-alist '("\\.erb\\'" . erb-mode))
 
-  :config
   (add-to-list 'web-mode-engines-alist '("elixir" . "\\.eex\\'"))
   (add-to-list 'web-mode-engines-alist '("phoenix" . "\\.[lh]eex\\'"))
   :hook
@@ -2017,7 +2052,7 @@ Keeps show-paren highlights for (), [], and {}."
 (use-package pythontest
   :custom
   (pythontest-test-runner "pytest")
-  (setq pythontest-pytest-command "pytest --tb=short --disable-warnings --color=yes")
+  (pythontest-pytest-command "pytest --tb=short --disable-warnings --color=yes")
   :general
   (localleader-def
     :keymaps 'python-ts-mode-map
@@ -2225,11 +2260,11 @@ Keeps show-paren highlights for (), [], and {}."
   (dockerfile-ts-mode . +dockerfile-ts-mode-setup)
   (dockerfile-ts-mode . lsp-deferred))
 
-(use-package lsp-sonarlint
-  :after (go-ts-mode)
-  :custom
-  (lsp-sonarlint-auto-download t)
-  (lsp-sonarlint-enabled-analyzers '("go" "typescript")))
+;; (use-package lsp-sonarlint
+;;   :after (go-ts-mode)
+;;   :custom
+;;   (lsp-sonarlint-auto-download t)
+;;   (lsp-sonarlint-enabled-analyzers '("go" "typescript")))
 
 (use-package sh-script
   :ensure nil
@@ -2432,6 +2467,7 @@ DOCSTRING describes what the command does."
   :general
   (leader-def
     "os" 'ghostel
+    "oS" 'ghostel-new
     "ps" 'ghostel-project
     "pS" 'ghostel-project-list-buffers)
   :hook
@@ -2650,6 +2686,12 @@ DOCSTRING describes what the command does."
 ;; (advice-add #'isearch-mode :around #'+isearch-default-selected-text)
 ;;   )
 
+(use-package imenu
+  :ensure nil
+  :custom
+  (imenu-auto-rescan t)
+  (imenu-max-item-length 160))
+
 (use-package replace
   :ensure nil
   :config
@@ -2661,6 +2703,37 @@ DOCSTRING describes what the command does."
   (setq dumb-jump-prefer-searcher 'rg
         xref-history-storage #'xref-window-local-history)
   (add-hook 'xref-backend-functions #'dumb-jump-xref-activate))
+
+(use-package webjump
+  :ensure nil
+  :commands (webjump google-search)
+  :general
+  (leader-def
+    "sw" 'google-search
+    "sW" 'webjump)
+  :config
+  (add-to-list 'webjump-sites
+               '("Google" . [simple-query
+                             "https://www.google.com/"
+                             "https://www.google.com/search?q="
+                             ""]))
+
+  (defun google-search ()
+    "Search Google via webjump."
+    (interactive)
+    (let ((initial-input
+           (when (use-region-p)
+             (buffer-substring-no-properties
+              (region-beginning)
+              (region-end)))))
+      (cl-letf (((symbol-function 'webjump-read-string)
+                 (lambda (prompt)
+                   (read-string (concat prompt ": ") initial-input))))
+        (browse-url
+         (webjump-url-fix
+          (webjump-builtin (cdr (assoc "Google" webjump-sites))
+                           "Google"))))))
+  )
 
 (use-package link-hint
   :commands (link-hint-open-link)
@@ -2723,6 +2796,7 @@ DOCSTRING describes what the command does."
 (use-package eca
   :hook
   (eca-chat-mode . (lambda ()
+                     (setq-local scroll-margin 1)
                      (evil-insert-state)))
   :custom
   (eca-chat-expand-pending-approval-tools nil)
