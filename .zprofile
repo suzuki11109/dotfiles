@@ -22,4 +22,6 @@ export PATH="$PATH:$HOME/.lmstudio/bin"
 export PATH="$PATH:/Applications/Emacs.app/Contents/MacOS/bin"
 export PATH="$PATH:$HOME/Library/Application Support/Coursier/bin"
 
+export PATH=$HOME/.local/share/mise/shims:$PATH
+
 [ -f ~/.zprofile.local ] && source ~/.zprofile.local
