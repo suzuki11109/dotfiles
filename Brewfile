@@ -1,4 +1,3 @@
-brew "atuin"
 brew "autoconf"
 brew "colima"
 brew "direnv"
