@@ -2,9 +2,8 @@
 (setq package-vc-register-as-project nil)
 (setq package-quickstart t)
 (setq package-archives
-      '(("gnu"    . "https://elpa.gnu.org/packages/")
-        ("nongnu" . "https://elpa.nongnu.org/nongnu/")
-        ("melpa"  . "https://www.mirrorservice.org/sites/melpa.org/packages/")))
+      '(("gnu"    . "https://mirrors.tuna.tsinghua.edu.cn/elpa/gnu/")
+        ("melpa"  . "https://mirrors.tuna.tsinghua.edu.cn/elpa/melpa/")))
 
 ;; (setq use-package-compute-statistics t)
 (setq use-package-expand-minimally t)
@@ -150,6 +149,7 @@
 
   (evil-define-key '(motion) 'global "j" 'evil-next-visual-line)
   (evil-define-key '(motion) 'global "k" 'evil-previous-visual-line)
+  (define-key evil-motion-state-map (kbd "gz") 'evil-ex-nohighlight)
   (define-key evil-motion-state-map (kbd ";") 'evil-ex)
   (define-key evil-normal-state-map (kbd "C-n") nil)
   (define-key evil-normal-state-map (kbd "C-p") nil)
@@ -1699,8 +1699,11 @@ targets."
     "dq" #'dape-quit)
   )
 
-(setq-default left-fringe-width 1
-              left-margin-width 1)
+;; (setq-default left-fringe-width nil
+;;               left-margin-width 1
+;;               right-fringe-width 0
+;;               right-margin-width 1)
+
 (use-package flycheck
   :defer t
   :custom
@@ -1713,13 +1716,6 @@ targets."
   (flycheck-check-syntax-automatically '(save idle-change mode-enabled))
   (flycheck-emacs-lisp-load-path 'inherit)
   (flycheck-indication-mode 'left-margin)
-  ;; :preface
-  ;; (defun +set-flycheck-margins ()
-  ;;   (setq left-fringe-width 1 right-fringe-width 8
-  ;;         left-margin-width 1 right-margin-width 0)
-  ;;   (flycheck-refresh-fringes-and-margins))
-  ;; :hook
-  ;; (flycheck-mode . +set-flycheck-margins)
   )
 
 (use-package sideline
@@ -2811,6 +2807,7 @@ DOCSTRING describes what the command does."
     "ab" 'eca-chat-toggle-window)
   (:states '(normal insert)
            :keymaps 'eca-chat-mode-map
+           "M-RET" 'eca-chat-send-prompt-at-chat
            "C-c C-k" 'eca-stop
            "<tab>" 'eca-chat-toggle-expandable-block)
   (:states '(insert)
