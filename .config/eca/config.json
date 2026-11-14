@@ -6,7 +6,6 @@
       "url": "https://api.deepseek.com",
       "keyRc": "deepseek.com",
       "models": {
-        "deepseek-chat": {},
         "deepseek-flash": {},
         "deepseek-v4-pro": {}
       }
@@ -41,5 +40,26 @@
   //   }
   // },
   "defaultModel": "deepseek/deepseek-flash",
-  "defaultAgent": "code"
+  "defaultAgent": "code",
+  "agent": {
+    "advisor": {
+      "prompts": {
+        "chat": "${file:~/.config/eca/prompts/advisor.md}"
+      },
+      "disabledTools": [
+        "eca__edit_file",
+        "eca__write_file",
+        "eca__apply_edit",
+        "eca__shell_command",
+        "eca__grep",
+        "eca__glob",
+        "eca__read_file",
+        "eca__list_dir",
+        "eca__preview_file_change"
+      ]
+    }
+  },
+  "prompts": {
+    "rewrite": "${file:~/.config/eca/prompts/rewrite.md}"
+  }
 }
