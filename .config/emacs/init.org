@@ -5,7 +5,6 @@
 ** debug go, flutter
 ** calidraw
 ** slide
-** markdown-ts-mode, markdown-ts-appear
 ** smartparens
 ** org notes solution (denote, supertag, ekg, org-node, roam, vulpea)
 * Early Init
