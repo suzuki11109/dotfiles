@@ -66,6 +66,13 @@
     (delete-region beg end)
     (insert (url-unhex-string text))))
 
+(defun sha256-region (beg end)
+  "Replace the region with its SHA-256 hash."
+  (interactive "r")
+  (let ((hash (secure-hash 'sha256 (current-buffer) beg end)))
+    (delete-region beg end)
+    (insert hash)))
+
 (use-package gcmh
   :init
   (setq gcmh-idle-delay 'auto)
@@ -172,7 +179,8 @@
     "bd" 'kill-current-buffer
     "bi" 'ibuffer
     "bm" '((lambda () (interactive) (switch-to-buffer "*Messages*")) :wk "Open Messages")
-    "bl" #'evil-switch-to-windows-last-buffer
+    "bn" 'evil-buffer-new
+    "bl" 'evil-switch-to-windows-last-buffer
     "br" 'rename-buffer
     "bx" 'remember-notes
     "bz" 'bury-buffer
@@ -1231,42 +1239,6 @@ targets."
   :hook
   (embark-collect-mode . consult-preview-at-point-mode))
 
-(use-package grep
-  :defer t
-  :ensure nil
-  :preface
-  (defun +evil-grep-change-to-grep-edit-mode ()
-    (interactive)
-    (grep-change-to-grep-edit-mode)
-    (evil-insert-state))
-
-  (defun +evil-grep-edit-save-changes ()
-    (interactive)
-    (evil-normal-state)
-    (grep-edit-save-changes))
-  :config
-  (setq grep-program "rg"
-        grep-template
-        "rg --color=never --no-heading --line-number --null -e <R> <D>")
-
-  :general-config
-  (:states '(normal)
-           :keymaps 'grep-mode-map
-           "i" '+evil-grep-change-to-grep-edit-mode
-           "C-c C-e" '+evil-grep-change-to-grep-edit-mode)
-  (:states '(normal insert)
-           :keymaps 'grep-edit-mode-map
-           "C-c C-c" '+evil-grep-edit-save-changes)
-  )
-
-(use-package rg
-  :hook
-  (rg-mode . (lambda () (switch-to-buffer (current-buffer))))
-  :general
-  (leader-def
-    "sg" 'rg-project)
-  )
-
 (use-package cape
   :after corfu
   :config
@@ -2300,23 +2272,25 @@ Keeps show-paren highlights for (), [], and {}."
   :custom
   (comint-use-prompt-regexp t)
   (comint-prompt-read-only t)
-  (comint-buffer-maximum-size 2048)
+  (comint-buffer-maximum-size 4096)
   :config
-  (defun +comint-quit-if-done ()
-    "Quit comint buffer only if the process is finished."
-    (interactive)
-    (let ((proc (get-buffer-process (current-buffer))))
-      (if (or (not proc) (memq (process-status proc) '(exit signal)))
-          (quit-window)
-        (message "Process still running!"))))
+  ;; (defun +comint-quit-if-done ()
+  ;;   "Quit comint buffer only if the process is finished."
+  ;;   (interactive)
+  ;;   (let ((proc (get-buffer-process (current-buffer))))
+  ;;     (if (or (not proc) (memq (process-status proc) '(exit signal)))
+  ;;         (quit-window)
+  ;;       (message "Process still running!"))))
   :general-config
-  (:states '(normal)
-           :keymaps 'comint-mode-map
-           "q" #'+comint-quit-if-done)
+  ;; (:states '(normal)
+  ;;          :keymaps 'comint-mode-map
+  ;;          "q" #'+comint-quit-if-done)
   (:states '(insert)
            :keymaps 'comint-mode-map
            "S-<return>" #'newline
            "C-y" #'yank)
+  :hook
+  (comint-output-filter-functions . comint-truncate-buffer)
   )
 
 (use-package compile
@@ -2351,15 +2325,14 @@ Keeps show-paren highlights for (), [], and {}."
     (funcall orig-fun command t))
   (advice-add 'compile :around #'+compile-with-comint)
 
-  (defun +compile-finish-read-only (buffer string)
-    (with-current-buffer buffer
-      (setq-local buffer-read-only t)))
+  ;; (defun +compile-finish-read-only (buffer string)
+  ;;   (with-current-buffer buffer
+  ;;     (setq-local buffer-read-only t)))
 
-  (add-hook 'compilation-finish-functions '+compile-finish-read-only)
+  ;; (add-hook 'compilation-finish-functions '+compile-finish-read-only)
   :hook
-  ;; (compilation-filter . comint-truncate-buffer)
   (compilation-filter . ansi-color-compilation-filter)
-  (shell-command-mode . compilation-shell-minor-mode)
+  ;; (shell-command-mode . compilation-shell-minor-mode)
   :general
   (leader-def
     "@" #'compile-region
@@ -2432,12 +2405,12 @@ DOCSTRING describes what the command does."
   (shell-command-switch "-lc")
   (shell-command-prompt-show-cwd t))
 
-(use-package shell-command-x
-  :after shell
-  :config
-  (setq shell-command-x-buffer-name-async-format "*shell %p:%a*")
-  (setq shell-command-x-buffer-name-format "*shell %p:%a*")
-  (shell-command-x-mode 1))
+;; (use-package shell-command-x
+;;   :after shell
+;;   :config
+;;   (setq shell-command-x-buffer-name-async-format "*shell %p:%a*")
+;;   (setq shell-command-x-buffer-name-format "*shell %p:%a*")
+;;   (shell-command-x-mode 1))
 
 (use-package ghostel
   :commands (ghostel-run)
@@ -2445,6 +2418,7 @@ DOCSTRING describes what the command does."
   (ghostel-mode . (lambda () (setq-local line-spacing 0.3)))
   :custom
   (ghostel-tramp-shell-integration t)
+  (ghostel-compile-global-mode-excluded-modes '(grep-mode rg-mode))
   :config
   (defun ghostel-run (program &rest args)
     (interactive "sEnter command: ")
@@ -2456,10 +2430,10 @@ DOCSTRING describes what the command does."
       (apply #'ghostel-exec buf program args)
       (pop-to-buffer buf)))
 
-  (defun pi ()
-    "Run pi-coding-agent in `ghostel'."
-    (interactive)
-    (ghostel-run "pi"))
+  ;; (defun pi ()
+  ;;   "Run pi-coding-agent in `ghostel'."
+  ;;   (interactive)
+  ;;   (ghostel-run "pi"))
   :general
   (leader-def
     "os" 'ghostel
@@ -2468,6 +2442,7 @@ DOCSTRING describes what the command does."
     "pS" 'ghostel-project-list-buffers)
   :hook
   (after-init . ghostel-comint-global-mode)
+  (after-init . ghostel-compile-global-mode)
   (eshell-load . ghostel-eshell-visual-command-mode)
   )
 
@@ -2504,8 +2479,7 @@ DOCSTRING describes what the command does."
   :custom
   (popterm-backend 'ghostel)
   :hook
-  (after-init . popterm-global-mode)
-  )
+  (after-init . popterm-global-mode))
 
 (use-package eshell
   :ensure nil
@@ -2630,6 +2604,47 @@ DOCSTRING describes what the command does."
   :hook
   (ediff-before-setup . +ediff-save-wconf-h)
   ((ediff-quit ediff-suspend) . +ediff-restore-wconf-h)
+  )
+
+(use-package grep
+  :defer t
+  :ensure nil
+  :preface
+  (defun +evil-grep-change-to-grep-edit-mode ()
+    (interactive)
+    (grep-change-to-grep-edit-mode)
+    (evil-insert-state))
+
+  (defun +evil-grep-edit-save-changes ()
+    (interactive)
+    (evil-normal-state)
+    (grep-edit-save-changes))
+  :config
+  (setq grep-program "rg"
+        grep-template
+        "rg --color=never --no-heading --line-number --null -e <R> <D>")
+
+  :general-config
+  (:states '(normal)
+           :keymaps 'grep-mode-map
+           "i" '+evil-grep-change-to-grep-edit-mode
+           "C-c C-e" '+evil-grep-change-to-grep-edit-mode)
+  (:states '(normal insert)
+           :keymaps 'grep-edit-mode-map
+           "C-c C-c" '+evil-grep-edit-save-changes)
+  )
+
+(use-package rg
+  ;; :hook
+  ;; (rg-mode . (lambda () (switch-to-buffer (current-buffer))))
+  :config
+  (add-to-list 'display-buffer-alist
+             '("\\*rg\\*"
+               nil
+               (post-command-select-window . t)))
+  :general
+  (leader-def
+    "sg" 'rg-project)
   )
 
 ;; (use-package isearch
